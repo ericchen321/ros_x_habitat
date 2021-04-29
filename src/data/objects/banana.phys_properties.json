@@ -1,0 +1,8 @@
+{
+    "render mesh": "banana.glb",
+    "collision mesh": "banana_convex.glb",
+    "join collision meshes": false,
+    "mass": 0.066,
+    "friction coefficient": 0.5,
+    "restitution coefficient": 0.2
+}
