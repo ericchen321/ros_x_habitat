@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>ros-cross-habitat</name>
+  <name>ros-x-habitat</name>
   <version>0.0.0</version>
-  <description>The ros-cross-habitat package</description>
+  <description>The ros-x-habitat package</description>
   <maintainer email="yhymason@cs.ubc.ca">lci-user</maintainer>
   <license>TODO</license>
 

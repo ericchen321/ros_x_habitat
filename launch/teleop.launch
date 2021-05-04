@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <launch>
 
-	<node pkg="ros-cross-habitat" type="depth_ros.py" name="depth_ros" >
+	<node pkg="ros-x-habitat" type="depth_ros.py" name="depth_ros" >
 		<remap from="depth" to="habitat/depth"/>
 	</node>
 
-	<node pkg="ros-cross-habitat" type="rgb_ros.py" name="rgb_ros">
+	<node pkg="ros-x-habitat" type="rgb_ros.py" name="rgb_ros">
 		<remap from="rgb" to="habitat/rgb"/>
 	</node>
 
@@ -14,7 +14,7 @@
 <!-- 		<param name="coalesce_interval " value="0.05" /> -->
 <!-- 	</node> -->
 
-<!-- 	<node pkg="ros-cross-habitat" type="joy_controller.py" name="joy_controller" /> -->
+<!-- 	<node pkg="ros-x-habitat" type="joy_controller.py" name="joy_controller" /> -->
 
 	<node pkg="image_view" type="image_view" name="image_view">
 		<remap from="image" to="ros_img_rgb"/>
