@@ -11,11 +11,11 @@ pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
 def callback(data):
     # negative sign in vel_z because agent eyes look at negative z axis
     vel_max = 0.3  # m/s
-    vel_z = 4 * data.axes[1] * vel_max 
+    vel_z = 4 * data.axes[1] * vel_max
 
     # negative sign because pushing right produces negative number on joystick
-    vel_x = -4 * data.axes[0] * vel_max 
-    yaw = data.axes[3] * 30/180*3.1415926
+    vel_x = -4 * data.axes[0] * vel_max
+    yaw = data.axes[3] * 30 / 180 * 3.1415926
     pitch = data.axes[4] * 30
 
     # h = std_msgs.msg.Header()

@@ -26,8 +26,7 @@ def callback(data):
 
     img = np.float32(np.reshape(img_raveled, (img_size[0], img_size[1])))
 
-
-    #img = np.float32((np.reshape(data.data, (DEPTH_IMG_WIDTH, DEPTH_IMG_HEIGHT))))
+    # img = np.float32((np.reshape(data.data, (DEPTH_IMG_WIDTH, DEPTH_IMG_HEIGHT))))
 
     h = std_msgs.msg.Header()
     h.stamp = rospy.Time.now()
@@ -38,7 +37,7 @@ def callback(data):
     camera_info_msg = CameraInfo()
     camera_info_msg.header = h
     fx, fy = DEPTH_IMG_WIDTH / 2, DEPTH_IMG_HEIGHT / 2
-    cx, cy = DEPTH_IMG_WIDTH/2, DEPTH_IMG_HEIGHT/2
+    cx, cy = DEPTH_IMG_WIDTH / 2, DEPTH_IMG_HEIGHT / 2
 
     camera_info_msg.width = DEPTH_IMG_WIDTH
     camera_info_msg.height = DEPTH_IMG_HEIGHT

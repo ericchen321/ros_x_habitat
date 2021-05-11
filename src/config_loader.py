@@ -5,18 +5,14 @@ from habitat.sims import make_sim
 
 def main():
     # setup environment
-    config_path = (
-        "configs/pointnav_rgbd.yaml"
-    )
+    config_path = "configs/pointnav_rgbd.yaml"
     config = habitat.get_config(config_path)
     # print(config)
     # env = habitat.PhysicsEnv(config=config)
     for k in config.PHYSICS_SIMULATOR.keys():
         if isinstance(config.PHYSICS_SIMULATOR[k], Config):
             for inner_k in config.PHYSICS_SIMULATOR[k].keys():
-                config.SIMULATOR[k][inner_k] = config.PHYSICS_SIMULATOR[k][
-                    inner_k
-                ]
+                config.SIMULATOR[k][inner_k] = config.PHYSICS_SIMULATOR[k][inner_k]
         else:
             config.SIMULATOR[k] = config.PHYSICS_SIMULATOR[k]
 
@@ -30,9 +26,7 @@ def main():
         print("Import HSIM failed")
         raise e
     print(config)
-    sim = make_sim(
-        id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR
-    )
+    sim = make_sim(id_sim=config.SIMULATOR.TYPE, config=config.SIMULATOR)
     # sim = registry.get_simulator(config.PHYSICS_SIMULATOR.TYPE)
     # print(sim)
     # print(env._sim)
