@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, Iterator, List, Optional, Type, Union
 import numpy as np
-from gym.spaces.dict_space import Dict as SpaceDict
+from gym.spaces import Dict as SpaceDict
 
 from habitat.core.env import Env
 from habitat.config import Config
