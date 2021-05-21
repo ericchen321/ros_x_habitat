@@ -250,6 +250,7 @@ def generate_video(
     video_dir: Optional[str],
     images: List[np.ndarray],
     episode_id: int,
+    scene_id: int,
     checkpoint_idx: int,
     metrics: Dict[str, float],
     tb_writer: TensorboardWriter,
@@ -262,6 +263,7 @@ def generate_video(
         video_dir: path to target video directory.
         images: list of images to be converted to video.
         episode_id: episode id for video naming.
+        scene_id: scene id for video naming.
         checkpoint_idx: checkpoint index for video naming.
         metric_name: name of the performance metric, e.g. "spl".
         metric_value: value of metric.
@@ -277,7 +279,8 @@ def generate_video(
     for k, v in metrics.items():
         metric_strs.append(f"{k}={v:.2f}")
 
-    video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
+    scene_id = os.path.basename(scene_id)
+    video_name = f"episode={episode_id}-scene={scene_id}-ckpt={checkpoint_idx}-" + "-".join(
         metric_strs
     )
     if "disk" in video_option:

@@ -9,7 +9,7 @@ from collections import defaultdict
 from classes.utils_tensorboard import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
-
+from habitat.tasks.nav.nav import NavigationEpisode
 
 class HabitatDiscreteEvaluator(HabitatEvaluator):
     r"""Class to evaluate Habitat agents producing discrete actions in environments
@@ -67,10 +67,13 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
         count_episodes = 0
         print("number of episodes: " + str(num_episodes))
         while count_episodes < num_episodes:
-            print("working on episode " + str(count_episodes))
+            print(f"Working on  {count_episodes+1}/{num_episodes}-th episode")
             observations_per_episode = []
             agent.reset()
             observations_per_action = self._env._env.reset()
+            current_episode = self._env._env.current_episode
+            print(f"episode id: {current_episode.episode_id}")
+            print(f"episode scene id: {current_episode.scene_id}")
             
             frame_counter = 0
             # act until one episode is over
@@ -103,7 +106,8 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
                 video_option=["disk", "tensorboard"],
                 video_dir='video_benchmark_dir',
                 images=observations_per_episode,
-                episode_id=count_episodes-1,
+                episode_id=current_episode.episode_id,
+                scene_id=current_episode.scene_id,
                 checkpoint_idx=0,
                 metrics=per_ep_metrics,
                 tb_writer=writer,
