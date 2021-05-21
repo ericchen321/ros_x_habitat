@@ -52,3 +52,5 @@ Thumbs.db
 src/tb_benchmark/
 src/video_benchmark_dir/
 
+# Saved models
+data/checkpoints/
