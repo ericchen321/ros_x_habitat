@@ -14,6 +14,7 @@ dist/
 *.py[cod]
 
 # Log files
+logs/
 *.log
 
 # Package files
@@ -25,6 +26,10 @@ dist/
 
 # JetBrains IDE
 .idea/
+
+# VS Code IDE
+.vscode/
+../.vscode/
 
 # Unit test reports
 TEST*.xml
@@ -49,8 +54,8 @@ Thumbs.db
 *.wmv
 
 # Tensorboard files and videos
-src/tb_benchmark/
-src/video_benchmark_dir/
+src/tb/
+src/videos/
 
 # Saved models
-data/checkpoints/
+src/data/checkpoints/

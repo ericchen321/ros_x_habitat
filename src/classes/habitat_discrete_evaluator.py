@@ -11,6 +11,10 @@ from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
 
+# logging
+import os
+from classes import utils_logging
+
 class HabitatDiscreteEvaluator(HabitatEvaluator):
     r"""Class to evaluate Habitat agents producing discrete actions in environments
     without dynamics.
@@ -34,7 +38,13 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
     
 
     def evaluate(
-        self, agent: Agent, num_episodes: Optional[int] = None, control_period: Optional[float] = 1.0
+        self, 
+        agent: Agent, 
+        episode_id_last: str = "-1", 
+        scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
+        log_dir: str = "logs/",
+        video_dir: str = "videos/",
+        tb_dir: str = "tb/"
     ) -> Dict[str, float]:
         r"""..
 
@@ -42,47 +52,63 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
             agent: agent to be evaluated in environment.
             num_episodes: count of number of episodes for which the
             evaluation should be run.
-            control_period: number of seconds in which each action should complete. Not used
-                by the discrete evaluator since every action is instantaneous
 
         Return:
             dict containing metrics tracked by environment.
         """
-        if num_episodes is None:
-            num_episodes = len(self._env._env.episodes)
-        else:
-            assert num_episodes <= len(self._env._env.episodes), (
-                "num_episodes({}) is larger than number of episodes "
-                "in environment ({})".format(
-                    num_episodes, len(self._env._env.episodes)
-                )
-            )
-
-        assert num_episodes > 0, "num_episodes should be greater than 0"
+        num_episodes = len(self._env._env.episodes)
+        assert num_episodes > 0, "environment should contain at least one episode"
+        logger = utils_logging.setup_logger(__name__)
+        logger.info(f"Total number of episodes in the environment: {num_episodes}")
 
         agg_metrics: Dict = defaultdict(float)
 
-        writer = TensorboardWriter('tb_benchmark/', flush_secs=30) # flush_specs from base_trainer.py
+        writer = TensorboardWriter(tb_dir, flush_secs=30) # flush_specs from base_trainer.py
 
+        # locate the last episode evaluated
+        if episode_id_last != "-1":
+            # iterate to the last episode. If not found, the loop exits upon a
+            # StopIteration exception
+            last_ep_found = False
+            while not last_ep_found:
+                try:
+                    self._env._env.reset()
+                    e = self._env._env.current_episode
+                    if (e.episode_id == episode_id_last) and (e.scene_id == scene_id_last):
+                        logger.info(f"Last episode found: episode-id={episode_id_last}, scene-id={scene_id_last}")
+                        last_ep_found = True
+                except StopIteration:
+                    logger.info("Last episode not found!")
+                    raise StopIteration
+            assert self._env._env.current_episode is not None
+            assert self._env._env.current_episode.episode_id == episode_id_last and self._env._env.current_episode.scene_id == scene_id_last
+        else:
+            logger.info(f"No last episode specified. Proceed to evaluate from beginning")
+        
+        # then evaluate the rest of the episodes from the environment
         count_episodes = 0
-        print("number of episodes: " + str(num_episodes))
         while count_episodes < num_episodes:
-            print(f"Working on  {count_episodes+1}/{num_episodes}-th episode")
+            # initialize a new episode
             observations_per_episode = []
             agent.reset()
             observations_per_action = self._env._env.reset()
             current_episode = self._env._env.current_episode
-            print(f"episode id: {current_episode.episode_id}")
-            print(f"episode scene id: {current_episode.scene_id}")
-            
-            frame_counter = 0
+
+            # get episode and scene id
+            episode_id = int(current_episode.episode_id)
+            scene_id = current_episode.scene_id
+            logger = utils_logging.setup_logger(f"{__name__}-{episode_id}-{scene_id}", f"{log_dir}/{episode_id}-{os.path.basename(scene_id)}.log")
+            logger.info(f"episode id: {episode_id}")
+            logger.info(f"scene id: {scene_id}")
+
             # act until one episode is over
             while not self._env._env.episode_over:
                 action = agent.act(observations_per_action)
-                observations_per_action = reward_per_action = done_per_action = info_per_action = None
+                observations_per_action = None
+                info_per_action = None
                 (observations_per_action, 
-                reward_per_action, 
-                done_per_action, 
+                _, 
+                _, 
                 info_per_action)  = self._env.step(action)
                 # generate an output image for the action. The image includes observations
                 # and a top-down map showing the agent's state in the environment
@@ -96,7 +122,7 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
             per_ep_metrics = {k: metrics[k] for k in ['distance_to_goal', 'success', 'spl']}
             # print distance_to_goal, success and spl
             for k, v in per_ep_metrics.items():
-                print(f'{k},{v}')
+                logger.info(f'{k},{v}')
             # calculate aggregated distance_to_goal, success and spl
             for m, v in per_ep_metrics.items():
                 agg_metrics[m] += v
@@ -104,10 +130,10 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
             # generate video
             generate_video(
                 video_option=["disk", "tensorboard"],
-                video_dir='video_benchmark_dir',
+                video_dir=video_dir,
                 images=observations_per_episode,
-                episode_id=current_episode.episode_id,
-                scene_id=current_episode.scene_id,
+                episode_id=episode_id,
+                scene_id=scene_id,
                 checkpoint_idx=0,
                 metrics=per_ep_metrics,
                 tb_writer=writer,
