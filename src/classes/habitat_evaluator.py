@@ -11,15 +11,13 @@ class HabitatEvaluator:
     """
 
     def evaluate(
-        self, agent: Agent, num_episodes: Optional[int] = None, control_period: Optional[float] = 1.0
+        self, agent: Agent, num_episodes: Optional[int] = None, *args, **kwargs
     ) -> Dict[str, float]:
         r"""..
 
         Args:
             agent: agent to be evaluated in environment.
             num_episodes: number of episodes for which the evaluation should be run.
-            control_period: number of seconds in which each action should complete. Not
-                used by subclasses for which dynamics is not simulated.
 
         Return:
             dict containing metrics tracked by environment.
