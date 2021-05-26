@@ -44,8 +44,11 @@ class PhysicsEnv(Env):
     _episode_over: bool
 
     def step_physics(
-        self, action: Union[int, str, Dict[str, Any]], time_step=1.0 / 60.0,
-        control_period=1.0, **kwargs
+        self,
+        action: Union[int, str, Dict[str, Any]],
+        time_step=1.0 / 60.0,
+        control_period=1.0,
+        **kwargs
     ) -> Observations:
         r"""Perform an action in the environment, with physics enabled, and
         return observations.
@@ -72,8 +75,11 @@ class PhysicsEnv(Env):
 
         # Step with physics
         observations = self.task.step_physics(
-            action=action, episode=self.current_episode, time_step=time_step,
-            control_period=control_period, id_agent_obj=self._id_agent_obj
+            action=action,
+            episode=self.current_episode,
+            time_step=time_step,
+            control_period=control_period,
+            id_agent_obj=self._id_agent_obj,
         )
 
         self._task.measurements.update_measures(
@@ -89,19 +95,21 @@ class PhysicsEnv(Env):
         simulation environment.
         """
         # attach asset to agent
-        locobot_template_id = \
-        self._sim._sim.load_object_configs("data/objects/locobot_merged")[0]
+        locobot_template_id = self._sim._sim.load_object_configs(
+            "data/objects/locobot_merged"
+        )[0]
         # print("locobot_template_id is " + str(locobot_template_id))
-        self._id_agent_obj = self._sim._sim.add_object(locobot_template_id,
-                                                       self._sim._sim.agents[
-                                                           0].scene_node)
+        self._id_agent_obj = self._sim._sim.add_object(
+            locobot_template_id, self._sim._sim.agents[0].scene_node
+        )
         # print("id of agent object is " + str(self._id_agent_obj))
 
         # set all objects in scene to be dynamic
         obj_ids = self._sim._sim.get_existing_object_ids()
         for obj_id in obj_ids:
             self._sim._sim.set_object_motion_type(
-                hsim.physics.MotionType.DYNAMIC, obj_id)
+                hsim.physics.MotionType.DYNAMIC, obj_id
+            )
 
     def disable_physics(self):
         r"""Disables physics in the environment and clear up the
@@ -110,6 +118,6 @@ class PhysicsEnv(Env):
         # remove all objects in the scene, but keep their scene nodes
         obj_ids = self._sim._sim.get_existing_object_ids()
         for obj_id in obj_ids:
-            self._sim._sim.remove_object(object_id=obj_id,
-                                         delete_object_node=False,
-                                         delete_visual_node=False)
+            self._sim._sim.remove_object(
+                object_id=obj_id, delete_object_node=False, delete_visual_node=False
+            )

@@ -10,7 +10,7 @@ from sensor_msgs.msg import Image
 
 import numpy as np
 
-rospy.init_node("nprgb2ros_rgb",anonymous=False)
+rospy.init_node("nprgb2ros_rgb", anonymous=False)
 
 pub = rospy.Publisher("ros_img_rgb", Image, queue_size=10)
 
@@ -27,7 +27,7 @@ def callback(data):
 
 
 def listener():
-    
+
     rospy.Subscriber("rgb", numpy_msg(Floats), callback)
     rospy.spin()
 

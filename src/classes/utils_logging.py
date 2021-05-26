@@ -12,8 +12,8 @@ def setup_logger(name, log_file=None, level=logging.INFO):
     if log_file is None:
         handler = logging.StreamHandler(sys.stdout)
     else:
-        handler = logging.FileHandler(log_file)        
-    handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+        handler = logging.FileHandler(log_file)
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
 
     logger = logging.getLogger(name)
     logger.setLevel(level)

@@ -23,7 +23,9 @@ from habitat.core.logging import logger
 from habitat.utils.visualizations.utils import images_to_video
 from habitat.utils.visualizations import maps
 from habitat.core.utils import try_cv2_import
+
 cv2 = try_cv2_import()
+
 
 class TensorboardWriter:
     def __init__(self, log_dir: str, *args: Any, **kwargs: Any):
@@ -71,15 +73,11 @@ class TensorboardWriter:
         if not self.writer:
             return
         # initial shape of np.ndarray list: N * (H, W, 3)
-        frame_tensors = [
-            torch.from_numpy(np_arr).unsqueeze(0) for np_arr in images
-        ]
+        frame_tensors = [torch.from_numpy(np_arr).unsqueeze(0) for np_arr in images]
         video_tensor = torch.cat(tuple(frame_tensors))
         video_tensor = video_tensor.permute(0, 3, 1, 2).unsqueeze(0)
         # final shape of video tensor: (1, n, 3, H, W)
-        self.writer.add_video(
-            video_name, video_tensor, fps=fps, global_step=step_idx
-        )
+        self.writer.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)
 
 
 class Flatten(nn.Module):
@@ -140,13 +138,8 @@ class ResizeCenterCropper(nn.Module):
         observation_space = copy.deepcopy(observation_space)
         if size:
             for key in observation_space.spaces:
-                if (
-                    key in trans_keys
-                    and observation_space.spaces[key].shape != size
-                ):
-                    logger.info(
-                        "Overwriting CNN input size of %s: %s" % (key, size)
-                    )
+                if key in trans_keys and observation_space.spaces[key].shape != size:
+                    logger.info("Overwriting CNN input size of %s: %s" % (key, size))
                     observation_space.spaces[key] = overwrite_gym_box_shape(
                         observation_space.spaces[key], size
                     )
@@ -210,9 +203,7 @@ def batch_obs(
 
     for sensor in batch:
         batch[sensor] = (
-            torch.stack(batch[sensor], dim=0)
-            .to(device=device)
-            .to(dtype=torch.float)
+            torch.stack(batch[sensor], dim=0).to(device=device).to(dtype=torch.float)
         )
 
     return batch
@@ -221,7 +212,7 @@ def batch_obs(
 def poll_checkpoint_folder(
     checkpoint_folder: str, previous_ckpt_ind: int
 ) -> Optional[str]:
-    r""" Return (previous_ckpt_ind + 1)th checkpoint in checkpoint folder
+    r"""Return (previous_ckpt_ind + 1)th checkpoint in checkpoint folder
     (sorted by time of last modification).
 
     Args:
@@ -235,9 +226,7 @@ def poll_checkpoint_folder(
     assert os.path.isdir(checkpoint_folder), (
         f"invalid checkpoint folder " f"path {checkpoint_folder}"
     )
-    models_paths = list(
-        filter(os.path.isfile, glob.glob(checkpoint_folder + "/*"))
-    )
+    models_paths = list(filter(os.path.isfile, glob.glob(checkpoint_folder + "/*")))
     models_paths.sort(key=os.path.getmtime)
     ind = previous_ckpt_ind + 1
     if ind < len(models_paths):
@@ -280,8 +269,9 @@ def generate_video(
         metric_strs.append(f"{k}={v:.2f}")
 
     scene_id = os.path.basename(scene_id)
-    video_name = f"episode={episode_id}-scene={scene_id}-ckpt={checkpoint_idx}-" + "-".join(
-        metric_strs
+    video_name = (
+        f"episode={episode_id}-scene={scene_id}-ckpt={checkpoint_idx}-"
+        + "-".join(metric_strs)
     )
     if "disk" in video_option:
         assert video_dir is not None
@@ -327,9 +317,9 @@ def image_resize_shortest_edge(
     scale = size / min(h, w)
     h = int(h * scale)
     w = int(w * scale)
-    img = torch.nn.functional.interpolate(
-        img.float(), size=(h, w), mode="area"
-    ).to(dtype=img.dtype)
+    img = torch.nn.functional.interpolate(img.float(), size=(h, w), mode="area").to(
+        dtype=img.dtype
+    )
     if channels_last:
         if len(img.shape) == 4:
             # NCHW -> NHWC
@@ -380,6 +370,7 @@ def overwrite_gym_box_shape(box: Box, shape) -> Box:
     high = box.high if np.isscalar(box.high) else np.max(box.high)
     return Box(low=low, high=high, shape=shape, dtype=box.dtype)
 
+
 def generate_map_frame(env, obs_dim):
     """Generates a map that displays the state of the agent in the given environment,
     for the current frame.
@@ -391,12 +382,14 @@ def generate_map_frame(env, obs_dim):
         the height x width x 1 map
     """
     # draw map
-    top_down_map = maps.get_topdown_map_from_sim(sim=env.sim, map_resolution=(1250, 1250, 1))
+    top_down_map = maps.get_topdown_map_from_sim(
+        sim=env.sim, map_resolution=(1250, 1250, 1)
+    )
     # draw agent
     # TODO: figure out how to convert quaternion to angles to get agent_rotation
     top_down_map = maps.draw_agent(
         image=top_down_map,
-        agent_center_coord=(1,1),
+        agent_center_coord=(1, 1),
         agent_rotation=0.0,
         agent_radius_px=8,
     )
@@ -411,8 +404,9 @@ def generate_map_frame(env, obs_dim):
         interpolation=cv2.INTER_CUBIC,
     )
     top_down_map = np.expand_dims(top_down_map, axis=2)
-    
+
     return top_down_map
+
 
 # utility function to draw a top-down map
 # copied from shortest_path_follower_example.py
@@ -431,17 +425,15 @@ def draw_top_down_map(info, heading, output_size):
         info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
     )
     original_map_size = top_down_map.shape[:2]
-    map_scale = np.array(
-        (1, original_map_size[1] * 1.0 / original_map_size[0])
-    )
+    map_scale = np.array((1, original_map_size[1] * 1.0 / original_map_size[0]))
     new_map_size = np.round(output_size * map_scale).astype(np.int32)
     # OpenCV expects w, h but map size is in h, w
     top_down_map = cv2.resize(top_down_map, (new_map_size[1], new_map_size[0]))
 
     map_agent_pos = info["top_down_map"]["agent_map_coord"]
-    map_agent_pos = np.round(
-        map_agent_pos * new_map_size / original_map_size
-    ).astype(np.int32)
+    map_agent_pos = np.round(map_agent_pos * new_map_size / original_map_size).astype(
+        np.int32
+    )
     top_down_map = maps.draw_agent(
         top_down_map,
         map_agent_pos,
