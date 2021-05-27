@@ -5,7 +5,6 @@ import attr
 
 @attr.s(auto_attribs=True)
 class PhysicsSimulator(Simulator):
-
     def step_physics(self, dt):
         self._num_total_frames += 1
         collided = self.contact_test(object_id=0)
