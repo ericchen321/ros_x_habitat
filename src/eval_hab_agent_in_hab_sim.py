@@ -8,6 +8,7 @@ from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging
 from classes import utils_logging
+
 logger = utils_logging.setup_logger(__name__)
 
 
@@ -35,34 +36,28 @@ def main():
     parser.add_argument(
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
+    parser.add_argument("--episode-id", type=str, default=0)
     parser.add_argument(
-        "--episode-id", type=str, default=0
+        "--scene-id",
+        type=str,
+        default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
-    parser.add_argument(
-        "--scene-id", type=str, default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
-    )
-    parser.add_argument(
-        "--log-dir", type=str, default="logs/"
-    )
-    parser.add_argument(
-        "--video-dir", type=str, default="videos/"
-    )
-    parser.add_argument(
-        "--tb-dir", type=str, default="tb/"
-    )
+    parser.add_argument("--log-dir", type=str, default="logs/")
+    parser.add_argument("--video-dir", type=str, default="videos/")
+    parser.add_argument("--tb-dir", type=str, default="tb/")
     args = parser.parse_args()
 
     # instantiate a discrete/continuous evaluator
     exp_config = get_config(args.task_config)
     evaluator = None
-    if 'SIMULATOR' in exp_config:
-        logger.info('Instantiating discrete simulator')
+    if "SIMULATOR" in exp_config:
+        logger.info("Instantiating discrete simulator")
         evaluator = HabitatDiscreteEvaluator(config_paths=args.task_config)
-    elif 'PHYSICS_SIMULATOR' in exp_config:
-        logger.info('Instantiating continuous simulator with dynamics')
+    elif "PHYSICS_SIMULATOR" in exp_config:
+        logger.info("Instantiating continuous simulator with dynamics")
         raise NotImplementedError
     else:
-        logger.info('Simulator not properly specified')
+        logger.info("Simulator not properly specified")
         raise NotImplementedError
 
     agent_config = get_default_config()
@@ -71,7 +66,14 @@ def main():
     agent = PPOAgent(agent_config)
 
     logger.info("Started Evaluation")
-    metrics = evaluator.evaluate(agent, episode_id_last=args.episode_id, scene_id_last=args.scene_id, log_dir=args.log_dir, video_dir=args.video_dir, tb_dir=args.tb_dir)
+    metrics = evaluator.evaluate(
+        agent,
+        episode_id_last=args.episode_id,
+        scene_id_last=args.scene_id,
+        log_dir=args.log_dir,
+        video_dir=args.video_dir,
+        tb_dir=args.tb_dir,
+    )
 
     for k, v in metrics.items():
         habitat.logger.info("{}: {:.3f}".format(k, v))
