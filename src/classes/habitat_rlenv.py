@@ -5,7 +5,7 @@ import numpy as np
 
 from habitat.config import Config
 from habitat.core.env import Env
-from classes.physics_env import PhysicsEnv 
+from classes.physics_env import PhysicsEnv
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.simulator import Observations, Simulator
 from habitat.utils import profiling_wrapper
@@ -29,9 +29,10 @@ class HabitatRLEnv(gym.Env):
     _env: Union[Env, PhysicsEnv]
 
     def __init__(
-        self, config: Config, 
-        dataset: Optional[Dataset] = None, 
-        enable_physics: Optional[bool] = False
+        self,
+        config: Config,
+        dataset: Optional[Dataset] = None,
+        enable_physics: Optional[bool] = False,
     ) -> None:
         """Constructor
 
@@ -44,7 +45,7 @@ class HabitatRLEnv(gym.Env):
             self._env = PhysicsEnv(config, dataset)
         else:
             self._env = Env(config, dataset)
-        
+
         self.observation_space = self._env.observation_space
         self.action_space = self._env.action_space
         self.number_of_episodes = self._env.number_of_episodes

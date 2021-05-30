@@ -1,9 +1,8 @@
-
 from classes.habitat_rlenv import HabitatRLEnv
 
+
 class HabitatEvalRLEnv(HabitatRLEnv):
-    r""" Custom RL environment for HabitatEvaluator.
-    """
+    r"""Custom RL environment for HabitatEvaluator."""
 
     def get_reward_range(self):
         return [-1, 1]
