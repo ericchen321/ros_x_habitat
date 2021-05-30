@@ -28,7 +28,9 @@ class HabitatEnvNode:
         agent_decision = msg.data
         # TODO: convert agent's decision from a String or a Twist to appropriate Action class that the Env accepts
         (self.observations, _, _, _) = self.env.step(agent_decision)
-        # TODO: convert observations to either a String
+        # TODO: convert observations to Python dictionary then to a ROS String
+        # e.g dictionary = { 'data': 'Howdy' }
+        # message = message_converter.convert_dictionary_to_ros_message('std_msgs/String', dictionary)
         new_msg = String()
         new_msg.data = ""
 
