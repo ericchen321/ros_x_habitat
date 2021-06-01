@@ -57,5 +57,5 @@ Thumbs.db
 src/tb/
 src/videos/
 
-# Saved models
-src/data/checkpoints/
+# Saved models, scene files, episode info
+src/data/
