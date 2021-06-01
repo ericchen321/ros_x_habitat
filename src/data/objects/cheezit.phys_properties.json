@@ -1,8 +1,0 @@
-{
-    "render mesh": "cheezit.glb",
-    "mass": 0.41,
-    "friction coefficient": 0.5,
-    "restitution coefficient": 0.4,
-    "use bounding box for collision": true,
-    "margin": 0.01
-}
