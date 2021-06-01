@@ -14,7 +14,7 @@ from habitat.tasks.nav.nav import NavigationEpisode
 # logging
 import os
 from classes import utils_logging
-
+import time
 
 class HabitatDiscreteEvaluator(HabitatEvaluator):
     r"""Class to evaluate Habitat agents producing discrete actions in environments
@@ -100,11 +100,22 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
         scene_id = ""
         while count_episodes < num_episodes:
             try:
+                count_steps = 0
+                t_elapsed = 0.0
+                # ------------ log sim time start ------------
+                t_start = time.clock()
+                # --------------------------------------------
+
                 # initialize a new episode
                 observations_per_episode = []
                 agent.reset()
                 observations_per_action = self._env._env.reset()
                 current_episode = self._env._env.current_episode
+
+                # ------------  log sim time end  ------------
+                t_end = time.clock()
+                t_elapsed += (t_end - t_start)
+                # --------------------------------------------
 
                 # get episode and scene id
                 episode_id = int(current_episode.episode_id)
@@ -118,12 +129,23 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
 
                 # act until one episode is over
                 while not self._env._env.episode_over:
+                    # ------------ log sim time start ------------
+                    t_start = time.clock()
+                    # --------------------------------------------
+
                     action = agent.act(observations_per_action)
                     observations_per_action = None
                     info_per_action = None
                     (observations_per_action, _, _, info_per_action) = self._env.step(
                         action
                     )
+                    count_steps += 1
+
+                    # ------------  log sim time end  ------------
+                    t_end = time.clock()
+                    t_elapsed += (t_end - t_start)
+                    # --------------------------------------------
+
                     # generate an output image for the action. The image includes observations
                     # and a top-down map showing the agent's state in the environment
                     out_im_per_action = observations_to_image(
@@ -132,16 +154,18 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
                     observations_per_episode.append(out_im_per_action)
 
                 # episode ended
-                # get per-episode metrics. for now we only extract
-                # distance-to-goal, success, spl
+                # get per-episode metrics. for now we extract distance-to-goal, success, spl
+                # from the environment, and we add sim_time and num_steps as two other metrics
                 metrics = self._env._env.get_metrics()
                 per_ep_metrics = {
                     k: metrics[k] for k in ["distance_to_goal", "success", "spl"]
                 }
-                # print distance_to_goal, success and spl
+                per_ep_metrics['sim_time'] = t_elapsed
+                per_ep_metrics['num_steps'] = count_steps
+                # print metrics of this episode
                 for k, v in per_ep_metrics.items():
                     logger_ep.info(f"{k},{v}")
-                # calculate aggregated distance_to_goal, success and spl
+                # calculate aggregated metrics over episodes eval'ed so far
                 for m, v in per_ep_metrics.items():
                     agg_metrics[m] += v
                 count_episodes += 1
@@ -163,7 +187,6 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
             except OSError:
                 logger.info(f"Evaulation stopped after: {count_episodes} episodes due to OSError!")
                 logger.info(f"Last episode evaluated: episode={episode_id}, scene={scene_id}")
-                count_episodes -= 1
                 break
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
