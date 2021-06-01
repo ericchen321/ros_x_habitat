@@ -36,7 +36,7 @@ def main():
     parser.add_argument(
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
-    parser.add_argument("--episode-id", type=str, default=0)
+    parser.add_argument("--episode-id", type=str, default="-1")
     parser.add_argument(
         "--scene-id",
         type=str,
@@ -75,8 +75,9 @@ def main():
         tb_dir=args.tb_dir,
     )
 
+    logger.info("Printing average metrics:")
     for k, v in metrics.items():
-        habitat.logger.info("{}: {:.3f}".format(k, v))
+        logger.info("{}: {:.3f}".format(k, v))
 
 
 if __name__ == "__main__":
