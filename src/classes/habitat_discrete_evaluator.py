@@ -163,6 +163,7 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
             except OSError:
                 logger.info(f"Evaulation stopped after: {count_episodes} episodes due to OSError!")
                 logger.info(f"Last episode evaluated: episode={episode_id}, scene={scene_id}")
+                count_episodes -= 1
                 break
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
