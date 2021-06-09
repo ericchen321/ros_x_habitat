@@ -84,11 +84,6 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
                 except StopIteration:
                     logger.info("Last episode not found!")
                     raise StopIteration
-            assert self._env._env.current_episode is not None
-            assert (
-                self._env._env.current_episode.episode_id == episode_id_last
-                and self._env._env.current_episode.scene_id == scene_id_last
-            )
         else:
             logger.info(
                 f"No last episode specified. Proceed to evaluate from beginning"
