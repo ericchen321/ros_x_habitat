@@ -1,4 +1,4 @@
-from classes.habitat_rlenv import HabitatRLEnv
+from src.classes.habitat_rlenv import HabitatRLEnv
 
 
 class HabitatEvalRLEnv(HabitatRLEnv):

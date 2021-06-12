@@ -10,7 +10,7 @@ from rospy.numpy_msg import numpy_msg
 from rospy_tutorials.msg import Floats
 from geometry_msgs.msg import Twist
 from habitat.config import Config
-from classes.physics_env import PhysicsEnv
+from src.classes.physics_env import PhysicsEnv
 import threading
 import sys
 
@@ -158,8 +158,8 @@ class SimEnv(threading.Thread):
             from habitat.sims.habitat_simulator.habitat_simulator import (
                 HabitatSim,
             )
-            from classes.habitat_physics_simulator import HabitatPhysicsSim
-            from classes.habitat_physics_task import PhysicsNavigationTask
+            from src.classes.habitat_physics_simulator import HabitatPhysicsSim
+            from src.classes.habitat_physics_task import PhysicsNavigationTask
             from habitat.sims.habitat_simulator.actions import (
                 HabitatSimV1ActionSpaceConfiguration,
             )

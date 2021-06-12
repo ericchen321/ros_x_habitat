@@ -3,7 +3,7 @@ import argparse
 import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
-from classes.habitat_discrete_evaluator import HabitatDiscreteEvaluator
+from src.classes.habitat_discrete_evaluator import HabitatDiscreteEvaluator
 from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging

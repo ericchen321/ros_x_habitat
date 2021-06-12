@@ -1,12 +1,12 @@
-from classes.habitat_evaluator import HabitatEvaluator
+from src.classes.habitat_evaluator import HabitatEvaluator
 from typing import Dict, Optional
 from habitat.config.default import get_config
-from classes.habitat_eval_rlenv import HabitatEvalRLEnv
+from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
 from habitat.core.agent import Agent
 from collections import defaultdict
 
 # use TensorBoard to visualize
-from classes.utils_tensorboard import TensorboardWriter, generate_video
+from src.classes.utils_tensorboard import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
