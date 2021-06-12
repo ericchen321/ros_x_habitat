@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(ros-x-habitat)
+project(ros_x_habitat)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -48,15 +48,11 @@ find_package(catkin REQUIRED COMPONENTS
     message_generation
 )
 
-catkin_package(
-  ...
-  CATKIN_DEPENDS message_runtime ...
-  ...)
-
 ## Generate messages in the 'msg' folder
 add_message_files(
     FILES
     PointGoalWithGPSCompass.msg
+    DepthImage.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -110,9 +106,10 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES ros-x-habitat
+#  LIBRARIES ros_x_habitat
 #  CATKIN_DEPENDS other_catkin_pkg
 #  DEPENDS system_lib
+#  CATKIN_DEPENDS message_runtime
 )
 
 ###########
@@ -128,7 +125,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/ros-x-habitat.cpp
+#   src/${PROJECT_NAME}/ros_x_habitat.cpp
 # )
 
 ## Add cmake target dependencies of the library

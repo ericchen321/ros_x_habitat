@@ -59,3 +59,6 @@ src/videos/
 
 # Saved models, scene files, episode info
 src/data/
+
+# build files
+build/

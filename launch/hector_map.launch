@@ -10,7 +10,7 @@
 
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find hector_slam_launch)/rviz_cfg/mapping_demo.rviz"/>
 
-  <include file="$(find ros-x-habitat)/launch/mapping_default.launch"/>
+  <include file="$(find ros_x_habitat)/launch/mapping_default.launch"/>
 
 <!--   <include file="$(find hector_geotiff)/launch/geotiff_mapper.launch"> -->
 <!--     <arg name="trajectory_source_frame_name" value="base_frame"/> -->
