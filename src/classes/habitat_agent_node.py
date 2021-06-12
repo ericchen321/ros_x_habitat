@@ -40,7 +40,14 @@ class HabitatAgentNode:
     The node subscribes to sensor topics, and publishes either
     discrete actions or continuous velocities to command topics.
     """
-    def __init__(self, agent_config: Config, enable_physics: bool = False, control_period: float = 1.0, sensor_pub_rate: int = 10):
+
+    def __init__(
+        self,
+        agent_config: Config,
+        enable_physics: bool = False,
+        control_period: float = 1.0,
+        sensor_pub_rate: int = 10,
+    ):
         self.agent = PPOAgent(agent_config)
         self.input_type = agent_config.INPUT_TYPE
         self.enable_physics = enable_physics
@@ -77,25 +84,36 @@ class HabitatAgentNode:
             self.sub_rgb = message_filters.Subscriber("rgb", Image)
         if self.input_type == "depth" or self.input_type == "rgbd":
             self.sub_depth = message_filters.Subscriber("depth", numpy_msg(DepthImage))
-        self.sub_pointgoal_with_gps_compass = message_filters.Subscriber("pointgoal_with_gps_compass", PointGoalWithGPSCompass)
-        
+        self.sub_pointgoal_with_gps_compass = message_filters.Subscriber(
+            "pointgoal_with_gps_compass", PointGoalWithGPSCompass
+        )
+
         # filter sensor topics with time synchronizer
         if self.input_type == "rgb":
-            self.ts = TimeSynchronizer([self.sub_rgb, self.sub_pointgoal_with_gps_compass], queue_size=self.sub_queue_size)
+            self.ts = TimeSynchronizer(
+                [self.sub_rgb, self.sub_pointgoal_with_gps_compass],
+                queue_size=self.sub_queue_size,
+            )
             self.ts.registerCallback(self.callback_rgb)
         elif self.input_type == "rgbd":
-            self.ts = TimeSynchronizer([self.sub_rgb, self.sub_depth, self.sub_pointgoal_with_gps_compass], queue_size=self.sub_queue_size)
+            self.ts = TimeSynchronizer(
+                [self.sub_rgb, self.sub_depth, self.sub_pointgoal_with_gps_compass],
+                queue_size=self.sub_queue_size,
+            )
             self.ts.registerCallback(self.callback_rgbd)
         else:
-            self.ts = TimeSynchronizer([self.sub_depth, self.sub_pointgoal_with_gps_compass], queue_size=self.sub_queue_size)
+            self.ts = TimeSynchronizer(
+                [self.sub_depth, self.sub_pointgoal_with_gps_compass],
+                queue_size=self.sub_queue_size,
+            )
             self.ts.registerCallback(self.callback_depth)
-        
+
         print("agent making sure env subscribed to command topic...")
         while self.pub.get_num_connections() == 0:
             pass
 
         print("agent initialized")
-    
+
     def depthmsg_to_cv2(self, depth_msg):
         r"""
         Converts a ROS DepthImage message to a Habitat depth observation.
@@ -107,7 +125,12 @@ class HabitatAgentNode:
         depth_img = np.reshape(depth_msg.data.astype(np.float32), (h, w))
         return depth_img
 
-    def msgs_to_obs(self, rgb_msg: Image = None, depth_msg: DepthImage = None, pointgoal_with_gps_compass_msg: PointGoalWithGPSCompass = None) -> Dict[str, Any]:
+    def msgs_to_obs(
+        self,
+        rgb_msg: Image = None,
+        depth_msg: DepthImage = None,
+        pointgoal_with_gps_compass_msg: PointGoalWithGPSCompass = None,
+    ) -> Dict[str, Any]:
         r"""
         Converts ROS messages into Habitat observations.
         :param rgb_msg: RGB sensor observations packed in a ROS message
@@ -120,20 +143,29 @@ class HabitatAgentNode:
 
         # Convert RGB message
         if rgb_msg is not None:
-            observations["rgb"] = CvBridge().imgmsg_to_cv2(rgb_msg, "passthrough").astype(np.float32)
-        
+            observations["rgb"] = (
+                CvBridge().imgmsg_to_cv2(rgb_msg, "passthrough").astype(np.float32)
+            )
+
         # Convert depth message
         if depth_msg is not None:
             observations["depth"] = self.depthmsg_to_cv2(depth_msg)
             # have to manually add channel info
-            observations["depth"] = np.expand_dims(observations["depth"], 2).astype(np.float32)
-        
+            observations["depth"] = np.expand_dims(observations["depth"], 2).astype(
+                np.float32
+            )
+
         # Convert pointgoal + GPS/compass sensor message
         if pointgoal_with_gps_compass_msg is not None:
-            observations["pointgoal_with_gps_compass"] = np.asarray([pointgoal_with_gps_compass_msg.distance_to_goal, pointgoal_with_gps_compass_msg.angle_to_goal]).astype(np.float32)
-        
+            observations["pointgoal_with_gps_compass"] = np.asarray(
+                [
+                    pointgoal_with_gps_compass_msg.distance_to_goal,
+                    pointgoal_with_gps_compass_msg.angle_to_goal,
+                ]
+            ).astype(np.float32)
+
         return observations
-    
+
     def action_to_msg(self, action: Dict[str, int]):
         r"""
         Converts action produced by Habitat agent to a ROS message.
@@ -164,7 +196,7 @@ class HabitatAgentNode:
             # Convert to Int16 message in discrete mode
             msg = Int16()
             msg.data = action_id
-        
+
         return msg
 
     def callback_rgb(self, rgb_msg, pointgoal_with_gps_compass_msg):
@@ -175,7 +207,10 @@ class HabitatAgentNode:
         :param pointgoal_with_gps_compass_msg: Pointgoal + GPS/Compass readings.
         """
         # convert current_observations from ROS to Habitat format
-        observations = self.msgs_to_obs(rgb_msg=rgb_msg, pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg)
+        observations = self.msgs_to_obs(
+            rgb_msg=rgb_msg,
+            pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg,
+        )
 
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
@@ -190,7 +225,7 @@ class HabitatAgentNode:
             self.action = self.agent.act(observations)
             action_msg = self.action_to_msg(self.action)
             self.pub.publish(action_msg)
-    
+
     def callback_depth(self, depth_msg, pointgoal_with_gps_compass_msg):
         r"""
         Produce an action or velocity command periodically from depth
@@ -199,7 +234,10 @@ class HabitatAgentNode:
         :param pointgoal_with_gps_compass_msg: Pointgoal + GPS/Compass readings.
         """
         # convert current_observations from ROS to Habitat format
-        observations = self.msgs_to_obs(depth_msg=depth_msg, pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg)
+        observations = self.msgs_to_obs(
+            depth_msg=depth_msg,
+            pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg,
+        )
 
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
@@ -214,7 +252,7 @@ class HabitatAgentNode:
             self.action = self.agent.act(observations)
             action_msg = self.action_to_msg(self.action)
             self.pub.publish(action_msg)
-    
+
     def callback_rgbd(self, rgb_msg, depth_msg, pointgoal_with_gps_compass_msg):
         r"""
         Produces an action or velocity command periodically from RGBD
@@ -224,7 +262,11 @@ class HabitatAgentNode:
         :param pointgoal_with_gps_compass_msg: Pointgoal + GPS/Compass readings.
         """
         # convert current_observations from ROS to Habitat format
-        observations = self.msgs_to_obs(rgb_msg=rgb_msg, depth_msg=depth_msg, pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg)
+        observations = self.msgs_to_obs(
+            rgb_msg=rgb_msg,
+            depth_msg=depth_msg,
+            pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg,
+        )
 
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
@@ -250,7 +292,7 @@ if __name__ == "__main__":
         choices=["blind", "rgb", "depth", "rgbd"],
     )
     parser.add_argument("--model-path", default="", type=str)
-    parser.add_argument('--enable-physics', default=False, action='store_true')
+    parser.add_argument("--enable-physics", default=False, action="store_true")
     parser.add_argument(
         "--control-period",
         type=float,
@@ -267,5 +309,10 @@ if __name__ == "__main__":
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path
-    HabitatAgentNode(agent_config=agent_config, enable_physics=args.enable_physics, control_period=args.control_period, sensor_pub_rate=args.sensor_pub_rate)
+    HabitatAgentNode(
+        agent_config=agent_config,
+        enable_physics=args.enable_physics,
+        control_period=args.control_period,
+        sensor_pub_rate=args.sensor_pub_rate,
+    )
     rospy.spin()

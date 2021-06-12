@@ -16,6 +16,7 @@ import os
 from classes import utils_logging
 import time
 
+
 class HabitatDiscreteEvaluator(HabitatEvaluator):
     r"""Class to evaluate Habitat agents producing discrete actions in environments
     without dynamics.
@@ -109,7 +110,7 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
 
                 # ------------  log sim time end  ------------
                 t_end = time.clock()
-                t_elapsed += (t_end - t_start)
+                t_elapsed += t_end - t_start
                 # --------------------------------------------
 
                 # get episode and scene id
@@ -138,7 +139,7 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
 
                     # ------------  log sim time end  ------------
                     t_end = time.clock()
-                    t_elapsed += (t_end - t_start)
+                    t_elapsed += t_end - t_start
                     # --------------------------------------------
 
                     # generate an output image for the action. The image includes observations
@@ -155,8 +156,8 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
                 per_ep_metrics = {
                     k: metrics[k] for k in ["distance_to_goal", "success", "spl"]
                 }
-                per_ep_metrics['sim_time'] = t_elapsed
-                per_ep_metrics['num_steps'] = count_steps
+                per_ep_metrics["sim_time"] = t_elapsed
+                per_ep_metrics["num_steps"] = count_steps
                 # print metrics of this episode
                 for k, v in per_ep_metrics.items():
                     logger_ep.info(f"{k},{v}")
@@ -177,11 +178,17 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
                 )
             except StopIteration:
                 logger.info(f"Finished evaluation after: {count_episodes} episodes")
-                logger.info(f"Last episode evaluated: episode={episode_id}, scene={scene_id}")
+                logger.info(
+                    f"Last episode evaluated: episode={episode_id}, scene={scene_id}"
+                )
                 break
             except OSError:
-                logger.info(f"Evaulation stopped after: {count_episodes} episodes due to OSError!")
-                logger.info(f"Last episode evaluated: episode={episode_id}, scene={scene_id}")
+                logger.info(
+                    f"Evaulation stopped after: {count_episodes} episodes due to OSError!"
+                )
+                logger.info(
+                    f"Last episode evaluated: episode={episode_id}, scene={scene_id}"
+                )
                 break
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
