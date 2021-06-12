@@ -27,19 +27,35 @@ readings_depth_discrete = []
 readings_ptgoal_with_comp_discrete = []
 actions_discrete = []
 for i in range(0, num_readings):
-    readings_rgb_discrete.append(np.load(f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/rgb-{i}.npy"))
-    readings_depth_discrete.append(np.load(f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/depth-{i}.npy"))
-    readings_ptgoal_with_comp_discrete.append(np.load(f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/pointgoal_with_gps_compass-{i}.npy"))
-    actions_discrete.append(np.load(f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/acts/action-{i}.npy"))
-
+    readings_rgb_discrete.append(
+        np.load(
+            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/rgb-{i}.npy"
+        )
+    )
+    readings_depth_discrete.append(
+        np.load(
+            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/depth-{i}.npy"
+        )
+    )
+    readings_ptgoal_with_comp_discrete.append(
+        np.load(
+            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/pointgoal_with_gps_compass-{i}.npy"
+        )
+    )
+    actions_discrete.append(
+        np.load(
+            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/acts/action-{i}.npy"
+        )
+    )
 
 
 class MockHabitatAgentNode:
     r"""
-        A mock agent that checks if sensor readings from the environment
-        node is correct, and publishes pre-recorded actions back to the
-        environment.    
+    A mock agent that checks if sensor readings from the environment
+    node is correct, and publishes pre-recorded actions back to the
+    environment.
     """
+
     def __init__(self, enable_physics: bool = False):
         self.enable_physics = enable_physics
         self.sensor_pub_rate = 10
@@ -66,18 +82,23 @@ class MockHabitatAgentNode:
         # subscribe to sensor topics
         self.sub_rgb = message_filters.Subscriber("rgb", Image)
         self.sub_depth = message_filters.Subscriber("depth", numpy_msg(DepthImage))
-        self.sub_pointgoal_with_gps_compass = message_filters.Subscriber("pointgoal_with_gps_compass", PointGoalWithGPSCompass)
-        
+        self.sub_pointgoal_with_gps_compass = message_filters.Subscriber(
+            "pointgoal_with_gps_compass", PointGoalWithGPSCompass
+        )
+
         # filter sensor topics with time synchronizer
-        self.ts = TimeSynchronizer([self.sub_rgb, self.sub_depth, self.sub_pointgoal_with_gps_compass], queue_size=self.sub_queue_size)
+        self.ts = TimeSynchronizer(
+            [self.sub_rgb, self.sub_depth, self.sub_pointgoal_with_gps_compass],
+            queue_size=self.sub_queue_size,
+        )
         self.ts.registerCallback(self.callback_rgbd)
-        
+
         print("agent making sure env subscribed to command topic...")
         while self.pub.get_num_connections() == 0:
             pass
 
         print("agent initialized")
-    
+
     def depthmsg_to_cv2(self, depth_msg):
         r"""
         Converts a ROS DepthImage message to a Habitat depth observation.
@@ -89,7 +110,12 @@ class MockHabitatAgentNode:
         depth_img = np.reshape(depth_msg.data.astype(np.float32), (h, w))
         return depth_img
 
-    def msgs_to_obs(self, rgb_msg: Image = None, depth_msg: DepthImage = None, pointgoal_with_gps_compass_msg: PointGoalWithGPSCompass = None) -> Dict[str, Any]:
+    def msgs_to_obs(
+        self,
+        rgb_msg: Image = None,
+        depth_msg: DepthImage = None,
+        pointgoal_with_gps_compass_msg: PointGoalWithGPSCompass = None,
+    ) -> Dict[str, Any]:
         r"""
         Converts ROS messages into Habitat observations.
         :param rgb_msg: RGB sensor observations packed in a ROS message
@@ -102,20 +128,29 @@ class MockHabitatAgentNode:
 
         # Convert RGB message
         if rgb_msg is not None:
-            observations["rgb"] = CvBridge().imgmsg_to_cv2(rgb_msg, "passthrough").astype(np.float32)
-        
+            observations["rgb"] = (
+                CvBridge().imgmsg_to_cv2(rgb_msg, "passthrough").astype(np.float32)
+            )
+
         # Convert depth message
         if depth_msg is not None:
             observations["depth"] = self.depthmsg_to_cv2(depth_msg)
             # have to manually add channel info
-            observations["depth"] = np.expand_dims(observations["depth"], 2).astype(np.float32)
-        
+            observations["depth"] = np.expand_dims(observations["depth"], 2).astype(
+                np.float32
+            )
+
         # Convert pointgoal + GPS/compass sensor message
         if pointgoal_with_gps_compass_msg is not None:
-            observations["pointgoal_with_gps_compass"] = np.asarray([pointgoal_with_gps_compass_msg.distance_to_goal, pointgoal_with_gps_compass_msg.angle_to_goal]).astype(np.float32)
-        
+            observations["pointgoal_with_gps_compass"] = np.asarray(
+                [
+                    pointgoal_with_gps_compass_msg.distance_to_goal,
+                    pointgoal_with_gps_compass_msg.angle_to_goal,
+                ]
+            ).astype(np.float32)
+
         return observations
-    
+
     def action_to_msg(self, action: Dict[str, int]):
         r"""
         Converts action produced by Habitat agent to a ROS message.
@@ -146,9 +181,9 @@ class MockHabitatAgentNode:
             # Convert to Int16 message in discrete mode
             msg = Int16()
             msg.data = action_id
-        
+
         return msg
-    
+
     def callback_rgbd(self, rgb_msg, depth_msg, pointgoal_with_gps_compass_msg):
         r"""
         Checks if simulator readings are correct;
@@ -159,19 +194,43 @@ class MockHabitatAgentNode:
         :param pointgoal_with_gps_compass_msg: Pointgoal + GPS/Compass readings.
         """
         # convert current_observations from ROS to Habitat format
-        observations = self.msgs_to_obs(rgb_msg=rgb_msg, depth_msg=depth_msg, pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg)
-        
+        observations = self.msgs_to_obs(
+            rgb_msg=rgb_msg,
+            depth_msg=depth_msg,
+            pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg,
+        )
+
         if self.observations_count < num_readings:
             # check sensor readings' correctness
-            assert np.linalg.norm(observations["rgb"] - readings_rgb_discrete[self.observations_count]) < 1e-5, f"RGB reading at step {self.observations_count} does not match"
-            assert np.linalg.norm(observations["depth"] - readings_depth_discrete[self.observations_count]) < 1e-5, f"Depth reading at step {self.observations_count} does not match"
-            assert np.linalg.norm(observations["pointgoal_with_gps_compass"] - readings_ptgoal_with_comp_discrete[self.observations_count]) < 1e-5, f"Pointgoal + GPS/Compass reading at step {self.observations_count} does not match"
+            assert (
+                np.linalg.norm(
+                    observations["rgb"] - readings_rgb_discrete[self.observations_count]
+                )
+                < 1e-5
+            ), f"RGB reading at step {self.observations_count} does not match"
+            assert (
+                np.linalg.norm(
+                    observations["depth"]
+                    - readings_depth_discrete[self.observations_count]
+                )
+                < 1e-5
+            ), f"Depth reading at step {self.observations_count} does not match"
+            assert (
+                np.linalg.norm(
+                    observations["pointgoal_with_gps_compass"]
+                    - readings_ptgoal_with_comp_discrete[self.observations_count]
+                )
+                < 1e-5
+            ), f"Pointgoal + GPS/Compass reading at step {self.observations_count} does not match"
 
             # produce an action/velocity once the last action has completed
             # and publish to relevant topics
             if self.enable_physics:
                 self.count_frames += 1
-                if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
+                if (
+                    self.count_frames
+                    == (self.sensor_pub_rate * self.control_period) - 1
+                ):
                     self.count_frames = 0
                     action = actions_discrete[self.observations_count]
                     vel_msg = self.action_to_msg(action)
@@ -181,13 +240,14 @@ class MockHabitatAgentNode:
                 action_msg = self.action_to_msg(action)
                 self.pub.publish(action_msg)
                 print(f"published action after step {self.observations_count}")
-            
+
             self.observations_count += 1
+
 
 if __name__ == "__main__":
     # parse input arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--enable-physics', default=False, action='store_true')
+    parser.add_argument("--enable-physics", default=False, action="store_true")
     args = parser.parse_args()
 
     rospy.init_node("mock_agent_node")

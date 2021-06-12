@@ -24,8 +24,13 @@ class HabitatEnvNode:
     The node subscribes to agent command topics, and publishes sensor
     readings to sensor topics.
     """
+
     def __init__(
-        self, config_paths: Optional[str] = None, enable_physics: bool = False, episode_id_last: str = "-1", scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
+        self,
+        config_paths: Optional[str] = None,
+        enable_physics: bool = False,
+        episode_id_last: str = "-1",
+        scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     ):
         # initialize Habitat environment
         self.config = get_config(config_paths)
@@ -52,7 +57,8 @@ class HabitatEnvNode:
                     if (e.episode_id == episode_id_last) and (
                         e.scene_id == scene_id_last
                     ):
-                        print(f"Last episode found: episode-id={episode_id_last}, scene-id={scene_id_last}"
+                        print(
+                            f"Last episode found: episode-id={episode_id_last}, scene-id={scene_id_last}"
                         )
                         last_ep_found = True
                 except StopIteration:
@@ -79,25 +85,39 @@ class HabitatEnvNode:
             # we create one topic for each of RGB, Depth and GPS+Compass
             # sensor
             if sensor_uuid == "rgb":
-                self.pub_rgb = rospy.Publisher(sensor_uuid, Image, queue_size=self.pub_queue_size)
+                self.pub_rgb = rospy.Publisher(
+                    sensor_uuid, Image, queue_size=self.pub_queue_size
+                )
             elif sensor_uuid == "depth":
-                self.pub_depth = rospy.Publisher(sensor_uuid, numpy_msg(DepthImage), queue_size=self.pub_queue_size)
+                self.pub_depth = rospy.Publisher(
+                    sensor_uuid, numpy_msg(DepthImage), queue_size=self.pub_queue_size
+                )
             elif sensor_uuid == "pointgoal_with_gps_compass":
-                self.pub_pointgoal_with_gps_compass = rospy.Publisher(sensor_uuid, PointGoalWithGPSCompass, queue_size=10)
+                self.pub_pointgoal_with_gps_compass = rospy.Publisher(
+                    sensor_uuid, PointGoalWithGPSCompass, queue_size=10
+                )
 
         # subscribe to command topics
         if self.enable_physics:
-            self.sub = rospy.Subscriber("cmd_vel", Twist, self.callback, queue_size=self.sub_queue_size)
+            self.sub = rospy.Subscriber(
+                "cmd_vel", Twist, self.callback, queue_size=self.sub_queue_size
+            )
         else:
-            self.sub = rospy.Subscriber("action", Int16, self.callback, queue_size=self.sub_queue_size)
+            self.sub = rospy.Subscriber(
+                "action", Int16, self.callback, queue_size=self.sub_queue_size
+            )
 
         # wait until connections with the agent is established
         print("env making sure agent is subscribed to sensor topics...")
-        while self.pub_rgb.get_num_connections() == 0 or self.pub_depth.get_num_connections() == 0 or self.pub_pointgoal_with_gps_compass.get_num_connections() == 0:
+        while (
+            self.pub_rgb.get_num_connections() == 0
+            or self.pub_depth.get_num_connections() == 0
+            or self.pub_pointgoal_with_gps_compass.get_num_connections() == 0
+        ):
             pass
 
         print("env initialized")
-    
+
     def cv2_to_depthmsg(self, depth_img: DepthImage):
         r"""
         Converts a Habitat depth image to a ROS DepthImage message.
@@ -109,7 +129,7 @@ class HabitatEnvNode:
         depth_msg.step = depth_msg.width
         depth_msg.data = np.ravel(depth_img)
         return depth_msg
-    
+
     def obs_to_msgs(self, observations_hab: Observations):
         r"""
         Converts Habitat observations to ROS messages.
@@ -127,8 +147,10 @@ class HabitatEnvNode:
         for sensor_uuid, _ in observations_hab.items():
             sensor_data = observations_hab[sensor_uuid]
             # we publish to each of RGB, Depth and GPS+Compass sensor
-            if sensor_uuid == "rgb": 
-                rgb_msg = CvBridge().cv2_to_imgmsg(sensor_data.astype(np.uint8), encoding="passthrough")
+            if sensor_uuid == "rgb":
+                rgb_msg = CvBridge().cv2_to_imgmsg(
+                    sensor_data.astype(np.uint8), encoding="passthrough"
+                )
                 h = Header()
                 h.stamp = t_curr
                 rgb_msg.header = h
@@ -163,8 +185,10 @@ class HabitatEnvNode:
                 elif sensor_uuid == "depth":
                     self.pub_depth.publish(observations_ros["depth"])
                 elif sensor_uuid == "pointgoal_with_gps_compass":
-                    self.pub_pointgoal_with_gps_compass.publish(observations_ros["pointgoal_with_gps_compass"])
-            #print("published observations")  
+                    self.pub_pointgoal_with_gps_compass.publish(
+                        observations_ros["pointgoal_with_gps_compass"]
+                    )
+            # print("published observations")
 
     def step(self):
         r"""
@@ -183,10 +207,10 @@ class HabitatEnvNode:
         :param cmd_msg: Either a velocity command or an action command.
         """
         # unpack agent action from ROS message, and send the action
-        # to the simulator 
+        # to the simulator
         if self.enable_physics is True:
             # TODO: invoke step_physics() or something to set velocity
-            pass 
+            pass
         else:
             with self.action_cv:
                 self.action = cmd_msg.data
@@ -200,7 +224,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
-    parser.add_argument('--enable-physics', default=False, action='store_true')
+    parser.add_argument("--enable-physics", default=False, action="store_true")
     parser.add_argument(
         "--sensor-pub-rate",
         type=int,
@@ -215,8 +239,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     rospy.init_node("env_node")
-    env_node = HabitatEnvNode(config_paths=args.task_config, enable_physics=args.enable_physics, episode_id_last=args.episode_id, scene_id_last=args.scene_id_last)
-    
+    env_node = HabitatEnvNode(
+        config_paths=args.task_config,
+        enable_physics=args.enable_physics,
+        episode_id_last=args.episode_id,
+        scene_id_last=args.scene_id_last,
+    )
+
     # publish observations at fixed rate
     r = rospy.Rate(args.sensor_pub_rate)
     while not rospy.is_shutdown():
