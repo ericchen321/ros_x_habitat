@@ -1,9 +1,0 @@
-{
-	"render_mesh": "locobot_merged.glb",
-	"collision_mesh": "locobot_merged_convex.glb",
-	"join_collision_meshes": false,
-	"mass": 4.35,
-	"friction_coefficient": 0.4,
-	"restitution_coefficient": 0.05,
-	"COM": [0, 0.05, 0]
-}

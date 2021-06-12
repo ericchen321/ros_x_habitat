@@ -7,7 +7,7 @@ from typing import (
 )
 import numpy as np
 from gym import spaces
-from classes.physics_simulator import PhysicsSimulator
+from src.classes.physics_simulator import PhysicsSimulator
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.spaces import Space

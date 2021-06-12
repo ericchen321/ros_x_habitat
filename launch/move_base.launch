@@ -1,6 +1,6 @@
 <launch>
 
-   <arg name="map_path" default="$(find ros-x-habitat)/maps/mymap.yaml"/>
+   <arg name="map_path" default="$(find ros_x_habitat)/maps/mymap.yaml"/>
 
    <master auto="start"/>
 
@@ -46,11 +46,11 @@
    </node>
 
    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-      <rosparam file="$(find ros-x-habitat)/navigation_params/costmap_common_params.yaml" command="load" ns="global_costmap" />
-      <rosparam file="$(find ros-x-habitat)/navigation_params/costmap_common_params.yaml" command="load" ns="local_costmap" />
-      <rosparam file="$(find ros-x-habitat)/navigation_params/local_costmap_params.yaml" command="load" />
-      <rosparam file="$(find ros-x-habitat)/navigation_params/global_costmap_params.yaml" command="load" />
-      <rosparam file="$(find ros-x-habitat)/navigation_params/base_local_planner_params.yaml" command="load" />
+      <rosparam file="$(find ros_x_habitat)/navigation_params/costmap_common_params.yaml" command="load" ns="global_costmap" />
+      <rosparam file="$(find ros_x_habitat)/navigation_params/costmap_common_params.yaml" command="load" ns="local_costmap" />
+      <rosparam file="$(find ros_x_habitat)/navigation_params/local_costmap_params.yaml" command="load" />
+      <rosparam file="$(find ros_x_habitat)/navigation_params/global_costmap_params.yaml" command="load" />
+      <rosparam file="$(find ros_x_habitat)/navigation_params/base_local_planner_params.yaml" command="load" />
    </node>
 
    <node pkg="rosservice" type="rosservice" name="global_loc" args="call --wait /global_localization"/>
@@ -59,7 +59,7 @@
    <arg name="trajectory_source_frame_name" default="/base_frame"/>
    <arg name="trajectory_update_rate" default="4"/>
    <arg name="trajectory_publish_rate" default="0.25"/>
-   <arg name="map_file_path" default="$(find ros-x-habitat)"/>
+   <arg name="map_file_path" default="$(find ros_x_habitat)"/>
    <arg name="map_file_base_name" default="mymap.yaml"/>
 
 

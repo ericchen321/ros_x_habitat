@@ -1,7 +1,0 @@
-{
-    "render mesh": "chefcan.glb",
-    "collision mesh": "chefcan_convex.glb",
-    "mass": 0.414,
-    "friction coefficient": 0.5,
-    "restitution coefficient": 0.1
-}
