@@ -97,21 +97,35 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
         while count_episodes < num_episodes:
             try:
                 count_steps = 0
-                t_elapsed = 0.0
-                # ------------ log sim time start ------------
-                t_start = time.clock()
-                # --------------------------------------------
+                t_sim_elapsed = 0.0
+                t_agent_elapsed = 0.0
 
                 # initialize a new episode
                 observations_per_episode = []
+
+                # ------------ log agent time start ------------
+                t_agent_start = time.clock()
+                # ----------------------------------------------
+
                 agent.reset()
+
+                # ------------ log agent time end ------------
+                t_agent_end = time.clock()
+                t_agent_elapsed += t_agent_end - t_agent_start
+                # --------------------------------------------
+
+                # ------------ log sim time start ------------
+                t_sim_start = time.clock()
+                # --------------------------------------------
+
                 observations_per_action = self._env._env.reset()
-                current_episode = self._env._env.current_episode
 
                 # ------------  log sim time end  ------------
-                t_end = time.clock()
-                t_elapsed += t_end - t_start
+                t_sim_end = time.clock()
+                t_sim_elapsed += t_sim_end - t_sim_start
                 # --------------------------------------------
+
+                current_episode = self._env._env.current_episode
 
                 # get episode and scene id
                 episode_id = int(current_episode.episode_id)
@@ -125,21 +139,32 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
 
                 # act until one episode is over
                 while not self._env._env.episode_over:
-                    # ------------ log sim time start ------------
-                    t_start = time.clock()
-                    # --------------------------------------------
+                    # ------------ log agent time start ------------
+                    t_agent_start = time.clock()
+                    # ----------------------------------------------
 
                     action = agent.act(observations_per_action)
+
+                    # ------------ log agent time end ------------
+                    t_agent_end = time.clock()
+                    t_agent_elapsed += t_agent_end - t_agent_start
+                    # --------------------------------------------
+
                     observations_per_action = None
                     info_per_action = None
+
+                    # ------------ log sim time start ------------
+                    t_sim_start = time.clock()
+                    # --------------------------------------------
+
                     (observations_per_action, _, _, info_per_action) = self._env.step(
                         action
                     )
                     count_steps += 1
 
                     # ------------  log sim time end  ------------
-                    t_end = time.clock()
-                    t_elapsed += t_end - t_start
+                    t_sim_end = time.clock()
+                    t_sim_elapsed += t_sim_end - t_sim_start
                     # --------------------------------------------
 
                     # generate an output image for the action. The image includes observations
@@ -156,7 +181,8 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
                 per_ep_metrics = {
                     k: metrics[k] for k in ["distance_to_goal", "success", "spl"]
                 }
-                per_ep_metrics["sim_time"] = t_elapsed
+                per_ep_metrics["agent_time"] = t_agent_elapsed
+                per_ep_metrics["sim_time"] = t_sim_elapsed
                 per_ep_metrics["num_steps"] = count_steps
                 # print metrics of this episode
                 for k, v in per_ep_metrics.items():
