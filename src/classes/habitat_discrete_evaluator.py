@@ -42,6 +42,7 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
         episode_id_last: str = "-1",
         scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
         log_dir: str = "logs/",
+        make_videos: bool = False,
         video_dir: str = "videos/",
         tb_dir: str = "tb/",
     ) -> Dict[str, float]:
@@ -49,8 +50,6 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
 
         Args:
             agent: agent to be evaluated in environment.
-            num_episodes: count of number of episodes for which the
-            evaluation should be run.
 
         Return:
             dict containing metrics tracked by environment.
@@ -192,16 +191,17 @@ class HabitatDiscreteEvaluator(HabitatEvaluator):
                     agg_metrics[m] += v
                 count_episodes += 1
                 # generate video
-                generate_video(
-                    video_option=["disk", "tensorboard"],
-                    video_dir=video_dir,
-                    images=observations_per_episode,
-                    episode_id=episode_id,
-                    scene_id=scene_id,
-                    checkpoint_idx=0,
-                    metrics=per_ep_metrics,
-                    tb_writer=writer,
-                )
+                if make_videos:
+                    generate_video(
+                        video_option=["disk", "tensorboard"],
+                        video_dir=video_dir,
+                        images=observations_per_episode,
+                        episode_id=episode_id,
+                        scene_id=scene_id,
+                        checkpoint_idx=0,
+                        metrics=per_ep_metrics,
+                        tb_writer=writer,
+                    )
             except StopIteration:
                 logger.info(f"Finished evaluation after: {count_episodes} episodes")
                 logger.info(

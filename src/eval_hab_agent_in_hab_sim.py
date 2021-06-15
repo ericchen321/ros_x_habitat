@@ -43,6 +43,7 @@ def main():
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
     parser.add_argument("--log-dir", type=str, default="logs/")
+    parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--video-dir", type=str, default="videos/")
     parser.add_argument("--tb-dir", type=str, default="tb/")
     args = parser.parse_args()
@@ -71,6 +72,7 @@ def main():
         episode_id_last=args.episode_id,
         scene_id_last=args.scene_id,
         log_dir=args.log_dir,
+        make_videos=args.make_videos,
         video_dir=args.video_dir,
         tb_dir=args.tb_dir,
     )
