@@ -20,7 +20,11 @@ from habitat_baselines.agents.ppo_agents import PPOAgent
 from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 from math import radians
 import numpy as np
+import time
+from ros_x_habitat.srv import ResetAgent
 
+# logging
+from src.classes import utils_logging
 
 def get_default_config():
     c = Config()
@@ -46,19 +50,23 @@ class HabitatAgentNode:
         agent_config: Config,
         enable_physics: bool = False,
         control_period: float = 1.0,
-        sensor_pub_rate: int = 10,
+        sensor_pub_rate: float = 5.0,
     ):
         self.agent = PPOAgent(agent_config)
         self.input_type = agent_config.INPUT_TYPE
         self.enable_physics = enable_physics
-        self.sensor_pub_rate = sensor_pub_rate
+        self.sensor_pub_rate = float(sensor_pub_rate)
+
+        # set up logger
+        self.logger = utils_logging.setup_logger("agent_node")
 
         # agent publish and subscribe queue size
         # TODO: make them configurable by constructor argument
         self.sub_queue_size = 10
         self.pub_queue_size = 10
 
-        self.agent.reset()
+        # establish reset protocol with env
+        self.reset_service = rospy.Service('reset_agent', ResetAgent, self.reset_agent)
 
         # the last action produced from the agent
         self.action = None
@@ -108,11 +116,20 @@ class HabitatAgentNode:
             )
             self.ts.registerCallback(self.callback_depth)
 
-        print("agent making sure env subscribed to command topic...")
+        self.logger.info("agent making sure env subscribed to command topic...")
         while self.pub.get_num_connections() == 0:
             pass
 
-        print("agent initialized")
+        self.logger.info("agent initialized")
+    
+    def reset_agent(self, request):
+        r"""
+        ROS service handler which resets the agent.
+        :param request: any integer.
+        :returns: True
+        """
+        self.agent.reset()
+        return True
 
     def depthmsg_to_cv2(self, depth_msg):
         r"""
@@ -261,6 +278,11 @@ class HabitatAgentNode:
         :param depth_msg: Depth sensor readings in ROS message format.
         :param pointgoal_with_gps_compass_msg: Pointgoal + GPS/Compass readings.
         """
+                
+        # ------------ log agent time start ------------
+        t_agent_start = time.clock()
+        # ----------------------------------------------
+        
         # convert current_observations from ROS to Habitat format
         observations = self.msgs_to_obs(
             rgb_msg=rgb_msg,
@@ -282,6 +304,12 @@ class HabitatAgentNode:
             action_msg = self.action_to_msg(self.action)
             self.pub.publish(action_msg)
 
+        # ------------ log agent time end ------------
+        t_agent_end = time.clock()
+        t_agent_elapsed = t_agent_end - t_agent_start
+        #print(f"time: {t_agent_elapsed} sec")
+        # --------------------------------------------
+
 
 if __name__ == "__main__":
     # parse input arguments
@@ -300,7 +328,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--sensor-pub-rate",
-        type=int,
+        type=float,
         default=10,
     )
     args = parser.parse_args()
