@@ -123,18 +123,18 @@ class HabROSHabEvaluator(Evaluator):
                     # set up logger
                     episode_id = resp.episode_id
                     scene_id = resp.scene_id
-                    logger_episode = utils_logging.setup_logger(
+                    logger_per_episode = utils_logging.setup_logger(
                         f"{__name__}-{episode_id}-{scene_id}",
                         f"{log_dir}/{episode_id}-{os.path.basename(scene_id)}.log",
                     )
 
                     # log episode ID and scene ID
-                    logger_episode.info(f"episode id: {episode_id}")
-                    logger_episode.info(f"scene id: {scene_id}")
+                    logger_per_episode.info(f"episode id: {episode_id}")
+                    logger_per_episode.info(f"scene id: {scene_id}")
 
                     # print metrics of this episode
                     for k, v in per_ep_metrics.items():
-                        logger_episode.info(f"{k},{v}")
+                        logger_per_episode.info(f"{k},{v}")
                     
                     # calculate aggregated metrics over episodes eval'ed so far
                     for m, v in per_ep_metrics.items():

@@ -151,12 +151,12 @@ class HabNApHabEvaluator(Evaluator):
                 # get episode and scene id
                 episode_id = str(current_episode.episode_id)
                 scene_id = current_episode.scene_id
-                logger_episode = utils_logging.setup_logger(
+                logger_per_episode = utils_logging.setup_logger(
                     f"{__name__}-{episode_id}-{scene_id}",
                     f"{log_dir}/{episode_id}-{os.path.basename(scene_id)}.log",
                 )
-                logger_episode.info(f"episode id: {episode_id}")
-                logger_episode.info(f"scene id: {scene_id}")
+                logger_per_episode.info(f"episode id: {episode_id}")
+                logger_per_episode.info(f"scene id: {scene_id}")
 
                 # act until one episode is over
                 print(f"walking in {count_episodes} episode")
@@ -209,7 +209,7 @@ class HabNApHabEvaluator(Evaluator):
                 per_ep_metrics["num_steps"] = count_steps
                 # print metrics of this episode
                 for k, v in per_ep_metrics.items():
-                    logger_episode.info(f"{k},{v}")
+                    logger_per_episode.info(f"{k},{v}")
                 # calculate aggregated metrics over episodes eval'ed so far
                 for m, v in per_ep_metrics.items():
                     agg_metrics[m] += v
