@@ -8,7 +8,7 @@ class Evaluator:
     r"""Abstract class for evaluating an agent in a simulation environment
     either with or without physics.
 
-    Users should instantiate 'HabNApHabEvaluator' or 'HabROSHabEvaluator', etc
+    Users should instantiate 'HabitatEvaluator' or 'HabitatROSEvaluator', etc
     as sublcasses of 'Evaluator'.
     """
 

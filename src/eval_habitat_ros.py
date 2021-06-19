@@ -3,7 +3,7 @@ import argparse
 import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
-from src.classes.hab_ros_hab_evaluator import HabROSHabEvaluator
+from src.classes.habitat_ros_evaluator import HabitatROSEvaluator
 from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging
@@ -54,11 +54,11 @@ def main():
     evaluator = None
     if "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabROSHabEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, enable_physics=False)
+        evaluator = HabitatROSEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, enable_physics=False)
     elif "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
         # TODO: pass in control period
-        evaluator = HabROSHabEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, enable_physics=True)
+        evaluator = HabitatROSEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, enable_physics=True)
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError

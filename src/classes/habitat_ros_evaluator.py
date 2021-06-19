@@ -7,23 +7,62 @@ from ros_x_habitat.srv import *
 from subprocess import Popen
 import shlex
 import rospy
+
+# use TensorBoard to visualize
+from src.classes.utils_tensorboard import TensorboardWriter, generate_video
+from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
+from habitat.tasks.nav.nav import NavigationEpisode
 
+# logging
+import os
+from src.classes import utils_logging
+from traceback import print_exc
 
-class MockHabROSHabEvaluator(Evaluator):
+# sim timing
+import time
+
+class HabitatROSEvaluator(Evaluator):
     r"""Class to evaluate Habitat agents in Habitat environments with ROS
     as middleware.
     """
 
     def __init__(
         self,
+        input_type: str,
+        model_path: str,
+        config_paths: str,
+        sensor_pub_rate: float,
+        enable_physics: bool = False,
     ) -> None:
         r"""..
-        Constructor for the setting 3 mock evaluator.
+
+        :param input_type: agent's input type, options: "rgb", "rgbd",
+            "depth", "blind"
+        :param model_path: path to agent's model
+        :param config_paths: file to be used for creating the environment
+        :param sensor_pub_rate: rate at which the env node publishes sensor
+            readings
+        :param enable_physics: use dynamic simulation or not
         """
 
+        # check if agent input type is valid
+        assert input_type in ["rgb", "rgbd", "depth", "blind"]
+
+        if enable_physics:
+            # TODO: pass extra arguments to define agent and sim with dynamics
+            raise NotImplementedError
+        else:
+            # start the agent node
+            agent_node_args = shlex.split(f"python classes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}")
+            Popen(agent_node_args)
+
+            # start the env node
+            env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {sensor_pub_rate}")
+            Popen(env_node_args)
+
         # start the evaluator node
-        rospy.init_node("mock_evaluator_hab_ros_hab")
+        rospy.init_node("evaluator_habitat_ros")
     
     def evaluate(
         self,
@@ -43,13 +82,13 @@ class MockHabROSHabEvaluator(Evaluator):
         :param episode_id_last: ID of the last episode evaluated; -1 for evaluating
             from start
         :param scene_id_last: Scene ID of the last episode evaluated
-        --- The following parameters are unused:
         :param log_dir: logging directory
         :param make_videos: toggle video production on/off
         :param video_dir: directory to store videos
         :param tb_dir: Tensorboard logging directory
         :return: dict containing metrics tracked by environment.
         """
+        logger = utils_logging.setup_logger(__name__)
 
         count_episodes = 0
         agg_metrics: Dict = defaultdict(float)
@@ -71,7 +110,7 @@ class MockHabROSHabEvaluator(Evaluator):
                 
                 if resp.episode_id == "-1":
                     # no more episodes
-                    print(f"Finished evaluation after: {count_episodes} episodes")
+                    logger.info(f"Finished evaluation after: {count_episodes} episodes")
                     break
                 else:
                     # get per-episode metrics
@@ -80,6 +119,22 @@ class MockHabROSHabEvaluator(Evaluator):
                         "success": resp.success,
                         "spl": resp.spl
                     }
+
+                    # set up logger
+                    episode_id = resp.episode_id
+                    scene_id = resp.scene_id
+                    logger_per_episode = utils_logging.setup_logger(
+                        f"{__name__}-{episode_id}-{scene_id}",
+                        f"{log_dir}/{episode_id}-{os.path.basename(scene_id)}.log",
+                    )
+
+                    # log episode ID and scene ID
+                    logger_per_episode.info(f"episode id: {episode_id}")
+                    logger_per_episode.info(f"scene id: {scene_id}")
+
+                    # print metrics of this episode
+                    for k, v in per_ep_metrics.items():
+                        logger_per_episode.info(f"{k},{v}")
                     
                     # calculate aggregated metrics over episodes eval'ed so far
                     for m, v in per_ep_metrics.items():
@@ -87,7 +142,7 @@ class MockHabROSHabEvaluator(Evaluator):
                     
                     count_episodes += 1
             except rospy.ServiceException:
-                print(f"Evaluation call failed at {count_episodes}-th episode")
+                logger.info(f"Evaluation call failed at {count_episodes}-th episode")
                 break
         
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}

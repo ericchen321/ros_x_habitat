@@ -3,7 +3,7 @@ import argparse
 import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
-from src.classes.hab_nap_hab_evaluator import HabNApHabEvaluator
+from src.classes.habitat_evaluator import HabitatEvaluator
 from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging
@@ -59,10 +59,10 @@ def main():
     evaluator = None
     if "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabNApHabEvaluator(config_paths=args.task_config, agent=agent, enable_physics=False)
+        evaluator = HabitatEvaluator(config_paths=args.task_config, agent=agent, enable_physics=False)
     elif "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
-        evaluator = HabNApHabEvaluator(config_paths=args.task_config, agent=agent, enable_physics=True)
+        evaluator = HabitatEvaluator(config_paths=args.task_config, agent=agent, enable_physics=True)
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError

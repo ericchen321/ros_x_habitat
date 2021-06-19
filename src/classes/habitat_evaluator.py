@@ -20,7 +20,7 @@ from traceback import print_exc
 import time
 
 
-class HabNApHabEvaluator(Evaluator):
+class HabitatEvaluator(Evaluator):
     r"""Class to evaluate a Habitat agent in a Habitat simulator instance 
     without ROS as middleware.
     """
