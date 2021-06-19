@@ -43,6 +43,7 @@ def main():
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
     parser.add_argument("--sensor-pub-rate", type=float, default=5.0)
+    parser.add_argument("--do-not-start-nodes-from-evaluator", default=False, action="store_true")
     parser.add_argument("--log-dir", type=str, default="logs/")
     parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--video-dir", type=str, default="videos/")
@@ -54,11 +55,11 @@ def main():
     evaluator = None
     if "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabitatROSEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, enable_physics=False)
+        evaluator = HabitatROSEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, do_not_start_nodes=args.do_not_start_nodes_from_evaluator, enable_physics=False)
     elif "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
         # TODO: pass in control period
-        evaluator = HabitatROSEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, enable_physics=True)
+        evaluator = HabitatROSEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, do_not_start_nodes=args.do_not_start_nodes_from_evaluator, enable_physics=True)
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError

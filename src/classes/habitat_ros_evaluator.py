@@ -33,6 +33,7 @@ class HabitatROSEvaluator(Evaluator):
         model_path: str,
         config_paths: str,
         sensor_pub_rate: float,
+        do_not_start_nodes: bool = False,
         enable_physics: bool = False,
     ) -> None:
         r"""..
@@ -43,6 +44,8 @@ class HabitatROSEvaluator(Evaluator):
         :param config_paths: file to be used for creating the environment
         :param sensor_pub_rate: rate at which the env node publishes sensor
             readings
+        :param do_not_nodes: if True then the evaluator would not start the
+            env node and the agent node.
         :param enable_physics: use dynamic simulation or not
         """
 
@@ -53,13 +56,14 @@ class HabitatROSEvaluator(Evaluator):
             # TODO: pass extra arguments to define agent and sim with dynamics
             raise NotImplementedError
         else:
-            # start the agent node
-            agent_node_args = shlex.split(f"python classes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}")
-            Popen(agent_node_args)
+            if do_not_start_nodes is False:
+                # start the agent node
+                agent_node_args = shlex.split(f"python classes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}")
+                Popen(agent_node_args)
 
-            # start the env node
-            env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {sensor_pub_rate}")
-            Popen(env_node_args)
+                # start the env node
+                env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {sensor_pub_rate}")
+                Popen(env_node_args)
 
         # start the evaluator node
         rospy.init_node("evaluator_habitat_ros")
