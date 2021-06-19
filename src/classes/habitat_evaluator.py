@@ -159,7 +159,6 @@ class HabitatEvaluator(Evaluator):
                 logger_per_episode.info(f"scene id: {scene_id}")
 
                 # act until one episode is over
-                print(f"walking in {count_episodes} episode")
                 while not self.env._env.episode_over:
 
                     # ------------ log agent time start ------------
