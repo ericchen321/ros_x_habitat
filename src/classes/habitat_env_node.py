@@ -2,7 +2,6 @@
 import argparse
 from typing import (
     TYPE_CHECKING,
-    Optional,
 )
 import numpy as np
 import rospy
@@ -17,9 +16,10 @@ from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
 from habitat.config.default import get_config
 from threading import Condition
 from ros_x_habitat.srv import EvalEpisode, ResetAgent
+from src.classes.constants import AgentResetCommands
 
 # logging
-import utils_logging
+from src.classes import utils_logging
 
 
 class HabitatEnvNode:
@@ -31,7 +31,7 @@ class HabitatEnvNode:
 
     def __init__(
         self,
-        config_paths: Optional[str] = None,
+        config_paths: str = None,
         enable_physics: bool = False,
         pub_rate: float = 5.0
     ):
@@ -77,7 +77,7 @@ class HabitatEnvNode:
         self.new_action_published = False
         self.action_cv = Condition()
 
-        # establish reset protocol with agent
+        # establish reset service with agent
         self.reset_agent = rospy.ServiceProxy('reset_agent', ResetAgent)
 
         # define the max rate at which we publish sensor readings
@@ -104,7 +104,7 @@ class HabitatEnvNode:
                 "pointgoal_with_gps_compass", PointGoalWithGPSCompass, queue_size=10
             )
 
-        # subscribe to command topics
+        # subscribe from command topics
         if self.enable_physics:
             self.sub = rospy.Subscriber(
                 "cmd_vel", Twist, self.callback, queue_size=self.sub_queue_size
@@ -129,15 +129,7 @@ class HabitatEnvNode:
         r"""
         Resets the agent and the simulator. Requires being called only from
         the main thread.
-        """
-        # reset agent
-        rospy.wait_for_service("reset_agent")
-        try:
-            resp = self.reset_agent(0)
-            assert resp.done
-        except rospy.ServiceException:
-            self.logger.info("Failed to reset agent!")
-        
+        """        
         # reset the simulator
         with self.enable_reset_cv:
             while self.enable_reset is False:
@@ -169,6 +161,14 @@ class HabitatEnvNode:
             # initialize observations
             with self.action_cv:
                 self.observations = self.env.reset()
+            
+            # reset agent
+            rospy.wait_for_service("reset_agent")
+            try:
+                resp = self.reset_agent(int(AgentResetCommands.RESET))
+                assert resp.done
+            except rospy.ServiceException:
+                self.logger.info("Failed to reset agent!")
 
             self.enable_reset = False
     
@@ -178,7 +178,8 @@ class HabitatEnvNode:
         metrics.
         :param request: evaluation parameters provided by evaluator, including
             last episode ID and last scene ID.
-        :return: metrics including distance-to-goal, success and spl.
+        :return: 1) episode ID and scene ID; 2) metrics including distance-to-
+        goal, success and spl.
         """
         with self.enable_reset_cv:
             # unpack evaluator request
@@ -323,8 +324,8 @@ class HabitatEnvNode:
          # publish observations at fixed rate
         r = rospy.Rate(self.pub_rate)
         while not self.env._env.episode_over:
-            env_node.publish_sensor_observations()
-            env_node.step()
+            self.publish_sensor_observations()
+            self.step()
             # if episode is done, disable evaluation and alert eval_episode()
             if self.env._env.episode_over:
                 with self.enable_eval_cv:
@@ -371,6 +372,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    # initialize the env node
     rospy.init_node("env_node")
     env_node = HabitatEnvNode(
         config_paths=args.task_config,
@@ -388,4 +390,13 @@ if __name__ == "__main__":
                 env_node.all_episodes_evaluated = True
                 env_node.enable_eval = False
                 env_node.enable_eval_cv.notify()
+            # request agent to shut down
+            rospy.wait_for_service("reset_agent")
+            try:
+                resp = env_node.reset_agent(int(AgentResetCommands.SHUTDOWN))
+                assert resp.done
+            except rospy.ServiceException:
+                env_node.logger.info("Failed to shut down agent!")
+            # shut down the env node
+            rospy.signal_shutdown("no episodes to evaluate")
             break
