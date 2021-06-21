@@ -18,9 +18,16 @@ from cv_bridge import CvBridge, CvBridgeError
 from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 from math import radians
 import numpy as np
+import os
+from ros_x_habitat.srv import ResetAgent
+from threading import Lock
+from src.classes.constants import AgentResetCommands
+from threading import Condition
 
 
 # load sensor readings and actions from disk
+episode_id = 49
+scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 num_readings = 27
 readings_rgb_discrete = []
 readings_depth_discrete = []
@@ -29,22 +36,22 @@ actions_discrete = []
 for i in range(0, num_readings):
     readings_rgb_discrete.append(
         np.load(
-            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/rgb-{i}.npy"
+            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/rgb-{episode_id}-{os.path.basename(scene_id)}-{i}.npy"
         )
     )
     readings_depth_discrete.append(
         np.load(
-            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/depth-{i}.npy"
+            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/depth-{episode_id}-{os.path.basename(scene_id)}-{i}.npy"
         )
     )
     readings_ptgoal_with_comp_discrete.append(
         np.load(
-            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/obs/pointgoal_with_gps_compass-{i}.npy"
+            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/pointgoal_with_gps_compass-{episode_id}-{os.path.basename(scene_id)}-{i}.npy"
         )
     )
     actions_discrete.append(
         np.load(
-            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/tests/acts/action-{i}.npy"
+            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/acts/action-{episode_id}-{os.path.basename(scene_id)}-{i}.npy"
         )
     )
 
@@ -56,13 +63,21 @@ class MockHabitatAgentNode:
     environment.
     """
 
-    def __init__(self, enable_physics: bool = False):
+    def __init__(
+        self,
+        enable_physics: bool = False,
+        control_period: float = 1.0,
+        sensor_pub_rate: float = 5.0
+    ):
         self.enable_physics = enable_physics
-        self.sensor_pub_rate = 10
+        self.sensor_pub_rate = sensor_pub_rate
         self.observations_count = 0
 
         self.sub_queue_size = 10
         self.pub_queue_size = 10
+
+        # establish reset protocol with env
+        self.reset_service = rospy.Service('reset_agent', ResetAgent, self.reset_agent)
 
         if self.enable_physics:
             self.control_period = 1.0
@@ -72,6 +87,14 @@ class MockHabitatAgentNode:
         # not applicable in discrete mode
         if self.enable_physics:
             self.count_frames = 0
+        
+        # lock guarding access to self.action, self.count_frames and
+        # self.agent
+        self.lock = Lock()
+
+        # shutdown triggers the node to be shutdown. Guarded by shutdown_cv
+        self.shutdown = False
+        self.shutdown_cv = Condition()
 
         # publish to command topics
         if self.enable_physics:
@@ -98,6 +121,26 @@ class MockHabitatAgentNode:
             pass
 
         print("agent initialized")
+
+    def reset_agent(self, request):
+        r"""
+        ROS service handler which resets the agent and related variables.
+        :param request: command from the env node.
+        :returns: True
+        """
+        if request.reset == AgentResetCommands.RESET:
+            # fake-reset the agent
+            self.lock.acquire()
+            self.count_frames = 0
+            self.action = None
+            self.lock.release()
+            return True
+        elif request.reset == AgentResetCommands.SHUTDOWN:
+            # shut down the agent node
+            with self.shutdown_cv:
+                self.shutdown = True
+                self.shutdown_cv.notify()
+                return True
 
     def depthmsg_to_cv2(self, depth_msg):
         r"""
@@ -225,6 +268,7 @@ class MockHabitatAgentNode:
 
             # produce an action/velocity once the last action has completed
             # and publish to relevant topics
+            self.lock.acquire()
             if self.enable_physics:
                 self.count_frames += 1
                 if (
@@ -239,7 +283,7 @@ class MockHabitatAgentNode:
                 action = {"action": actions_discrete[self.observations_count]}
                 action_msg = self.action_to_msg(action)
                 self.pub.publish(action_msg)
-                print(f"published action after step {self.observations_count}")
+            self.lock.release()
 
             self.observations_count += 1
 
@@ -248,8 +292,28 @@ if __name__ == "__main__":
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--enable-physics", default=False, action="store_true")
+    parser.add_argument(
+        "--control-period",
+        type=float,
+        default=1.0,
+    )
+    parser.add_argument(
+        "--sensor-pub-rate",
+        type=float,
+        default=10,
+    )
     args = parser.parse_args()
-
+    
+    # init mock agent node
     rospy.init_node("mock_agent_node")
-    mock_agent_node = MockHabitatAgentNode(enable_physics=args.enable_physics)
-    rospy.spin()
+    mock_agent_node = MockHabitatAgentNode(
+        enable_physics = args.enable_physics,
+        control_period = args.control_period,
+        sensor_pub_rate = args.sensor_pub_rate
+    )
+    
+    # shutdown the mock agent node after getting the signal
+    with mock_agent_node.shutdown_cv:
+        while mock_agent_node.shutdown is False:
+            mock_agent_node.shutdown_cv.wait()
+        rospy.signal_shutdown("received request to shut down")

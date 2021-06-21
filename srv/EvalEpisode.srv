@@ -1,0 +1,8 @@
+string episode_id_last
+string scene_id_last
+---
+string episode_id
+string scene_id
+float32 distance_to_goal
+float32 success
+float32 spl

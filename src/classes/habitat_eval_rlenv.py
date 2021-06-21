@@ -2,7 +2,7 @@ from src.classes.habitat_rlenv import HabitatRLEnv
 
 
 class HabitatEvalRLEnv(HabitatRLEnv):
-    r"""Custom RL environment for HabitatEvaluator."""
+    r"""Custom RL environment for Evaluator."""
 
     def get_reward_range(self):
         return [-1, 1]

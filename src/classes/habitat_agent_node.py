@@ -20,7 +20,14 @@ from habitat_baselines.agents.ppo_agents import PPOAgent
 from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 from math import radians
 import numpy as np
+import time
+from ros_x_habitat.srv import ResetAgent
+from threading import Lock
+from src.classes.constants import AgentResetCommands
+from threading import Condition
 
+# logging
+from src.classes import utils_logging
 
 def get_default_config():
     c = Config()
@@ -46,32 +53,44 @@ class HabitatAgentNode:
         agent_config: Config,
         enable_physics: bool = False,
         control_period: float = 1.0,
-        sensor_pub_rate: int = 10,
+        sensor_pub_rate: float = 5.0,
     ):
         self.agent = PPOAgent(agent_config)
         self.input_type = agent_config.INPUT_TYPE
         self.enable_physics = enable_physics
-        self.sensor_pub_rate = sensor_pub_rate
+        self.sensor_pub_rate = float(sensor_pub_rate)
+
+        # set up logger
+        self.logger = utils_logging.setup_logger("agent_node")
 
         # agent publish and subscribe queue size
         # TODO: make them configurable by constructor argument
         self.sub_queue_size = 10
         self.pub_queue_size = 10
 
-        self.agent.reset()
-
-        # the last action produced from the agent
-        self.action = None
+        # establish reset protocol with env
+        self.reset_service = rospy.Service('reset_agent', ResetAgent, self.reset_agent)
 
         # control_period defined for continuous mode
         if self.enable_physics:
             self.control_period = control_period
+        
+        # the last action produced from the agent
+        self.action = None
 
         # count the number of frames received from Habitat simulator;
         # reset to 0 every time an action is completed
         # not applicable in discrete mode
         if self.enable_physics:
             self.count_frames = 0
+        
+        # lock guarding access to self.action, self.count_frames and
+        # self.agent
+        self.lock = Lock()
+
+        # shutdown triggers the node to be shutdown. Guarded by shutdown_cv
+        self.shutdown = False
+        self.shutdown_cv = Condition()
 
         # publish to command topics
         if self.enable_physics:
@@ -108,11 +127,32 @@ class HabitatAgentNode:
             )
             self.ts.registerCallback(self.callback_depth)
 
-        print("agent making sure env subscribed to command topic...")
+        self.logger.info("agent making sure env subscribed to command topic...")
         while self.pub.get_num_connections() == 0:
             pass
 
-        print("agent initialized")
+        self.logger.info("agent initialized")
+    
+    def reset_agent(self, request):
+        r"""
+        ROS service handler which resets the agent and related variables.
+        :param request: command from the env node.
+        :returns: True
+        """
+        if request.reset == AgentResetCommands.RESET:
+            # reset the agent
+            self.lock.acquire()
+            self.count_frames = 0
+            self.action = None
+            self.agent.reset()
+            self.lock.release()
+            return True
+        elif request.reset == AgentResetCommands.SHUTDOWN:
+            # shut down the agent node
+            with self.shutdown_cv:
+                self.shutdown = True
+                self.shutdown_cv.notify()
+                return True
 
     def depthmsg_to_cv2(self, depth_msg):
         r"""
@@ -214,6 +254,7 @@ class HabitatAgentNode:
 
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
+        self.lock.acquire()
         if self.enable_physics:
             self.count_frames += 1
             if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
@@ -225,6 +266,7 @@ class HabitatAgentNode:
             self.action = self.agent.act(observations)
             action_msg = self.action_to_msg(self.action)
             self.pub.publish(action_msg)
+        self.lock.release()
 
     def callback_depth(self, depth_msg, pointgoal_with_gps_compass_msg):
         r"""
@@ -241,6 +283,7 @@ class HabitatAgentNode:
 
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
+        self.lock.acquire()
         if self.enable_physics:
             self.count_frames += 1
             if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
@@ -252,6 +295,7 @@ class HabitatAgentNode:
             self.action = self.agent.act(observations)
             action_msg = self.action_to_msg(self.action)
             self.pub.publish(action_msg)
+        self.lock.release()
 
     def callback_rgbd(self, rgb_msg, depth_msg, pointgoal_with_gps_compass_msg):
         r"""
@@ -261,6 +305,11 @@ class HabitatAgentNode:
         :param depth_msg: Depth sensor readings in ROS message format.
         :param pointgoal_with_gps_compass_msg: Pointgoal + GPS/Compass readings.
         """
+                
+        # ------------ log agent time start ------------
+        t_agent_start = time.clock()
+        # ----------------------------------------------
+        
         # convert current_observations from ROS to Habitat format
         observations = self.msgs_to_obs(
             rgb_msg=rgb_msg,
@@ -270,6 +319,7 @@ class HabitatAgentNode:
 
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
+        self.lock.acquire()
         if self.enable_physics:
             self.count_frames += 1
             if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
@@ -281,6 +331,13 @@ class HabitatAgentNode:
             self.action = self.agent.act(observations)
             action_msg = self.action_to_msg(self.action)
             self.pub.publish(action_msg)
+        self.lock.release()
+
+        # ------------ log agent time end ------------
+        t_agent_end = time.clock()
+        t_agent_elapsed = t_agent_end - t_agent_start
+        #print(f"time: {t_agent_elapsed} sec")
+        # --------------------------------------------
 
 
 if __name__ == "__main__":
@@ -300,19 +357,26 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--sensor-pub-rate",
-        type=int,
+        type=float,
         default=10,
     )
     args = parser.parse_args()
 
+    # initialize the agent node
     rospy.init_node("agent_node")
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path
-    HabitatAgentNode(
+    agent_node = HabitatAgentNode(
         agent_config=agent_config,
         enable_physics=args.enable_physics,
         control_period=args.control_period,
         sensor_pub_rate=args.sensor_pub_rate,
     )
-    rospy.spin()
+    
+    # shutdown the agent node after getting the signal
+    with agent_node.shutdown_cv:
+        while agent_node.shutdown is False:
+            agent_node.shutdown_cv.wait()
+        rospy.signal_shutdown("received request to shut down")
+        

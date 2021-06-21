@@ -1,0 +1,3 @@
+int16 reset # 0 for reset, 1 for shutdown
+---
+bool done

@@ -3,7 +3,7 @@ import argparse
 import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
-from src.classes.habitat_discrete_evaluator import HabitatDiscreteEvaluator
+from src.classes.habitat_evaluator import HabitatEvaluator
 from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging
@@ -48,27 +48,27 @@ def main():
     parser.add_argument("--tb-dir", type=str, default="tb/")
     args = parser.parse_args()
 
-    # instantiate a discrete/continuous evaluator
-    exp_config = get_config(args.task_config)
-    evaluator = None
-    if "SIMULATOR" in exp_config:
-        logger.info("Instantiating discrete simulator")
-        evaluator = HabitatDiscreteEvaluator(config_paths=args.task_config)
-    elif "PHYSICS_SIMULATOR" in exp_config:
-        logger.info("Instantiating continuous simulator with dynamics")
-        raise NotImplementedError
-    else:
-        logger.info("Simulator not properly specified")
-        raise NotImplementedError
-
+    # instantiate an agent
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path
     agent = PPOAgent(agent_config)
 
+    # instantiate a discrete/continuous evaluator
+    exp_config = get_config(args.task_config)
+    evaluator = None
+    if "SIMULATOR" in exp_config:
+        logger.info("Instantiating discrete simulator")
+        evaluator = HabitatEvaluator(config_paths=args.task_config, agent=agent, enable_physics=False)
+    elif "PHYSICS_SIMULATOR" in exp_config:
+        logger.info("Instantiating continuous simulator with dynamics")
+        evaluator = HabitatEvaluator(config_paths=args.task_config, agent=agent, enable_physics=True)
+    else:
+        logger.info("Simulator not properly specified")
+        raise NotImplementedError
+
     logger.info("Started Evaluation")
     metrics = evaluator.evaluate(
-        agent,
         episode_id_last=args.episode_id,
         scene_id_last=args.scene_id,
         log_dir=args.log_dir,
