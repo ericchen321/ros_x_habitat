@@ -41,7 +41,8 @@ class HabitatRLEnv(gym.Env):
         """
 
         self._env = None
-        if enable_physics:
+        self.enable_physics = enable_physics
+        if self.enable_physics:
             self._env = PhysicsEnv(config, dataset)
         else:
             self._env = Env(config, dataset)
@@ -113,8 +114,10 @@ class HabitatRLEnv(gym.Env):
 
         :return: :py:`(observations, reward, done, info)`
         """
-
-        observations = self._env.step(*args, **kwargs)
+        if self.enable_physics:
+            observations = self._env.step_physics(*args, **kwargs)
+        else:
+            observations = self._env.step(*args, **kwargs)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)
