@@ -21,7 +21,7 @@ import time
 
 
 class HabitatEvaluator(Evaluator):
-    r"""Class to evaluate a Habitat agent in a Habitat simulator instance 
+    r"""Class to evaluate a Habitat agent in a Habitat simulator instance
     without ROS as middleware.
     """
 
@@ -36,7 +36,7 @@ class HabitatEvaluator(Evaluator):
         :param config_paths: file to be used for creating the environment
         :param agent: Habitat agent object
         :param enable_physics: use dynamic simulation or not
-        
+
         """
         config_env = get_config(config_paths)
         # embed top-down map and heading sensor in config
@@ -50,7 +50,9 @@ class HabitatEvaluator(Evaluator):
 
         # define Habitat simulator instance
         self.enable_physics = enable_physics
-        self.env = HabitatEvalRLEnv(config=config_env, enable_physics=self.enable_physics)
+        self.env = HabitatEvalRLEnv(
+            config=config_env, enable_physics=self.enable_physics
+        )
 
     def evaluate(
         self,
@@ -61,7 +63,7 @@ class HabitatEvaluator(Evaluator):
         video_dir: str = "videos/",
         tb_dir: str = "tb/",
         *args,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, float]:
         r"""..
         Evaluate over episodes, starting from the last episode evaluated. Return evaluation
@@ -235,9 +237,7 @@ class HabitatEvaluator(Evaluator):
                 logger.info(
                     f"Evaulation stopped after: {count_episodes} episodes due to OSError!"
                 )
-                logger.info(
-                    f"Current episode: episode={episode_id}, scene={scene_id}"
-                )
+                logger.info(f"Current episode: episode={episode_id}, scene={scene_id}")
                 print_exc()
                 break
 
