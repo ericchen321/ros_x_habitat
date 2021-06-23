@@ -10,6 +10,7 @@ from habitat.core.registry import registry
 from habitat.core.simulator import (
     Simulator,
 )
+from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 
 
 def merge_sim_episode_config(sim_config: Config, episode: Episode) -> Any:
@@ -56,14 +57,50 @@ class PhysicsNavigationTask(EmbodiedTask):
         # step through all frames in the control period
         total_steps = int(control_period * 1.0 / time_step)
         observations = None
+
+        # obtain agent velocity control object by agent id
+        agent_vel_control = self._sim.get_object_velocity_control(id_agent_obj)
+        agent_vel_control.controlling_lin_vel = True
+        agent_vel_control.controlling_ang_vel = True
+        agent_vel_control.lin_vel_is_local = True
+        agent_vel_control.ang_vel_is_local = True
+
         for i in range(0, total_steps):
-            observations_per_step = task_action.step_physics(
-                **action["action_args"],
-                task=self,
-                time_step=time_step,
-                control_period=control_period,
-                id_agent_obj=id_agent_obj,
-            )
+            # Setting agent velocity controls based on each action type
+            if task_action == _DefaultHabitatSimActions.STOP:
+                agent_vel_control.linear_velocity = np.float32([0, 0, 0])
+                agent_vel_control.angular_velocity = np.float32([0, 0, 0])
+                task_action.is_stop_called = True
+            elif task_action == _DefaultHabitatSimActions.MOVE_FORWARD:
+                # set linear velocity. 0.25m is defined as _C.SIMULATOR.FORWARD_STEP_SIZE
+                # in habitat/config/default.py. By default, forward movement happens on the
+                # local z axis.
+                # TODO: programmatically load this value
+                agent_vel_control.linear_velocity = np.float32(
+                    [0, 0, -0.25 / control_period]
+                )
+                agent_vel_control.angular_velocity = np.float32([0, 0, 0])
+            elif task_action == _DefaultHabitatSimActions.TURN_LEFT:
+                # set angular velocity. 10 deg is defined as _C.SIMULATOR.TURN_ANGLE
+                # in habitat/config/default.py. By default, turning left/right is about
+                # the local y axis.
+                # TODO: programmatically load this value
+                angular_vel_in_rad = np.radians(10.0 / control_period)
+                agent_vel_control.linear_velocity = np.float32([0, 0, 0])
+                agent_vel_control.angular_velocity = np.float32(
+                    [0, angular_vel_in_rad, 0]
+                )
+            elif task_action == _DefaultHabitatSimActions.TURN_RIGHT:
+                angular_vel_in_rad = np.radians(-10.0 / control_period)
+                agent_vel_control.linear_velocity = np.float32([0, 0, 0])
+                agent_vel_control.angular_velocity = np.float32(
+                    [0, angular_vel_in_rad, 0]
+                )
+
+            if task_action.is_stop_called:
+                observations_per_step = self._sim.get_observations_at()
+            else:
+                observations_per_step = self._sim.step_physics(time_step)
             # we only collect observations from the last frame
             if i == total_steps - 1:
                 observations = observations_per_step
