@@ -227,6 +227,9 @@ class HabitatEvaluator(Evaluator):
                         metrics=per_ep_metrics,
                         tb_writer=writer,
                     )
+                # shut down the episode logger
+                utils_logging.close_logger(logger_per_episode)
+
             except StopIteration:
                 logger.info(f"Finished evaluation after: {count_episodes} episodes")
                 logger.info(
@@ -242,5 +245,6 @@ class HabitatEvaluator(Evaluator):
                 break
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
+        utils_logging.close_logger(logger)
 
         return avg_metrics

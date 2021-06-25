@@ -123,7 +123,6 @@ class HabitatROSEvaluator(Evaluator):
                         "success": resp.success,
                         "spl": resp.spl
                     }
-
                     # set up logger
                     episode_id = resp.episode_id
                     scene_id = resp.scene_id
@@ -131,24 +130,23 @@ class HabitatROSEvaluator(Evaluator):
                         f"{__name__}-{episode_id}-{scene_id}",
                         f"{log_dir}/{episode_id}-{os.path.basename(scene_id)}.log",
                     )
-
                     # log episode ID and scene ID
                     logger_per_episode.info(f"episode id: {episode_id}")
                     logger_per_episode.info(f"scene id: {scene_id}")
-
                     # print metrics of this episode
                     for k, v in per_ep_metrics.items():
                         logger_per_episode.info(f"{k},{v}")
-                    
                     # calculate aggregated metrics over episodes eval'ed so far
                     for m, v in per_ep_metrics.items():
                         agg_metrics[m] += v
-                    
                     count_episodes += 1
+                    # shut down the episode logger
+                    utils_logging.close_logger(logger_per_episode)
             except rospy.ServiceException:
                 logger.info(f"Evaluation call failed at {count_episodes}-th episode")
                 break
         
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
+        utils_logging.close_logger(logger)
 
         return avg_metrics

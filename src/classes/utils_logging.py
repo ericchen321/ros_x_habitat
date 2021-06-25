@@ -6,7 +6,13 @@ import sys
 
 
 def setup_logger(name, log_file=None, level=logging.INFO):
-    """To setup as many loggers as you want"""
+    r"""
+    To setup as many loggers as you want.
+    :param name: name of the logger
+    :param log_file: name of the file to export log. If not
+        supplied then log to stdout
+    :param level: level to log messages
+    """
 
     handler = None
     if log_file is None:
@@ -20,3 +26,11 @@ def setup_logger(name, log_file=None, level=logging.INFO):
     logger.addHandler(handler)
 
     return logger
+
+def close_logger(logger):
+    r"""
+    Close a logger. Assume only one handler exists.
+    """
+    
+    handler = logger.handlers[0]
+    logger.removeHandler(handler)
