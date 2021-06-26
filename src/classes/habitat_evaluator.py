@@ -10,6 +10,8 @@ from src.classes.utils_tensorboard import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
+from habitat.config import Config
+from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging
 import os
@@ -20,6 +22,17 @@ from traceback import print_exc
 import time
 
 
+def get_default_config():
+    c = Config()
+    c.INPUT_TYPE = "blind"
+    c.MODEL_PATH = "data/checkpoints/blind.pth"
+    c.RESOLUTION = 256
+    c.HIDDEN_SIZE = 512
+    c.RANDOM_SEED = 7
+    c.PTH_GPU_ID = 0
+    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+    return c
+
 class HabitatEvaluator(Evaluator):
     r"""Class to evaluate a Habitat agent in a Habitat simulator instance
     without ROS as middleware.
@@ -28,7 +41,8 @@ class HabitatEvaluator(Evaluator):
     def __init__(
         self,
         config_paths: str,
-        agent: Agent,
+        agent_input_type: str,
+        agent_model_path: str,
         enable_physics: bool = False,
     ) -> None:
         r"""..
@@ -45,8 +59,10 @@ class HabitatEvaluator(Evaluator):
         # config_env.TASK.SENSORS.append("HEADING_SENSOR")
         config_env.freeze()
 
-        # define agent instance
-        self.agent = agent
+        # store agent params and declare agent instance
+        self.agent_input_type = agent_input_type
+        self.agent_model_path = agent_model_path
+        self.agent = None
 
         # define Habitat simulator instance
         self.enable_physics = enable_physics
@@ -130,6 +146,11 @@ class HabitatEvaluator(Evaluator):
                 t_agent_start = time.clock()
                 # ----------------------------------------------
 
+                # instantiate an agent
+                agent_config = get_default_config()
+                agent_config.INPUT_TYPE = self.agent_input_type
+                agent_config.MODEL_PATH = self.agent_model_path
+                self.agent = PPOAgent(agent_config)
                 self.agent.reset()
 
                 # ------------ log agent time end ------------

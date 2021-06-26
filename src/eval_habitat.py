@@ -4,24 +4,12 @@ import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
 from src.classes.habitat_evaluator import HabitatEvaluator
-from habitat_baselines.agents.ppo_agents import PPOAgent
+import random
 
 # logging
 from classes import utils_logging
 
 logger = utils_logging.setup_logger(__name__)
-
-
-def get_default_config():
-    c = Config()
-    c.INPUT_TYPE = "blind"
-    c.MODEL_PATH = "data/checkpoints/blind.pth"
-    c.RESOLUTION = 256
-    c.HIDDEN_SIZE = 512
-    c.RANDOM_SEED = 7
-    c.PTH_GPU_ID = 0
-    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
-    return c
 
 
 def main():
@@ -48,21 +36,15 @@ def main():
     parser.add_argument("--tb-dir", type=str, default="tb/")
     args = parser.parse_args()
 
-    # instantiate an agent
-    agent_config = get_default_config()
-    agent_config.INPUT_TYPE = args.input_type
-    agent_config.MODEL_PATH = args.model_path
-    agent = PPOAgent(agent_config)
-
     # instantiate a discrete/continuous evaluator
     exp_config = get_config(args.task_config)
     evaluator = None
     if "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabitatEvaluator(config_paths=args.task_config, agent=agent, enable_physics=False)
+        evaluator = HabitatEvaluator(config_paths=args.task_config, agent_input_type=args.input_type, agent_model_path=args.model_path, enable_physics=False)
     elif "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
-        evaluator = HabitatEvaluator(config_paths=args.task_config, agent=agent, enable_physics=True)
+        evaluator = HabitatEvaluator(config_paths=args.task_config, agent_input_type=args.input_type, agent_model_path=args.model_path, enable_physics=True)
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError

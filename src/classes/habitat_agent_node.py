@@ -25,6 +25,7 @@ from ros_x_habitat.srv import ResetAgent
 from threading import Lock
 from src.classes.constants import AgentResetCommands
 from threading import Condition
+import random
 
 # logging
 from src.classes import utils_logging
@@ -55,10 +56,12 @@ class HabitatAgentNode:
         control_period: float = 1.0,
         sensor_pub_rate: float = 5.0,
     ):
-        self.agent = PPOAgent(agent_config)
-        self.input_type = agent_config.INPUT_TYPE
+        self.agent_config = agent_config
         self.enable_physics = enable_physics
         self.sensor_pub_rate = float(sensor_pub_rate)
+
+        # declare an agent instance
+        self.agent = PPOAgent(agent_config)
 
         # set up logger
         self.logger = utils_logging.setup_logger("agent_node")
@@ -99,22 +102,22 @@ class HabitatAgentNode:
             self.pub = rospy.Publisher("action", Int16, queue_size=self.pub_queue_size)
 
         # subscribe to sensor topics
-        if self.input_type == "rgb" or self.input_type == "rgbd":
+        if self.agent_config.INPUT_TYPE == "rgb" or self.agent_config.INPUT_TYPE == "rgbd":
             self.sub_rgb = message_filters.Subscriber("rgb", Image)
-        if self.input_type == "depth" or self.input_type == "rgbd":
+        if self.agent_config.INPUT_TYPE == "depth" or self.agent_config.INPUT_TYPE == "rgbd":
             self.sub_depth = message_filters.Subscriber("depth", numpy_msg(DepthImage))
         self.sub_pointgoal_with_gps_compass = message_filters.Subscriber(
             "pointgoal_with_gps_compass", PointGoalWithGPSCompass
         )
 
         # filter sensor topics with time synchronizer
-        if self.input_type == "rgb":
+        if self.agent_config.INPUT_TYPE == "rgb":
             self.ts = TimeSynchronizer(
                 [self.sub_rgb, self.sub_pointgoal_with_gps_compass],
                 queue_size=self.sub_queue_size,
             )
             self.ts.registerCallback(self.callback_rgb)
-        elif self.input_type == "rgbd":
+        elif self.agent_config.INPUT_TYPE == "rgbd":
             self.ts = TimeSynchronizer(
                 [self.sub_rgb, self.sub_depth, self.sub_pointgoal_with_gps_compass],
                 queue_size=self.sub_queue_size,
@@ -141,9 +144,14 @@ class HabitatAgentNode:
         """
         if request.reset == AgentResetCommands.RESET:
             # reset the agent
+            # NOTE: here we actually re-instantiate a new agent
+            # before resetting it, because somehow PPOAgent.reset()
+            # doesn't work and the agent retains memory from previous
+            # episodes
             self.lock.acquire()
             self.count_frames = 0
             self.action = None
+            self.agent = PPOAgent(self.agent_config)
             self.agent.reset()
             self.lock.release()
             return True

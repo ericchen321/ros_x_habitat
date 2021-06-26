@@ -5,23 +5,12 @@ from habitat.config import Config
 from habitat.config.default import get_config
 from src.classes.habitat_ros_evaluator import HabitatROSEvaluator
 from habitat_baselines.agents.ppo_agents import PPOAgent
+import random
 
 # logging
 from classes import utils_logging
 
 logger = utils_logging.setup_logger(__name__)
-
-
-def get_default_config():
-    c = Config()
-    c.INPUT_TYPE = "blind"
-    c.MODEL_PATH = "data/checkpoints/blind.pth"
-    c.RESOLUTION = 256
-    c.HIDDEN_SIZE = 512
-    c.RANDOM_SEED = 7
-    c.PTH_GPU_ID = 0
-    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
-    return c
 
 
 def main():
