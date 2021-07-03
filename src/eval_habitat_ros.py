@@ -44,11 +44,11 @@ def main():
     evaluator = None
     if "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabitatROSEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, do_not_start_nodes=args.do_not_start_nodes_from_evaluator, enable_physics=False)
+        evaluator = HabitatROSEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, sensor_pub_rate=args.sensor_pub_rate, do_not_start_nodes=args.do_not_start_nodes_from_evaluator, enable_physics=False)
     elif "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
         # TODO: pass in control period
-        evaluator = HabitatROSEvaluator(input_type=args.input_type, model_path=args.model_path, config_paths=args.task_config, sensor_pub_rate=args.sensor_pub_rate, do_not_start_nodes=args.do_not_start_nodes_from_evaluator, enable_physics=True)
+        evaluator = HabitatROSEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, sensor_pub_rate=args.sensor_pub_rate, do_not_start_nodes=args.do_not_start_nodes_from_evaluator, enable_physics=True)
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError

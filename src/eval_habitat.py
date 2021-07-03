@@ -39,12 +39,12 @@ def main():
     # instantiate a discrete/continuous evaluator
     exp_config = get_config(args.task_config)
     evaluator = None
-    if "SIMULATOR" in exp_config:
-        logger.info("Instantiating discrete simulator")
-        evaluator = HabitatEvaluator(config_paths=args.task_config, agent_input_type=args.input_type, agent_model_path=args.model_path, enable_physics=False)
-    elif "PHYSICS_SIMULATOR" in exp_config:
+    if "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
-        evaluator = HabitatEvaluator(config_paths=args.task_config, agent_input_type=args.input_type, agent_model_path=args.model_path, enable_physics=True)
+        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, enable_physics=True)
+    elif "SIMULATOR" in exp_config:
+        logger.info("Instantiating discrete simulator")
+        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, enable_physics=False)
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError
