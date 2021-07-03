@@ -1,4 +1,4 @@
-from src.classes.evaluator import Evaluator
+from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
 from typing import Dict
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
@@ -22,16 +22,16 @@ from traceback import print_exc
 # sim timing
 import time
 
-class HabitatROSEvaluator(Evaluator):
+class HabitatROSEvaluator(HabitatSimEvaluator):
     r"""Class to evaluate Habitat agents in Habitat environments with ROS
     as middleware.
     """
 
     def __init__(
         self,
+        config_paths: str,
         input_type: str,
         model_path: str,
-        config_paths: str,
         sensor_pub_rate: float,
         do_not_start_nodes: bool = False,
         enable_physics: bool = False,
@@ -62,7 +62,7 @@ class HabitatROSEvaluator(Evaluator):
                 Popen(agent_node_args)
 
                 # start the env node
-                env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {sensor_pub_rate}")
+                env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}")
                 Popen(env_node_args)
 
         # start the evaluator node

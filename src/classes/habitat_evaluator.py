@@ -1,6 +1,5 @@
-from src.classes.evaluator import Evaluator
+from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
 from typing import Dict
-from habitat.config.default import get_config
 from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
 from habitat.core.agent import Agent
 from collections import defaultdict
@@ -33,7 +32,7 @@ def get_default_config():
     c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
     return c
 
-class HabitatEvaluator(Evaluator):
+class HabitatEvaluator(HabitatSimEvaluator):
     r"""Class to evaluate a Habitat agent in a Habitat simulator instance
     without ROS as middleware.
     """
@@ -41,8 +40,8 @@ class HabitatEvaluator(Evaluator):
     def __init__(
         self,
         config_paths: str,
-        agent_input_type: str,
-        agent_model_path: str,
+        input_type: str,
+        model_path: str,
         enable_physics: bool = False,
     ) -> None:
         r"""..
@@ -52,22 +51,24 @@ class HabitatEvaluator(Evaluator):
         :param enable_physics: use dynamic simulation or not
 
         """
-        config_env = get_config(config_paths)
-        # embed top-down map and heading sensor in config
-        config_env.defrost()
-        config_env.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-        # config_env.TASK.SENSORS.append("HEADING_SENSOR")
-        config_env.freeze()
+        super().__init__(config_paths, input_type, model_path, enable_physics)
 
-        # store agent params and declare agent instance
-        self.agent_input_type = agent_input_type
-        self.agent_model_path = agent_model_path
+        # embed top-down map and heading sensor in config
+        self.config.defrost()
+        self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+        # self.config.TASK.SENSORS.append("HEADING_SENSOR")
+        self.config.freeze()
+
+        # declare an agent instance
         self.agent = None
 
+        # overwrite env config if physics enabled
+        if self.enable_physics:
+            self.overwrite_simulator_config(self.config)
+
         # define Habitat simulator instance
-        self.enable_physics = enable_physics
         self.env = HabitatEvalRLEnv(
-            config=config_env, enable_physics=self.enable_physics
+            config=self.config, enable_physics=self.enable_physics
         )
 
     def evaluate(
@@ -148,8 +149,8 @@ class HabitatEvaluator(Evaluator):
 
                 # instantiate an agent
                 agent_config = get_default_config()
-                agent_config.INPUT_TYPE = self.agent_input_type
-                agent_config.MODEL_PATH = self.agent_model_path
+                agent_config.INPUT_TYPE = self.input_type
+                agent_config.MODEL_PATH = self.model_path
                 self.agent = PPOAgent(agent_config)
                 self.agent.reset()
 

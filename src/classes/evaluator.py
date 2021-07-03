@@ -1,17 +1,13 @@
 from typing import Dict
-from habitat.config.default import get_config
-from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
-from habitat.core.agent import Agent
 
 
 class Evaluator:
     r"""Abstract class for evaluating an agent in a simulation environment
     either with or without physics.
 
-    Users should instantiate 'HabitatEvaluator' or 'HabitatROSEvaluator', etc
-    as sublcasses of 'Evaluator'.
+    Users should instantiate subclasses to 'Evaluator' for evaluation.
     """
-
+    
     def evaluate(
         self,
         episode_id_last: str = "-1",
