@@ -4,24 +4,12 @@ import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
 from src.classes.habitat_evaluator import HabitatEvaluator
-from habitat_baselines.agents.ppo_agents import PPOAgent
+import random
 
 # logging
 from classes import utils_logging
 
 logger = utils_logging.setup_logger(__name__)
-
-
-def get_default_config():
-    c = Config()
-    c.INPUT_TYPE = "blind"
-    c.MODEL_PATH = "data/checkpoints/blind.pth"
-    c.RESOLUTION = 256
-    c.HIDDEN_SIZE = 512
-    c.RANDOM_SEED = 7
-    c.PTH_GPU_ID = 0
-    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
-    return c
 
 
 def main():
@@ -42,27 +30,26 @@ def main():
         type=str,
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
+    parser.add_argument(
+        "--agent-seed", type=int, default=0,
+    )
     parser.add_argument("--log-dir", type=str, default="logs/")
     parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--video-dir", type=str, default="videos/")
     parser.add_argument("--tb-dir", type=str, default="tb/")
+    parser.add_argument("--make-maps", default=False, action="store_true")
+    parser.add_argument("--map-dir", type=str, default="maps/")
     args = parser.parse_args()
-
-    # instantiate an agent
-    agent_config = get_default_config()
-    agent_config.INPUT_TYPE = args.input_type
-    agent_config.MODEL_PATH = args.model_path
-    agent = PPOAgent(agent_config)
 
     # instantiate a discrete/continuous evaluator
     exp_config = get_config(args.task_config)
     evaluator = None
-    if "SIMULATOR" in exp_config:
-        logger.info("Instantiating discrete simulator")
-        evaluator = HabitatEvaluator(config_paths=args.task_config, agent=agent, enable_physics=False)
-    elif "PHYSICS_SIMULATOR" in exp_config:
+    if "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
-        evaluator = HabitatEvaluator(config_paths=args.task_config, agent=agent, enable_physics=True)
+        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, agent_seed=args.agent_seed, enable_physics=True)
+    elif "SIMULATOR" in exp_config:
+        logger.info("Instantiating discrete simulator")
+        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, agent_seed=args.agent_seed, enable_physics=False)
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError
@@ -75,6 +62,8 @@ def main():
         make_videos=args.make_videos,
         video_dir=args.video_dir,
         tb_dir=args.tb_dir,
+        make_maps=args.make_maps,
+        map_dir=args.map_dir
     )
 
     logger.info("Printing average metrics:")

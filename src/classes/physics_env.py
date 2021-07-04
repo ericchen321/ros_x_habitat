@@ -43,6 +43,37 @@ class PhysicsEnv(Env):
     _episode_start_time: Optional[float]
     _episode_over: bool
 
+    def __init__(
+        self,
+        config: Config,
+        dataset: Optional[Dataset] = None
+    ) -> None:
+        """Constructor
+
+        :param config: config for the environment. Should contain id for
+            simulator and ``task_name`` which are passed into ``make_sim`` and
+            ``make_task``.
+        :param dataset: reference to dataset for task instance level
+            information. Can be defined as :py:`None` in which case
+            ``_episodes`` should be populated from outside.
+        """
+        super().__init__(config, dataset)
+        
+        # declare the physics object attributes manager;
+        # this should be instantiated on every reset
+        self.obj_templates_mgr = None
+        
+        # declare the rigid object manager;
+        # this should be instantiated on every reset
+        self.rigid_obj_mgr = None
+        
+        # declare the agent object
+        self.agent_object = None
+        
+        # declare the agent object handle
+        # NOTE: would be redudant after Facebook people implement ManagedRigidObject.contact_test()
+        self.agent_object_id = None
+        
     def step_physics(
         self,
         action: Union[int, str, Dict[str, Any]],
@@ -74,12 +105,15 @@ class PhysicsEnv(Env):
             action = {"action": action}
 
         # Step with physics
+        # double-check to make sure the agent object is already define by this point
+        assert self.agent_object is not None
         observations = self.task.step_physics(
             action=action,
             episode=self.current_episode,
             time_step=time_step,
             control_period=control_period,
-            id_agent_obj=self._id_agent_obj,
+            agent_object=self.agent_object,
+            agent_object_id=self.agent_object_id
         )
 
         self._task.measurements.update_measures(
@@ -90,34 +124,63 @@ class PhysicsEnv(Env):
 
         return observations
 
-    def enable_physics(self):
-        r"""Enables physics in the environment and initialize the
-        simulation environment.
+    def reset(self) -> Observations:
+        r"""Resets the environments and returns the initial observations.
+        Also initialize physics stuff on the basis of the tutorial from
+        https://aihabitat.org/docs/habitat-sim/managed-rigid-object-tutorial.html.
+
+        :return: initial observations from the environment.
         """
-        # attach asset to agent
-        locobot_template_id = self._sim._sim.load_object_configs(
+        self._reset_stats()
+
+        assert len(self.episodes) > 0, "Episodes list is empty"
+        # Delete the shortest path cache of the current episode
+        # Caching it for the next time we see this episode isn't really worth
+        # it
+        if self._current_episode is not None:
+            self._current_episode._shortest_path_cache = None
+
+        self._current_episode = next(self._episode_iterator)
+        self.reconfigure(self._config)
+
+        observations = self.task.reset(episode=self.current_episode)
+        self._task.measurements.reset_measures(
+            episode=self.current_episode, task=self.task
+        )
+
+        # instantiate the physics object attributes manager
+        self.obj_templates_mgr = self._sim.get_object_template_manager()
+        # instantiate the rigid object manager
+        self.rigid_obj_mgr = self._sim.get_rigid_object_manager()
+
+        # remove all objects in the scene, but keep their scene nodes
+        obj_handles = self.rigid_obj_mgr.get_object_handles()
+        for obj_handle in obj_handles:
+            self.rigid_obj_mgr.remove_object_by_handle(obj_handle, delete_object_node=False, delete_visual_node=False)
+
+        # load locobot asset and attach it to the agent's scene node
+        locobot_template_id = self.obj_templates_mgr.load_configs(
             "data/objects/locobot_merged"
         )[0]
-        # print("locobot_template_id is " + str(locobot_template_id))
-        self._id_agent_obj = self._sim._sim.add_object(
-            locobot_template_id, self._sim._sim.agents[0].scene_node
-        )
-        # print("id of agent object is " + str(self._id_agent_obj))
+        self.obj_templates_mgr.get_template_by_ID(locobot_template_id).angular_damping = 0.0
+        # NOTE: hsim.Simulator.add_object() is in accordance to Sim-V1 API
+        # we wouldn't need agent object's ID once V2 API has been fully
+        # supported
+        self.agent_object_id = self._sim.add_object(locobot_template_id, self._sim.agents[0].scene_node)
+        self.agent_object = self.rigid_obj_mgr.get_object_by_ID(self.agent_object_id)
+        assert self.agent_object is not None
+        # NOTE: the following lines are in accordance to Sim-V2 API;
+        # we commented them out because some key methods have not been
+        # implemented by Habitat people yet
+        #self.agent_object = self.rigid_obj_mgr.add_object_by_id(
+        #    locobot_template_id, self._sim.agents[0].scene_node
+        #)
 
-        # set all objects in scene to be dynamic
-        obj_ids = self._sim._sim.get_existing_object_ids()
-        for obj_id in obj_ids:
-            self._sim._sim.set_object_motion_type(
-                hsim.physics.MotionType.DYNAMIC, obj_id
-            )
+        # set all objects in the scene to be dynamic and collidable
+        obj_handles = self.rigid_obj_mgr.get_object_handles()
+        for obj_handle in obj_handles:
+            obj = self.rigid_obj_mgr.get_object_by_handle(obj_handle)
+            obj.motion_type = hsim.physics.MotionType.DYNAMIC
+            obj.collidable = True
 
-    def disable_physics(self):
-        r"""Disables physics in the environment and clear up the
-        simulation environment.
-        """
-        # remove all objects in the scene, but keep their scene nodes
-        obj_ids = self._sim._sim.get_existing_object_ids()
-        for obj_id in obj_ids:
-            self._sim._sim.remove_object(
-                object_id=obj_id, delete_object_node=False, delete_visual_node=False
-            )
+        return observations

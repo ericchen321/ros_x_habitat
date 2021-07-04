@@ -408,36 +408,50 @@ def generate_map_frame(env, obs_dim):
     return top_down_map
 
 
-# utility function to draw a top-down map
-# copied from shortest_path_follower_example.py
-def draw_top_down_map(info, heading, output_size):
-    """Generates a map that displays the state of the agent in the given environment,
-    for the current frame.
+# utility function to draw overlayed top-down maps given info
+# from a set of episodes
+def draw_overlayed_top_down_maps(
+    topdown_map_infos: List[Dict[str, Any]], 
+    output_height: int
+):
+    r"""Given the output of TopDownMap measures from episodes, colorizes the map,
+    draws the agent, and fits to a desired output height.
+    Modified upon habitat_lab.habitat.utils.visualizations.maps.
+    colorize_draw_agent_and_fit_to_height()
 
-    Args:
-        info: environment info for current frame.
-        heading: where the agent heads toward.
-        output_size: height of output map.
-    Returns:
-        the output_size x width x 1 map
+    :param topdown_map_infos: The output of the TopDownMap measures from the episodes
+    :param output_height: The desired output height
     """
-    top_down_map = maps.colorize_topdown_map(
-        info["top_down_map"]["map"], info["top_down_map"]["fog_of_war_mask"]
-    )
-    original_map_size = top_down_map.shape[:2]
-    map_scale = np.array((1, original_map_size[1] * 1.0 / original_map_size[0]))
-    new_map_size = np.round(output_size * map_scale).astype(np.int32)
-    # OpenCV expects w, h but map size is in h, w
-    top_down_map = cv2.resize(top_down_map, (new_map_size[1], new_map_size[0]))
+    # requires to contain info of at least one episode
+    assert len(topdown_map_infos) > 0
 
-    map_agent_pos = info["top_down_map"]["agent_map_coord"]
-    map_agent_pos = np.round(map_agent_pos * new_map_size / original_map_size).astype(
-        np.int32
+    # get the base map
+    top_down_map = topdown_map_infos[0]["map"]
+    top_down_map = colorize_topdown_map(
+        top_down_map, topdown_map_infos[0]["fog_of_war_mask"]
     )
-    top_down_map = maps.draw_agent(
+
+    # plot agent 
+    map_agent_pos = topdown_map_info["agent_map_coord"]
+    top_down_map = draw_agent(
+        image=top_down_map,
+        agent_center_coord=map_agent_pos,
+        agent_rotation=topdown_map_info["agent_angle"],
+        agent_radius_px=min(top_down_map.shape[0:2]) // 32,
+    )
+
+    if top_down_map.shape[0] > top_down_map.shape[1]:
+        top_down_map = np.rot90(top_down_map, 1)
+
+    # scale top down map to align with rgb view
+    old_h, old_w, _ = top_down_map.shape
+    top_down_height = output_height
+    top_down_width = int(float(top_down_height) / old_h * old_w)
+    # cv2 resize (dsize is width first)
+    top_down_map = cv2.resize(
         top_down_map,
-        map_agent_pos,
-        heading - np.pi / 2,
-        agent_radius_px=top_down_map.shape[0] / 40,
+        (top_down_width, top_down_height),
+        interpolation=cv2.INTER_CUBIC,
     )
+
     return top_down_map

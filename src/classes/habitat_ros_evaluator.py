@@ -1,4 +1,4 @@
-from src.classes.evaluator import Evaluator
+from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
 from typing import Dict
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
@@ -9,7 +9,7 @@ import shlex
 import rospy
 
 # use TensorBoard to visualize
-from src.classes.utils_tensorboard import TensorboardWriter, generate_video
+from src.classes.utils_visualization import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
@@ -22,16 +22,16 @@ from traceback import print_exc
 # sim timing
 import time
 
-class HabitatROSEvaluator(Evaluator):
+class HabitatROSEvaluator(HabitatSimEvaluator):
     r"""Class to evaluate Habitat agents in Habitat environments with ROS
     as middleware.
     """
 
     def __init__(
         self,
+        config_paths: str,
         input_type: str,
         model_path: str,
-        config_paths: str,
         sensor_pub_rate: float,
         do_not_start_nodes: bool = False,
         enable_physics: bool = False,
@@ -62,7 +62,7 @@ class HabitatROSEvaluator(Evaluator):
                 Popen(agent_node_args)
 
                 # start the env node
-                env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {sensor_pub_rate}")
+                env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}")
                 Popen(env_node_args)
 
         # start the evaluator node
@@ -76,6 +76,8 @@ class HabitatROSEvaluator(Evaluator):
         make_videos: bool = False,
         video_dir: str = "videos/",
         tb_dir: str = "tb/",
+        make_maps: bool = False,
+        map_dir: str = "maps/",
         *args,
         **kwargs
     ) -> Dict[str, float]:
@@ -90,6 +92,8 @@ class HabitatROSEvaluator(Evaluator):
         :param make_videos: toggle video production on/off
         :param video_dir: directory to store videos
         :param tb_dir: Tensorboard logging directory
+        :param map_maps: toggle overlayed map production on/off
+        :param map_dir: directory to store maps
         :return: dict containing metrics tracked by environment.
         """
         logger = utils_logging.setup_logger(__name__)
@@ -123,7 +127,6 @@ class HabitatROSEvaluator(Evaluator):
                         "success": resp.success,
                         "spl": resp.spl
                     }
-
                     # set up logger
                     episode_id = resp.episode_id
                     scene_id = resp.scene_id
@@ -131,24 +134,23 @@ class HabitatROSEvaluator(Evaluator):
                         f"{__name__}-{episode_id}-{scene_id}",
                         f"{log_dir}/{episode_id}-{os.path.basename(scene_id)}.log",
                     )
-
                     # log episode ID and scene ID
                     logger_per_episode.info(f"episode id: {episode_id}")
                     logger_per_episode.info(f"scene id: {scene_id}")
-
                     # print metrics of this episode
                     for k, v in per_ep_metrics.items():
                         logger_per_episode.info(f"{k},{v}")
-                    
                     # calculate aggregated metrics over episodes eval'ed so far
                     for m, v in per_ep_metrics.items():
                         agg_metrics[m] += v
-                    
                     count_episodes += 1
+                    # shut down the episode logger
+                    utils_logging.close_logger(logger_per_episode)
             except rospy.ServiceException:
                 logger.info(f"Evaluation call failed at {count_episodes}-th episode")
                 break
         
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
+        utils_logging.close_logger(logger)
 
         return avg_metrics

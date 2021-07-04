@@ -1,15 +1,16 @@
-from src.classes.evaluator import Evaluator
+from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
 from typing import Dict
-from habitat.config.default import get_config
 from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
 from habitat.core.agent import Agent
 from collections import defaultdict
 
 # use TensorBoard to visualize
-from src.classes.utils_tensorboard import TensorboardWriter, generate_video
+from src.classes.utils_visualization import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
+from habitat.config import Config
+from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging
 import os
@@ -20,7 +21,18 @@ from traceback import print_exc
 import time
 
 
-class HabitatEvaluator(Evaluator):
+def get_default_config():
+    c = Config()
+    c.INPUT_TYPE = "blind"
+    c.MODEL_PATH = "data/checkpoints/blind.pth"
+    c.RESOLUTION = 256
+    c.HIDDEN_SIZE = 512
+    c.RANDOM_SEED = 7
+    c.PTH_GPU_ID = 0
+    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+    return c
+
+class HabitatEvaluator(HabitatSimEvaluator):
     r"""Class to evaluate a Habitat agent in a Habitat simulator instance
     without ROS as middleware.
     """
@@ -28,7 +40,9 @@ class HabitatEvaluator(Evaluator):
     def __init__(
         self,
         config_paths: str,
-        agent: Agent,
+        input_type: str,
+        model_path: str,
+        agent_seed: int,
         enable_physics: bool = False,
     ) -> None:
         r"""..
@@ -38,20 +52,24 @@ class HabitatEvaluator(Evaluator):
         :param enable_physics: use dynamic simulation or not
 
         """
-        config_env = get_config(config_paths)
-        # embed top-down map and heading sensor in config
-        config_env.defrost()
-        config_env.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-        # config_env.TASK.SENSORS.append("HEADING_SENSOR")
-        config_env.freeze()
+        super().__init__(config_paths, input_type, model_path, agent_seed, enable_physics)
 
-        # define agent instance
-        self.agent = agent
+        # embed top-down map and heading sensor in config
+        self.config.defrost()
+        self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
+        # self.config.TASK.SENSORS.append("HEADING_SENSOR")
+        self.config.freeze()
+
+        # declare an agent instance
+        self.agent = None
+
+        # overwrite env config if physics enabled
+        if self.enable_physics:
+            self.overwrite_simulator_config(self.config)
 
         # define Habitat simulator instance
-        self.enable_physics = enable_physics
         self.env = HabitatEvalRLEnv(
-            config=config_env, enable_physics=self.enable_physics
+            config=self.config, enable_physics=self.enable_physics
         )
 
     def evaluate(
@@ -62,6 +80,8 @@ class HabitatEvaluator(Evaluator):
         make_videos: bool = False,
         video_dir: str = "videos/",
         tb_dir: str = "tb/",
+        make_maps: bool = False,
+        map_dir: str = "maps/",
         *args,
         **kwargs,
     ) -> Dict[str, float]:
@@ -76,6 +96,8 @@ class HabitatEvaluator(Evaluator):
         :param make_videos: toggle video production on/off
         :param video_dir: directory to store videos
         :param tb_dir: Tensorboard logging directory
+        :param map_maps: toggle overlayed map production on/off
+        :param map_dir: directory to store maps
         :return: dict containing metrics tracked by environment.
         """
         num_episodes = len(self.env._env.episodes)
@@ -117,6 +139,11 @@ class HabitatEvaluator(Evaluator):
         count_episodes = 0
         episode_id = ""
         scene_id = ""
+        # have a list to store the trajectory map from each episode
+        if make_maps:
+            # TODO: collect per-episode path info
+            pass
+
         while count_episodes < num_episodes:
             try:
                 count_steps = 0
@@ -130,6 +157,12 @@ class HabitatEvaluator(Evaluator):
                 t_agent_start = time.clock()
                 # ----------------------------------------------
 
+                # instantiate an agent
+                agent_config = get_default_config()
+                agent_config.INPUT_TYPE = self.input_type
+                agent_config.MODEL_PATH = self.model_path
+                agent_config.RANDOM_SEED = self.agent_seed
+                self.agent = PPOAgent(agent_config)
                 self.agent.reset()
 
                 # ------------ log agent time end ------------
@@ -227,6 +260,14 @@ class HabitatEvaluator(Evaluator):
                         metrics=per_ep_metrics,
                         tb_writer=writer,
                     )
+                # generate overlayed top-down map
+                if make_maps:
+                    # TODO: make overlayed top-down map
+                    pass
+
+                # shut down the episode logger
+                utils_logging.close_logger(logger_per_episode)
+
             except StopIteration:
                 logger.info(f"Finished evaluation after: {count_episodes} episodes")
                 logger.info(
@@ -242,5 +283,6 @@ class HabitatEvaluator(Evaluator):
                 break
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
+        utils_logging.close_logger(logger)
 
         return avg_metrics

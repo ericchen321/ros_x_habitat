@@ -1,17 +1,13 @@
 from typing import Dict
-from habitat.config.default import get_config
-from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
-from habitat.core.agent import Agent
 
 
 class Evaluator:
     r"""Abstract class for evaluating an agent in a simulation environment
     either with or without physics.
 
-    Users should instantiate 'HabitatEvaluator' or 'HabitatROSEvaluator', etc
-    as sublcasses of 'Evaluator'.
+    Users should instantiate subclasses to 'Evaluator' for evaluation.
     """
-
+    
     def evaluate(
         self,
         episode_id_last: str = "-1",
@@ -20,6 +16,8 @@ class Evaluator:
         make_videos: bool = False,
         video_dir: str = "videos/",
         tb_dir: str = "tb/",
+        make_maps: bool = False,
+        map_dir: str = "maps/",
         *args,
         **kwargs
     ) -> Dict[str, float]:
@@ -34,6 +32,8 @@ class Evaluator:
         :param make_videos: toggle video production on/off
         :param video_dir: directory to store videos
         :param tb_dir: Tensorboard logging directory
+        :param map_maps: toggle overlayed map production on/off
+        :param map_dir: directory to store maps
         :return: dict containing metrics tracked by environment.
         """
         raise NotImplementedError

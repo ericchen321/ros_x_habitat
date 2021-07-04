@@ -17,6 +17,7 @@ from habitat.config.default import get_config
 from threading import Condition
 from ros_x_habitat.srv import EvalEpisode, ResetAgent
 from src.classes.constants import AgentResetCommands
+from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
 
 # logging
 from src.classes import utils_logging
@@ -46,6 +47,10 @@ class HabitatEnvNode:
         # config_env.TASK.SENSORS.append("HEADING_SENSOR")
         self.config.freeze()
         self.enable_physics = enable_physics
+        # overwrite env config if physics enabled
+        if self.enable_physics:
+            HabitatSimEvaluator.overwrite_simulator_config(self.config)
+        # define environment
         self.env = HabitatEvalRLEnv(
             config=self.config, enable_physics=self.enable_physics
         )

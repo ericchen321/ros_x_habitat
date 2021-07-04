@@ -1,9 +1,15 @@
 ENVIRONMENT:
   MAX_EPISODE_STEPS: 500
+  ITERATOR_OPTIONS:
+    SHUFFLE: False
+    GROUP_BY_SCENE: True
+    CYCLE: False
 PHYSICS_SIMULATOR:
-  TYPE: "Sim-v2"
+  TYPE: "Sim-RxH"
   AGENT_0:
     SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+    ANGULAR_ACCELERATION: 12.56
+    ANGULAR_FRICTION: 1.0
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
     ENABLE_PHYSICS: True
@@ -27,3 +33,7 @@ TASK:
   SUCCESS:
     SUCCESS_DISTANCE: 0.2
 
+DATASET:
+  TYPE: PointNav-v1
+  SPLIT: val
+  DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
