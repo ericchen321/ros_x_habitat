@@ -44,6 +44,21 @@ class PhysicsNavigationTask(EmbodiedTask):
         self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
+    
+    def reset(self, episode: Episode):
+        observations = self._sim.reset()
+        observations.update(
+            self.sensor_suite.get_observations(
+                observations=observations, episode=episode, task=self
+            )
+        )
+
+        for action_instance in self.actions.values():
+            action_instance.reset(episode=episode, task=self)
+        
+        self.is_stop_called = False
+
+        return observations
 
     def step_physics(
         self,
