@@ -5,7 +5,7 @@ from habitat.core.agent import Agent
 from collections import defaultdict
 
 # use TensorBoard to visualize
-from src.classes.utils_tensorboard import TensorboardWriter, generate_video
+from src.classes.utils_visualization import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
@@ -42,6 +42,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         config_paths: str,
         input_type: str,
         model_path: str,
+        agent_seed: int,
         enable_physics: bool = False,
     ) -> None:
         r"""..
@@ -51,7 +52,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         :param enable_physics: use dynamic simulation or not
 
         """
-        super().__init__(config_paths, input_type, model_path, enable_physics)
+        super().__init__(config_paths, input_type, model_path, agent_seed, enable_physics)
 
         # embed top-down map and heading sensor in config
         self.config.defrost()
@@ -79,6 +80,8 @@ class HabitatEvaluator(HabitatSimEvaluator):
         make_videos: bool = False,
         video_dir: str = "videos/",
         tb_dir: str = "tb/",
+        make_maps: bool = False,
+        map_dir: str = "maps/",
         *args,
         **kwargs,
     ) -> Dict[str, float]:
@@ -93,6 +96,8 @@ class HabitatEvaluator(HabitatSimEvaluator):
         :param make_videos: toggle video production on/off
         :param video_dir: directory to store videos
         :param tb_dir: Tensorboard logging directory
+        :param map_maps: toggle overlayed map production on/off
+        :param map_dir: directory to store maps
         :return: dict containing metrics tracked by environment.
         """
         num_episodes = len(self.env._env.episodes)
@@ -134,6 +139,11 @@ class HabitatEvaluator(HabitatSimEvaluator):
         count_episodes = 0
         episode_id = ""
         scene_id = ""
+        # have a list to store the trajectory map from each episode
+        if make_maps:
+            # TODO: collect per-episode path info
+            pass
+
         while count_episodes < num_episodes:
             try:
                 count_steps = 0
@@ -151,6 +161,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 agent_config = get_default_config()
                 agent_config.INPUT_TYPE = self.input_type
                 agent_config.MODEL_PATH = self.model_path
+                agent_config.RANDOM_SEED = self.agent_seed
                 self.agent = PPOAgent(agent_config)
                 self.agent.reset()
 
@@ -249,6 +260,11 @@ class HabitatEvaluator(HabitatSimEvaluator):
                         metrics=per_ep_metrics,
                         tb_writer=writer,
                     )
+                # generate overlayed top-down map
+                if make_maps:
+                    # TODO: make overlayed top-down map
+                    pass
+
                 # shut down the episode logger
                 utils_logging.close_logger(logger_per_episode)
 

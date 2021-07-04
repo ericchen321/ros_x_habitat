@@ -16,11 +16,13 @@ class HabitatSimEvaluator(Evaluator):
         config_paths: str,
         input_type: str,
         model_path: str,
+        agent_seed: int,
         enable_physics: bool = False
     ):
         self.config = get_config(config_paths)
         self.input_type = input_type
         self.model_path = model_path
+        self.agent_seed = agent_seed
         self.enable_physics = enable_physics
 
     @classmethod

@@ -9,7 +9,7 @@ import shlex
 import rospy
 
 # use TensorBoard to visualize
-from src.classes.utils_tensorboard import TensorboardWriter, generate_video
+from src.classes.utils_visualization import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
@@ -76,6 +76,8 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         make_videos: bool = False,
         video_dir: str = "videos/",
         tb_dir: str = "tb/",
+        make_maps: bool = False,
+        map_dir: str = "maps/",
         *args,
         **kwargs
     ) -> Dict[str, float]:
@@ -90,6 +92,8 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         :param make_videos: toggle video production on/off
         :param video_dir: directory to store videos
         :param tb_dir: Tensorboard logging directory
+        :param map_maps: toggle overlayed map production on/off
+        :param map_dir: directory to store maps
         :return: dict containing metrics tracked by environment.
         """
         logger = utils_logging.setup_logger(__name__)

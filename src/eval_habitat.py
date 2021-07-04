@@ -30,10 +30,15 @@ def main():
         type=str,
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
+    parser.add_argument(
+        "--agent-seed", type=int, default=0,
+    )
     parser.add_argument("--log-dir", type=str, default="logs/")
     parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--video-dir", type=str, default="videos/")
     parser.add_argument("--tb-dir", type=str, default="tb/")
+    parser.add_argument("--make-maps", default=False, action="store_true")
+    parser.add_argument("--map-dir", type=str, default="maps/")
     args = parser.parse_args()
 
     # instantiate a discrete/continuous evaluator
@@ -41,10 +46,10 @@ def main():
     evaluator = None
     if "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
-        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, enable_physics=True)
+        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, agent_seed=args.agent_seed, enable_physics=True)
     elif "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, enable_physics=False)
+        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, agent_seed=args.agent_seed, enable_physics=False)
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError
@@ -57,6 +62,8 @@ def main():
         make_videos=args.make_videos,
         video_dir=args.video_dir,
         tb_dir=args.tb_dir,
+        make_maps=args.make_maps,
+        map_dir=args.map_dir
     )
 
     logger.info("Printing average metrics:")
