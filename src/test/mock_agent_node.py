@@ -28,7 +28,7 @@ from threading import Condition
 # load sensor readings and actions from disk
 episode_id = 49
 scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
-num_readings = 27
+num_readings = 47
 readings_rgb_discrete = []
 readings_depth_discrete = []
 readings_ptgoal_with_comp_discrete = []

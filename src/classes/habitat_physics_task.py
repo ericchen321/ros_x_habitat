@@ -12,6 +12,7 @@ from habitat.core.simulator import (
 )
 from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 from habitat.tasks.nav.nav import (
+    merge_sim_episode_config,
     SimulatorTaskAction,
     MoveForwardAction,
     TurnLeftAction,
@@ -23,23 +24,13 @@ from habitat.utils.geometry_utils import angle_between_quaternions
 import magnum as mn
 
 
-def merge_sim_episode_config(sim_config: Config, episode: Episode) -> Any:
-    sim_config.defrost()
-    sim_config.SCENE = episode.scene_id
-    sim_config.freeze()
-    if episode.start_position is not None and episode.start_rotation is not None:
-        agent_name = sim_config.AGENTS[sim_config.DEFAULT_AGENT_ID]
-        agent_cfg = getattr(sim_config, agent_name)
-        agent_cfg.defrost()
-        agent_cfg.START_POSITION = episode.start_position
-        agent_cfg.START_ROTATION = episode.start_rotation
-        agent_cfg.IS_SET_START_STATE = True
-        agent_cfg.freeze()
-    return sim_config
-
-
-@registry.register_task(name="Nav-v1")
+@registry.register_task(name="Nav-Phys")
 class PhysicsNavigationTask(EmbodiedTask):
+    r"""
+    Task to do point-goal navigation but with physics enabled. This class is the
+    dual of habitat.nav.nav.PointGoalNavigationTask (which is the class for nav
+    without physics).
+    """
     def __init__(
         self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
@@ -67,7 +58,6 @@ class PhysicsNavigationTask(EmbodiedTask):
         time_step: float,
         control_period: float,
         agent_object: hsim.physics.ManagedRigidObject,
-        agent_object_id: int
     ):
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
@@ -97,7 +87,7 @@ class PhysicsNavigationTask(EmbodiedTask):
             if isinstance(task_action, TurnLeftAction):
                 agent_init_rotation = self._sim.agents[0].get_state().rotation
             for frame in range(0, total_steps):
-                observations = self._sim.step_physics(agent_object, agent_object_id, time_step)
+                observations = self._sim.step_physics(agent_object, time_step)
                 # if collision occurred, quit the loop immediately
                 # NOTE: this is not working yet
                 #if self._sim.previous_step_collided:

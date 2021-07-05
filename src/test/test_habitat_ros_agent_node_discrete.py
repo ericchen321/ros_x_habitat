@@ -24,7 +24,7 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
         # load discrete test data
         self.episode_id = "49"
         self.scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
-        self.num_readings = 27
+        self.num_readings = 47
         self.readings_rgb_discrete = []
         self.readings_depth_discrete = []
         self.readings_ptgoal_with_comp_discrete = []
