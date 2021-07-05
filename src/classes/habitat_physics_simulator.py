@@ -30,48 +30,14 @@ from habitat.core.simulator import (
     VisualObservation,
 )
 import habitat_sim as hsim
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSimSensor, overwrite_config
 from numpy import ndarray
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSimVizSensors
 
 
-def overwrite_config(
-    config_from: Config, config_to: Any, ignore_keys: Optional[Set[str]] = None
-) -> None:
-    r"""Takes Habitat Lab config and Habitat-Sim config structures. Overwrites
-    Habitat-Sim config with Habitat Lab values, where a field name is present
-    in lowercase. Mostly used to avoid :ref:`sim_cfg.field = hapi_cfg.FIELD`
-    code.
-    Args:
-        config_from: Habitat Lab config node.
-        config_to: Habitat-Sim config structure.
-        ignore_keys: Optional set of keys to ignore in config_to
-    """
-
-    def if_config_to_lower(config):
-        if isinstance(config, Config):
-            return {key.lower(): val for key, val in config.items()}
-        else:
-            return config
-
-    for attr, value in config_from.items():
-        low_attr = attr.lower()
-        if ignore_keys is None or low_attr not in ignore_keys:
-            if hasattr(config_to, low_attr):
-                setattr(config_to, low_attr, if_config_to_lower(value))
-            else:
-                raise NameError(
-                    f"""{low_attr} is not found on habitat_sim but is found on habitat_lab config.
-                    It's also not in the list of keys to ignore: {ignore_keys}
-                    Did you make a typo in the config?
-                    If not the version of Habitat Sim may not be compatible with Habitat Lab version: {config_from}
-                    """
-                )
-
-
-@registry.register_simulator(name="Sim-RxH")
+@registry.register_simulator(name="Sim-Phys")
 class HabitatPhysicsSim(PhysicsSimulator, Simulator):
     r"""Physics simulator wrapper over habitat-sim. Modified upon
-    'Simulator' class from habitat-sim.
+    'HabitatSim' class from habitat-lab.
 
     habitat-sim repo: https://github.com/facebookresearch/habitat-sim
 
@@ -133,52 +99,23 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
         )
 
         sensor_specifications = []
-        VisualSensorTypeSet = {
-            habitat_sim.SensorType.COLOR,
-            habitat_sim.SensorType.DEPTH,
-            habitat_sim.SensorType.SEMANTIC,
-        }
-        CameraSensorSubTypeSet = {
-            habitat_sim.SensorSubType.PINHOLE,
-            habitat_sim.SensorSubType.ORTHOGRAPHIC,
-        }
         for sensor in _sensor_suite.sensors.values():
-
-            # Check if type VisualSensorSpec, we know that Sensor is one of HabitatSimRGBSensor, HabitatSimDepthSensor, HabitatSimSemanticSensor
-            if (
-                getattr(sensor, "sim_sensor_type", [])
-                not in VisualSensorTypeSet
-            ):
-                raise ValueError(
-                    f"""{getattr(sensor, "sim_sensor_type", [])} is an illegal sensorType that is not implemented yet"""
-                )
-            # Check if type CameraSensorSpec
-            if (
-                getattr(sensor, "sim_sensor_subtype", [])
-                not in CameraSensorSubTypeSet
-            ):
-                raise ValueError(
-                    f"""{getattr(sensor, "sim_sensor_subtype", [])} is an illegal sensorSubType for a VisualSensor"""
-                )
-
-            # TODO: Implement checks for other types of SensorSpecs
-
-            sim_sensor_cfg = habitat_sim.CameraSensorSpec()
-            # TODO Handle configs for custom VisualSensors that might need
-            # their own ignore_keys. Maybe with special key / checking
-            # SensorType
+            assert isinstance(sensor, HabitatSimSensor)
+            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore[misc]
             overwrite_config(
                 config_from=sensor.config,
                 config_to=sim_sensor_cfg,
                 # These keys are only used by Hab-Lab
                 # or translated into the sensor config manually
-                ignore_keys={
-                    "height",
-                    "max_depth",
-                    "min_depth",
-                    "normalize_depth",
-                    "type",
-                    "width",
+                ignore_keys=sensor._config_ignore_keys,
+                # TODO consider making trans_dict a sensor class var too.
+                trans_dict={
+                    "sensor_model_type": lambda v: getattr(
+                        habitat_sim.FisheyeSensorModelType, v
+                    ),
+                    "sensor_subtype": lambda v: getattr(
+                        habitat_sim.SensorSubType, v
+                    ),
                 },
             )
             sim_sensor_cfg.uuid = sensor.uuid
@@ -189,9 +126,7 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             # We know that the Sensor has to be one of these Sensors
-            sensor = cast(HabitatSimVizSensors, sensor)
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
-            sim_sensor_cfg.sensor_subtype = sensor.sim_sensor_subtype
             sim_sensor_cfg.gpu2gpu_transfer = (
                 self.habitat_config.HABITAT_SIM_V0.GPU_GPU
             )
@@ -243,10 +178,9 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
     def step_physics(
         self,
         agent_object: hsim.physics.ManagedRigidObject,
-        agent_object_id: int,
         time_step: float
     ) -> Observations:
-        sim_obs = super().step_physics(agent_object, agent_object_id, time_step)
+        sim_obs = super().step_physics(agent_object, time_step)
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
@@ -392,9 +326,6 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
         return agent_config
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
-        assert agent_id == 0, "No support of multi agent in {} yet.".format(
-            self.__class__.__name__
-        )
         return self.get_agent(agent_id).get_state()
 
     def set_agent_state(

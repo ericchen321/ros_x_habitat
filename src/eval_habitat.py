@@ -31,7 +31,7 @@ def main():
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
     parser.add_argument(
-        "--agent-seed", type=int, default=0,
+        "--agent-seed", type=int, default=7,
     )
     parser.add_argument("--log-dir", type=str, default="logs/")
     parser.add_argument("--make-videos", default=False, action="store_true")

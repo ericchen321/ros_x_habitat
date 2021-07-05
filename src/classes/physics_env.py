@@ -60,19 +60,15 @@ class PhysicsEnv(Env):
         super().__init__(config, dataset)
         
         # declare the physics object attributes manager;
-        # this should be instantiated on every reset
+        # this should be (re)-instantiated on every reset
         self.obj_templates_mgr = None
         
         # declare the rigid object manager;
-        # this should be instantiated on every reset
+        # this should be (re)-instantiated on every reset
         self.rigid_obj_mgr = None
         
         # declare the agent object
         self.agent_object = None
-        
-        # declare the agent object handle
-        # NOTE: would be redudant after Facebook people implement ManagedRigidObject.contact_test()
-        self.agent_object_id = None
         
     def step_physics(
         self,
@@ -113,7 +109,6 @@ class PhysicsEnv(Env):
             time_step=time_step,
             control_period=control_period,
             agent_object=self.agent_object,
-            agent_object_id=self.agent_object_id
         )
 
         self._task.measurements.update_measures(
@@ -162,19 +157,11 @@ class PhysicsEnv(Env):
         locobot_template_id = self.obj_templates_mgr.load_configs(
             "data/objects/locobot_merged"
         )[0]
-        self.obj_templates_mgr.get_template_by_ID(locobot_template_id).angular_damping = 0.0
-        # NOTE: hsim.Simulator.add_object() is in accordance to Sim-V1 API
-        # we wouldn't need agent object's ID once V2 API has been fully
-        # supported
-        self.agent_object_id = self._sim.add_object(locobot_template_id, self._sim.agents[0].scene_node)
-        self.agent_object = self.rigid_obj_mgr.get_object_by_ID(self.agent_object_id)
+        self.obj_templates_mgr.get_template_by_id(locobot_template_id).angular_damping = 0.0
+        self.agent_object = self.rigid_obj_mgr.add_object_by_template_id(
+            locobot_template_id, self._sim.agents[0].scene_node
+        )
         assert self.agent_object is not None
-        # NOTE: the following lines are in accordance to Sim-V2 API;
-        # we commented them out because some key methods have not been
-        # implemented by Habitat people yet
-        #self.agent_object = self.rigid_obj_mgr.add_object_by_id(
-        #    locobot_template_id, self._sim.agents[0].scene_node
-        #)
 
         # set all objects in the scene to be dynamic and collidable
         obj_handles = self.rigid_obj_mgr.get_object_handles()

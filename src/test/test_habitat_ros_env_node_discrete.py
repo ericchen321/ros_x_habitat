@@ -24,7 +24,7 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
         # load discrete test data
         self.episode_id = "49"
         self.scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
-        self.num_readings = 27
+        self.num_readings = 47
         self.readings_rgb_discrete = []
         self.readings_depth_discrete = []
         self.readings_ptgoal_with_comp_discrete = []
@@ -71,7 +71,7 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
 
         # mock-eval one episode
         metrics = mock_evaluator.evaluate("48", self.scene_id)
-        assert np.linalg.norm(metrics["success"] - 1.0) < 1e-5 and np.linalg.norm(metrics["spl"] - 0.934576) < 1e-5
+        assert np.linalg.norm(metrics["success"] - 1.0) < 1e-5 and np.linalg.norm(metrics["spl"] - 0.68244) < 1e-5
 
 
 def main():
