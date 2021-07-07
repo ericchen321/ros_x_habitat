@@ -1,26 +1,21 @@
-from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
-from typing import Dict
-from habitat.config.default import get_config
-from habitat.core.agent import Agent
-from collections import defaultdict
-from ros_x_habitat.srv import *
-from subprocess import Popen
-import shlex
-import rospy
-
-# use TensorBoard to visualize
-from src.utils.utils_visualization import TensorboardWriter, generate_video
-from habitat.utils.visualizations.utils import observations_to_image
-import numpy as np
-from habitat.tasks.nav.nav import NavigationEpisode
-
 # logging
 import os
+import shlex
+from collections import defaultdict
+from subprocess import Popen
+from typing import Dict
+
+# use TensorBoard to visualize
+import numpy as np
+import rospy
+from ros_x_habitat.srv import *
+
+from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from src.utils import utils_logging
-from traceback import print_exc
+
 
 # sim timing
-import time
+
 
 class HabitatROSEvaluator(HabitatSimEvaluator):
     r"""Class to evaluate Habitat agents in Habitat environments with ROS
@@ -58,16 +53,20 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         else:
             if do_not_start_nodes is False:
                 # start the agent node
-                agent_node_args = shlex.split(f"python src/nodes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}")
+                agent_node_args = shlex.split(
+                    f"python src/nodes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}"
+                )
                 Popen(agent_node_args)
 
                 # start the env node
-                env_node_args = shlex.split(f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}")
+                env_node_args = shlex.split(
+                    f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
+                )
                 Popen(env_node_args)
 
         # start the evaluator node
         rospy.init_node("evaluator_habitat_ros")
-    
+
     def evaluate(
         self,
         episode_id_last: str = "-1",
@@ -75,13 +74,13 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         log_dir: str = "logs/",
         agent_seed: int = 7,
         *args,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, float]:
         logger = utils_logging.setup_logger(__name__)
 
         count_episodes = 0
         agg_metrics: Dict = defaultdict(float)
-        eval_episode = rospy.ServiceProxy('eval_episode', EvalEpisode)
+        eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
         # evaluate episodes, starting from the one after the last episode
         # evaluated
@@ -96,7 +95,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                 else:
                     # evaluate the next episode
                     resp = eval_episode("-1", "")
-                
+
                 if resp.episode_id == "-1":
                     # no more episodes
                     logger.info(f"Finished evaluation after: {count_episodes} episodes")
@@ -106,7 +105,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                     per_ep_metrics = {
                         "distance_to_goal": resp.distance_to_goal,
                         "success": resp.success,
-                        "spl": resp.spl
+                        "spl": resp.spl,
                     }
                     # set up logger
                     episode_id = resp.episode_id
@@ -130,21 +129,16 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
             except rospy.ServiceException:
                 logger.info(f"Evaluation call failed at {count_episodes}-th episode")
                 break
-        
+
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
         utils_logging.close_logger(logger)
 
         return avg_metrics
 
     def generate_video(
-        self,
-        episode_id: str,
-        scene_id: str,
-        agent_seed: int = 7,
-        *args,
-        **kwargs
+        self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
     ) -> None:
-        #TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
+        # TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
         raise NotImplementedError
 
     def generate_map(
@@ -154,7 +148,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         agent_seed: int,
         map_height: int,
         *args,
-        **kwargs
+        **kwargs,
     ) -> np.ndarray:
-        #TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
+        # TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
         raise NotImplementedError

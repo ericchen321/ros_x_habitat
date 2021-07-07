@@ -2,14 +2,14 @@
 # note need to run viewer with python2!!!
 
 
-import rospy
-from rospy_tutorials.msg import Floats
-from rospy.numpy_msg import numpy_msg
-from sensor_msgs.msg import Image
-from sensor_msgs.msg import CameraInfo
-import std_msgs.msg
-from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
+import rospy
+import std_msgs.msg
+from cv_bridge import CvBridge
+from rospy.numpy_msg import numpy_msg
+from rospy_tutorials.msg import Floats
+from sensor_msgs.msg import CameraInfo
+from sensor_msgs.msg import Image
 
 DEPTH_IMG_WIDTH = 720
 DEPTH_IMG_HEIGHT = 720

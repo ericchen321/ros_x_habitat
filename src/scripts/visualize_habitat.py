@@ -1,14 +1,14 @@
 import argparse
 import csv
-import habitat
-from habitat.config import Config
-from habitat.config.default import get_config
-from src.evaluators.habitat_evaluator import HabitatEvaluator
-from src.utils.utils_visualization import generate_grid_of_maps
 import os
 
+from habitat.config.default import get_config
+
+from src.evaluators.habitat_evaluator import HabitatEvaluator
+from src.utils.utils_visualization import generate_grid_of_maps
+
+
 # logging
-from src.utils import utils_logging
 
 
 def main():
@@ -29,14 +29,10 @@ def main():
         type=str,
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
-    parser.add_argument(
-        "--seed-file-path", type=str, default="seed=7.csv"
-    )
+    parser.add_argument("--seed-file-path", type=str, default="seed=7.csv")
     parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--make-maps", default=False, action="store_true")
-    parser.add_argument(
-        "--map-dir", type=str, default="habitat_maps/"
-    )
+    parser.add_argument("--map-dir", type=str, default="habitat_maps/")
 
     args = parser.parse_args()
 
@@ -46,7 +42,7 @@ def main():
     # get seeds if provided; otherwise use default seed from Habitat
     seeds = []
     if args.seed_file_path != "":
-        with open(args.seed_file_path, newline='') as csv_file:
+        with open(args.seed_file_path, newline="") as csv_file:
             csv_lines = csv.reader(csv_file)
             for line in csv_lines:
                 seeds.append(int(line[0]))
@@ -56,9 +52,19 @@ def main():
     # instantiate a discrete/continuous evaluator
     evaluator = None
     if "PHYSICS_SIMULATOR" in exp_config:
-        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, enable_physics=True)
+        evaluator = HabitatEvaluator(
+            config_paths=args.task_config,
+            input_type=args.input_type,
+            model_path=args.model_path,
+            enable_physics=True,
+        )
     elif "SIMULATOR" in exp_config:
-        evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, enable_physics=False)
+        evaluator = HabitatEvaluator(
+            config_paths=args.task_config,
+            input_type=args.input_type,
+            model_path=args.model_path,
+            enable_physics=False,
+        )
     else:
         raise NotImplementedError
 
@@ -69,7 +75,7 @@ def main():
             os.mkdir(f"{exp_config.VIDEO_DIR}")
         except FileExistsError:
             pass
-        
+
         for seed in seeds:
             evaluator.generate_video(args.episode_id, args.scene_id, seed)
 
@@ -83,7 +89,9 @@ def main():
 
         maps = []
         for seed in seeds:
-            map_one_seed = evaluator.generate_map(args.episode_id, args.scene_id, seed, 200)
+            map_one_seed = evaluator.generate_map(
+                args.episode_id, args.scene_id, seed, 200
+            )
             maps.append(map_one_seed)
         generate_grid_of_maps(args.episode_id, args.scene_id, seeds, maps, args.map_dir)
 

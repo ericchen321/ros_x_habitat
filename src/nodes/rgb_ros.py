@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # note need to run viewer with python2!!!
 
-import rospy
-from rospy_tutorials.msg import Floats
-from rospy.numpy_msg import numpy_msg
-import std_msgs.msg
-from cv_bridge import CvBridge, CvBridgeError
-from sensor_msgs.msg import Image
-
 import numpy as np
+import rospy
+import std_msgs.msg
+from cv_bridge import CvBridge
+from rospy.numpy_msg import numpy_msg
+from rospy_tutorials.msg import Floats
+from sensor_msgs.msg import Image
 
 rospy.init_node("nprgb2ros_rgb", anonymous=False)
 

@@ -1,9 +1,9 @@
-from src.evaluators.evaluator import Evaluator
-from habitat.config.default import get_config
-from habitat.config import Config
-from typing import List
-from src.utils import utils_logging
 import numpy as np
+from habitat.config import Config
+from habitat.config.default import get_config
+
+from src.evaluators.evaluator import Evaluator
+from src.utils import utils_logging
 
 
 class HabitatSimEvaluator(Evaluator):
@@ -19,7 +19,7 @@ class HabitatSimEvaluator(Evaluator):
         config_paths: str,
         input_type: str,
         model_path: str,
-        enable_physics: bool = False
+        enable_physics: bool = False,
     ):
         # store experiment settings
         self.config = get_config(config_paths)
@@ -39,9 +39,7 @@ class HabitatSimEvaluator(Evaluator):
         for k in config.PHYSICS_SIMULATOR.keys():
             if isinstance(config.PHYSICS_SIMULATOR[k], Config):
                 for inner_k in config.PHYSICS_SIMULATOR[k].keys():
-                    config.SIMULATOR[k][inner_k] = config.PHYSICS_SIMULATOR[
-                        k
-                    ][inner_k]
+                    config.SIMULATOR[k][inner_k] = config.PHYSICS_SIMULATOR[k][inner_k]
             else:
                 config.SIMULATOR[k] = config.PHYSICS_SIMULATOR[k]
         try:
@@ -60,12 +58,7 @@ class HabitatSimEvaluator(Evaluator):
         return
 
     def generate_video(
-        self,
-        episode_id: str,
-        scene_id: str,
-        agent_seed: int = 7,
-        *args,
-        **kwargs
+        self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
     ) -> None:
         r"""
         Evaluate the episode of given episode ID and scene ID, and save the video to <video_dir>/.
@@ -86,7 +79,7 @@ class HabitatSimEvaluator(Evaluator):
         **kwargs
     ) -> np.ndarray:
         r"""
-        Evaluate the episode of given episode ID and scene ID, with agent initialized by the 
+        Evaluate the episode of given episode ID and scene ID, with agent initialized by the
         given seed. Return the top-down map.
 
         :param episode_id: ID of the episode
