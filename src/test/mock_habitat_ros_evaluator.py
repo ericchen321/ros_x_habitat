@@ -1,4 +1,4 @@
-from src.classes.evaluator import Evaluator
+from src.evaluators.evaluator import Evaluator
 from typing import Dict
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
@@ -30,9 +30,6 @@ class MockHabitatROSEvaluator(Evaluator):
         episode_id_last: str = "-1",
         scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
         log_dir: str = "logs/",
-        make_videos: bool = False,
-        video_dir: str = "videos/",
-        tb_dir: str = "tb/",
         *args,
         **kwargs
     ) -> Dict[str, float]:
@@ -45,11 +42,6 @@ class MockHabitatROSEvaluator(Evaluator):
         :param scene_id_last: Scene ID of the last episode evaluated
         --- The following parameters are unused:
         :param log_dir: logging directory
-        :param make_videos: toggle video production on/off
-        :param video_dir: directory to store videos
-        :param tb_dir: Tensorboard logging directory
-        :param map_maps: toggle overlayed map production on/off
-        :param map_dir: directory to store maps
         :return: dict containing metrics tracked by environment.
         """
 

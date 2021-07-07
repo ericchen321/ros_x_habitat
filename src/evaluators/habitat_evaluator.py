@@ -1,11 +1,12 @@
-from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
-from typing import Dict
-from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
+from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
+from typing import Dict, List
+from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from habitat.core.agent import Agent
 from collections import defaultdict
 
 # use TensorBoard to visualize
-from src.classes.utils_visualization import TensorboardWriter, generate_video
+from src.utils.utils_visualization import TensorboardWriter, generate_video
+from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
@@ -14,7 +15,7 @@ from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging
 import os
-from classes import utils_logging
+from src.utils import utils_logging
 from traceback import print_exc
 
 # sim timing
@@ -42,7 +43,6 @@ class HabitatEvaluator(HabitatSimEvaluator):
         config_paths: str,
         input_type: str,
         model_path: str,
-        agent_seed: int,
         enable_physics: bool = False,
     ) -> None:
         r"""..
@@ -52,12 +52,11 @@ class HabitatEvaluator(HabitatSimEvaluator):
         :param enable_physics: use dynamic simulation or not
 
         """
-        super().__init__(config_paths, input_type, model_path, agent_seed, enable_physics)
+        super().__init__(config_paths, input_type, model_path, enable_physics)
 
         # embed top-down map and heading sensor in config
         self.config.defrost()
         self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-        # self.config.TASK.SENSORS.append("HEADING_SENSOR")
         self.config.freeze()
 
         # declare an agent instance
@@ -77,61 +76,25 @@ class HabitatEvaluator(HabitatSimEvaluator):
         episode_id_last: str = "-1",
         scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
         log_dir: str = "logs/",
-        make_videos: bool = False,
-        video_dir: str = "videos/",
-        tb_dir: str = "tb/",
-        make_maps: bool = False,
-        map_dir: str = "maps/",
+        agent_seed: int = 7,
         *args,
         **kwargs,
     ) -> Dict[str, float]:
-        r"""..
-        Evaluate over episodes, starting from the last episode evaluated. Return evaluation
-        metrics. ROS is not involved.
-
-        :param episode_id_last: ID of the last episode evaluated; -1 for evaluating
-            from start
-        :param scene_id_last: Scene ID of the last episode evaluated
-        :param log_dir: logging directory
-        :param make_videos: toggle video production on/off
-        :param video_dir: directory to store videos
-        :param tb_dir: Tensorboard logging directory
-        :param map_maps: toggle overlayed map production on/off
-        :param map_dir: directory to store maps
-        :return: dict containing metrics tracked by environment.
-        """
+        # make sure we have episodes to evaluate
         num_episodes = len(self.env._env.episodes)
         assert num_episodes > 0, "environment should contain at least one episode"
-        logger = utils_logging.setup_logger(__name__)
-        logger.info(f"Total number of episodes in the environment: {num_episodes}")
+        self.logger.info(f"Total number of episodes in the environment: {num_episodes}")
 
         agg_metrics: Dict = defaultdict(float)
 
-        writer = TensorboardWriter(
-            tb_dir, flush_secs=30
-        )  # flush_specs from base_trainer.py
+        # reset episode iterator
+        self.env.reset_episode_iterator()
 
         # locate the last episode evaluated
         if episode_id_last != "-1":
-            # iterate to the last episode. If not found, the loop exits upon a
-            # StopIteration exception
-            last_ep_found = False
-            while not last_ep_found:
-                try:
-                    self.env._env.reset()
-                    e = self.env._env.current_episode
-                    if (str(e.episode_id) == str(episode_id_last)) and (
-                        e.scene_id == scene_id_last
-                    ):
-                        logger.info(
-                            f"Last episode found: episode-id={episode_id_last}, scene-id={scene_id_last}"
-                        )
-                        last_ep_found = True
-                except StopIteration:
-                    logger.info("Last episode not found!")
-                    raise StopIteration
+            self.env.iter_to_episode(episode_id_last, scene_id_last, self.logger)
         else:
-            logger.info(
+            self.logger.info(
                 f"No last episode specified. Proceed to evaluate from the next one"
             )
 
@@ -139,11 +102,6 @@ class HabitatEvaluator(HabitatSimEvaluator):
         count_episodes = 0
         episode_id = ""
         scene_id = ""
-        # have a list to store the trajectory map from each episode
-        if make_maps:
-            # TODO: collect per-episode path info
-            pass
-
         while count_episodes < num_episodes:
             try:
                 count_steps = 0
@@ -151,7 +109,6 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 t_agent_elapsed = 0.0
 
                 # initialize a new episode
-                observations_per_episode = []
 
                 # ------------ log agent time start ------------
                 t_agent_start = time.clock()
@@ -161,7 +118,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 agent_config = get_default_config()
                 agent_config.INPUT_TYPE = self.input_type
                 agent_config.MODEL_PATH = self.model_path
-                agent_config.RANDOM_SEED = self.agent_seed
+                agent_config.RANDOM_SEED = agent_seed
                 self.agent = PPOAgent(agent_config)
                 self.agent.reset()
 
@@ -174,7 +131,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 t_sim_start = time.clock()
                 # --------------------------------------------
 
-                observations_per_action = self.env._env.reset()
+                observations_per_action = self.env.reset()
 
                 # ------------  log sim time end  ------------
                 t_sim_end = time.clock()
@@ -188,7 +145,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 scene_id = current_episode.scene_id
                 logger_per_episode = utils_logging.setup_logger(
                     f"{__name__}-{episode_id}-{scene_id}",
-                    f"{log_dir}/{episode_id}-{os.path.basename(scene_id)}.log",
+                    f"{log_dir}/episode={episode_id}-scene={os.path.basename(scene_id)}.log",
                 )
                 logger_per_episode.info(f"episode id: {episode_id}")
                 logger_per_episode.info(f"scene id: {scene_id}")
@@ -208,13 +165,12 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     # --------------------------------------------
 
                     observations_per_action = None
-                    info_per_action = None
 
                     # ------------ log sim time start ------------
                     t_sim_start = time.clock()
                     # --------------------------------------------
 
-                    (observations_per_action, _, _, info_per_action) = self.env.step(
+                    (observations_per_action, _, _, _) = self.env.step(
                         action
                     )
                     count_steps += 1
@@ -223,13 +179,6 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     t_sim_end = time.clock()
                     t_sim_elapsed += t_sim_end - t_sim_start
                     # --------------------------------------------
-
-                    # generate an output image for the action. The image includes observations
-                    # and a top-down map showing the agent's state in the environment
-                    out_im_per_action = observations_to_image(
-                        observations_per_action, info_per_action
-                    )
-                    observations_per_episode.append(out_im_per_action)
 
                 # episode ended
                 # get per-episode metrics. for now we extract distance-to-goal, success, spl
@@ -248,41 +197,130 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 for m, v in per_ep_metrics.items():
                     agg_metrics[m] += v
                 count_episodes += 1
-                # generate video
-                if make_videos:
-                    generate_video(
-                        video_option=["disk", "tensorboard"],
-                        video_dir=video_dir,
-                        images=observations_per_episode,
-                        episode_id=episode_id,
-                        scene_id=scene_id,
-                        checkpoint_idx=0,
-                        metrics=per_ep_metrics,
-                        tb_writer=writer,
-                    )
-                # generate overlayed top-down map
-                if make_maps:
-                    # TODO: make overlayed top-down map
-                    pass
 
                 # shut down the episode logger
                 utils_logging.close_logger(logger_per_episode)
 
             except StopIteration:
-                logger.info(f"Finished evaluation after: {count_episodes} episodes")
-                logger.info(
+                self.logger.info(f"Finished evaluation after: {count_episodes} episodes")
+                self.logger.info(
                     f"Last episode evaluated: episode={episode_id}, scene={scene_id}"
                 )
                 break
             except OSError:
-                logger.info(
+                self.logger.info(
                     f"Evaulation stopped after: {count_episodes} episodes due to OSError!"
                 )
-                logger.info(f"Current episode: episode={episode_id}, scene={scene_id}")
+                self.logger.info(f"Current episode: episode={episode_id}, scene={scene_id}")
                 print_exc()
                 break
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
-        utils_logging.close_logger(logger)
+        utils_logging.close_logger(self.logger)
 
         return avg_metrics
+
+    def generate_video(
+        self,
+        episode_id: str,
+        scene_id: str,
+        agent_seed: int = 7,
+        *args,
+        **kwargs
+    ) -> None:
+        # reset episode iterator
+        self.env.reset_episode_iterator()
+
+        # iterate to the given episode
+        observations_per_action = None
+        info_per_action = None
+        observations_per_action = self.env.iter_to_episode(episode_id, scene_id, self.logger)
+
+        # instantiate an agent
+        agent_config = get_default_config()
+        agent_config.INPUT_TYPE = self.input_type
+        agent_config.MODEL_PATH = self.model_path
+        agent_config.RANDOM_SEED = agent_seed
+        self.agent = PPOAgent(agent_config)
+        self.agent.reset()
+
+        # store observations over frames
+        observations_per_episode = []
+        
+        # act until the episode is over
+        while not self.env._env.episode_over:
+            action = self.agent.act(observations_per_action)
+            (observations_per_action, _, _, info_per_action) = self.env.step(
+                action
+            )
+            # generate an output image for the action. The image includes observations
+            # and a top-down map showing the agent's state in the environment
+            out_im_per_action = observations_to_image(
+                observations_per_action, info_per_action
+            )
+            observations_per_episode.append(out_im_per_action)
+        
+        # get metrics for video generation
+        metrics = self.env._env.get_metrics()
+        per_ep_metrics = {
+            k: metrics[k] for k in ["distance_to_goal", "success", "spl"]
+        }
+
+        # set up Tensorboard writer
+        writer = None
+        if "tensorboard" in self.config.VIDEO_OPTION:
+            writer = TensorboardWriter(
+                self.config.TENSORBOARD_DIR, flush_secs=30
+            )  # flush_specs from base_trainer.py
+
+        # generate video and tensorboard visualization
+        generate_video(
+            video_option=self.config.VIDEO_OPTION,
+            video_dir=self.config.VIDEO_DIR,
+            images=observations_per_episode,
+            episode_id=episode_id,
+            scene_id=scene_id,
+            agent_seed=agent_seed,
+            checkpoint_idx=0,
+            metrics=per_ep_metrics,
+            tb_writer=writer,
+        )
+
+    def generate_map(
+        self,
+        episode_id: str,
+        scene_id: str,
+        agent_seed: int,
+        map_height: int,
+        *args,
+        **kwargs
+    ) -> np.ndarray:
+        # reset episode iterator
+        self.env.reset_episode_iterator()
+
+        # iterate to the given episode
+        observations_per_action = None
+        info_per_action = None
+        observations_per_action = self.env.iter_to_episode(episode_id, scene_id, self.logger)
+
+        # instantiate an agent
+        agent_config = get_default_config()
+        agent_config.INPUT_TYPE = self.input_type
+        agent_config.MODEL_PATH = self.model_path
+        agent_config.RANDOM_SEED = agent_seed
+        self.agent = PPOAgent(agent_config)
+        self.agent.reset()
+
+        # act until the episode is over
+        while not self.env._env.episode_over:
+            action = self.agent.act(observations_per_action)
+            (observations_per_action, _, _, info_per_action) = self.env.step(
+                action
+            )
+
+        # draw the map
+        top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+            info_per_action["top_down_map"], map_height,
+        )
+
+        return top_down_map

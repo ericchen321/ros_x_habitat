@@ -13,6 +13,12 @@ dist/
 # Compiled Python bytecode
 *.py[cod]
 
+# Pycache stuff
+__pycache__/
+
+# pylint config
+.pylintrc
+
 # Log files
 logs/
 *.log
@@ -53,12 +59,13 @@ Thumbs.db
 *.mov
 *.wmv
 
-# Tensorboard files and videos
-src/tb/
-src/videos/
+# Files for visualization
+tb/
+videos/
+habitat_maps/
 
 # Saved models, scene files, episode info
-src/data/
+data/
 
 # build files
 build/

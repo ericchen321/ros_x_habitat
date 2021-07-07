@@ -1,4 +1,4 @@
-from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
+from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from typing import Dict
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
@@ -9,14 +9,14 @@ import shlex
 import rospy
 
 # use TensorBoard to visualize
-from src.classes.utils_visualization import TensorboardWriter, generate_video
+from src.utils.utils_visualization import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
 
 # logging
 import os
-from src.classes import utils_logging
+from src.utils import utils_logging
 from traceback import print_exc
 
 # sim timing
@@ -44,8 +44,8 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         :param config_paths: file to be used for creating the environment
         :param sensor_pub_rate: rate at which the env node publishes sensor
             readings
-        :param do_not_nodes: if True then the evaluator would not start the
-            env node and the agent node.
+        :param do_not_start_nodes: if True then the evaluator would not start
+            the env node and the agent node.
         :param enable_physics: use dynamic simulation or not
         """
 
@@ -58,11 +58,11 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         else:
             if do_not_start_nodes is False:
                 # start the agent node
-                agent_node_args = shlex.split(f"python classes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}")
+                agent_node_args = shlex.split(f"python src/nodes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}")
                 Popen(agent_node_args)
 
                 # start the env node
-                env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}")
+                env_node_args = shlex.split(f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}")
                 Popen(env_node_args)
 
         # start the evaluator node
@@ -73,29 +73,10 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         episode_id_last: str = "-1",
         scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
         log_dir: str = "logs/",
-        make_videos: bool = False,
-        video_dir: str = "videos/",
-        tb_dir: str = "tb/",
-        make_maps: bool = False,
-        map_dir: str = "maps/",
+        agent_seed: int = 7,
         *args,
         **kwargs
     ) -> Dict[str, float]:
-        r"""..
-        Evaluate over episodes, starting from the last episode evaluated. Return evaluation
-        metrics.
-
-        :param episode_id_last: ID of the last episode evaluated; -1 for evaluating
-            from start
-        :param scene_id_last: Scene ID of the last episode evaluated
-        :param log_dir: logging directory
-        :param make_videos: toggle video production on/off
-        :param video_dir: directory to store videos
-        :param tb_dir: Tensorboard logging directory
-        :param map_maps: toggle overlayed map production on/off
-        :param map_dir: directory to store maps
-        :return: dict containing metrics tracked by environment.
-        """
         logger = utils_logging.setup_logger(__name__)
 
         count_episodes = 0
@@ -132,7 +113,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                     scene_id = resp.scene_id
                     logger_per_episode = utils_logging.setup_logger(
                         f"{__name__}-{episode_id}-{scene_id}",
-                        f"{log_dir}/{episode_id}-{os.path.basename(scene_id)}.log",
+                        f"{log_dir}/episode={episode_id}-scene={os.path.basename(scene_id)}.log",
                     )
                     # log episode ID and scene ID
                     logger_per_episode.info(f"episode id: {episode_id}")
@@ -154,3 +135,26 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         utils_logging.close_logger(logger)
 
         return avg_metrics
+
+    def generate_video(
+        self,
+        episode_id: str,
+        scene_id: str,
+        agent_seed: int = 7,
+        *args,
+        **kwargs
+    ) -> None:
+        #TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
+        raise NotImplementedError
+
+    def generate_map(
+        self,
+        episode_id: str,
+        scene_id: str,
+        agent_seed: int,
+        map_height: int,
+        *args,
+        **kwargs
+    ) -> np.ndarray:
+        #TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
+        raise NotImplementedError

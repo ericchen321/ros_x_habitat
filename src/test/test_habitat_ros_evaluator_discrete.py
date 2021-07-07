@@ -9,10 +9,10 @@ import numpy as np
 from mock_env_node import MockHabitatEnvNode
 from mock_agent_node import MockHabitatAgentNode
 from mock_habitat_ros_evaluator import MockHabitatROSEvaluator
-from src.classes.habitat_agent_node import HabitatAgentNode, get_default_config
-from src.classes.constants import AgentResetCommands
-from src.classes.habitat_env_node import HabitatEnvNode
-from src.classes.habitat_ros_evaluator import HabitatROSEvaluator
+from src.nodes.habitat_agent_node import HabitatAgentNode, get_default_config
+from src.constants.constants import AgentResetCommands
+from src.nodes.habitat_env_node import HabitatEnvNode
+from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
 from subprocess import Popen, call
 import shlex
 
@@ -34,7 +34,7 @@ class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
 
     def test_agent_node_discrete(self):
         # start the agent node
-        agent_node_args = shlex.split(f"python classes/habitat_agent_node.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --sensor-pub-rate 5.0")
+        agent_node_args = shlex.split(f"python src/nodes/habitat_agent_node.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --sensor-pub-rate 5.0")
         Popen(agent_node_args)
 
         # init the mock env node

@@ -12,15 +12,15 @@ from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
 from habitat.core.simulator import Observations
 from cv_bridge import CvBridge, CvBridgeError
-from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
+from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from habitat.config.default import get_config
 from threading import Condition
 from ros_x_habitat.srv import EvalEpisode, ResetAgent
-from src.classes.constants import AgentResetCommands
-from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
+from src.constants.constants import AgentResetCommands
+from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 
 # logging
-from src.classes import utils_logging
+from src.utils import utils_logging
 
 
 class HabitatEnvNode:
@@ -44,7 +44,6 @@ class HabitatEnvNode:
         # embed top-down map and heading sensor in config
         self.config.defrost()
         self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-        # config_env.TASK.SENSORS.append("HEADING_SENSOR")
         self.config.freeze()
         self.enable_physics = enable_physics
         # overwrite env config if physics enabled

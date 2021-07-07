@@ -23,12 +23,12 @@ import numpy as np
 import time
 from ros_x_habitat.srv import ResetAgent
 from threading import Lock
-from src.classes.constants import AgentResetCommands
+from src.constants.constants import AgentResetCommands
 from threading import Condition
 import random
 
 # logging
-from src.classes import utils_logging
+from src.utils import utils_logging
 
 def get_default_config():
     c = Config()
