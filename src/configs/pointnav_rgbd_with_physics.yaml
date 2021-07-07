@@ -37,3 +37,5 @@ DATASET:
   TYPE: PointNav-v1
   SPLIT: val
   DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
+
+VIDEO_OPTION: ["DISK"]

@@ -44,7 +44,6 @@ class HabitatEnvNode:
         # embed top-down map and heading sensor in config
         self.config.defrost()
         self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-        # config_env.TASK.SENSORS.append("HEADING_SENSOR")
         self.config.freeze()
         self.enable_physics = enable_physics
         # overwrite env config if physics enabled
