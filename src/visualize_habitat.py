@@ -4,7 +4,7 @@ import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
 from src.classes.habitat_evaluator import HabitatEvaluator
-import os
+from src.classes.utils_visualization import generate_grid_of_maps
 
 # logging
 from src.classes import utils_logging
@@ -31,7 +31,12 @@ def main():
     parser.add_argument(
         "--seed-file-path", type=str, default="seed=7.csv"
     )
-    parser.add_argument("--log-dir", type=str, default="logs/")
+    parser.add_argument("--make-videos", default=False, action="store_true")
+    parser.add_argument("--make-maps", default=False, action="store_true")
+    parser.add_argument(
+        "--map-dir", type=str, default="habitat_maps/"
+    )
+
     args = parser.parse_args()
 
     # get exp config
@@ -46,59 +51,28 @@ def main():
                 seeds.append(int(line[0]))
     else:
         seeds = [exp_config.SEED]
-    
-    # create log dir
-    try:
-        os.mkdir(f"{args.log_dir}")
-    except FileExistsError:
-        pass
-
-    # create logger and log experiment settings
-    logger = utils_logging.setup_logger(__name__, f"{args.log_dir}/summary-all_seeds.log")
-    logger.info("Experiment configuration:")
-    logger.info(exp_config)
 
     # instantiate a discrete/continuous evaluator
     evaluator = None
     if "PHYSICS_SIMULATOR" in exp_config:
-        logger.info("Instantiating continuous simulator with dynamics")
         evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, enable_physics=True)
     elif "SIMULATOR" in exp_config:
-        logger.info("Instantiating discrete simulator")
         evaluator = HabitatEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, enable_physics=False)
     else:
-        logger.info("Simulator not properly specified")
         raise NotImplementedError
 
-    logger.info("Started Evaluation")
-    for seed in seeds:
-        # create logger for each seed and log the seed
-        logger_per_seed = utils_logging.setup_logger(f"{__name__}-seed={seed}",
-        f"{args.log_dir}/summary-seed={seed}.log"
-        )
-        logger_per_seed.info(f"Seed = {seed}")
+    # evaluate and generate videos
+    if args.make_videos:
+        for seed in seeds:
+            evaluator.generate_video(args.episode_id, args.scene_id, seed)
 
-        # create (per-episode) log dir
-        try:
-            os.mkdir(f"{args.log_dir}/seed={seed}")
-        except FileExistsError:
-            pass
-
-        # evaluate
-        metrics = evaluator.evaluate(
-            episode_id_last=args.episode_id,
-            scene_id_last=args.scene_id,
-            log_dir=f"{args.log_dir}/seed={seed}",
-            agent_seed=seed
-        )
-
-        # log metrics
-        logger_per_seed.info("Printing average metrics:")
-        for k, v in metrics.items():
-            logger_per_seed.info("{}: {:.3f}".format(k, v))
-        utils_logging.close_logger(logger_per_seed)
-
-    utils_logging.close_logger(logger)
+    # evaluate and visualize top-down maps
+    if args.make_maps:
+        maps = []
+        for seed in seeds:
+            map_one_seed = evaluator.generate_map(args.episode_id, args.scene_id, seed, 200)
+            maps.append(map_one_seed)
+        generate_grid_of_maps(args.episode_id, args.scene_id, seeds, maps, args.map_dir)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ dist/
 *.py[cod]
 
 # Log files
-logs/
+src/logs/
 *.log
 
 # Package files
@@ -53,9 +53,10 @@ Thumbs.db
 *.mov
 *.wmv
 
-# Tensorboard files and videos
+# Files for visualization
 src/tb/
 src/videos/
+src/habitat_maps/
 
 # Saved models, scene files, episode info
 src/data/

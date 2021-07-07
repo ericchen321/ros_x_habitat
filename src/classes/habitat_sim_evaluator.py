@@ -1,6 +1,9 @@
 from src.classes.evaluator import Evaluator
 from habitat.config.default import get_config
 from habitat.config import Config
+from typing import List
+from src.classes import utils_logging
+import numpy as np
 
 
 class HabitatSimEvaluator(Evaluator):
@@ -16,14 +19,16 @@ class HabitatSimEvaluator(Evaluator):
         config_paths: str,
         input_type: str,
         model_path: str,
-        agent_seed: int,
         enable_physics: bool = False
     ):
+        # store experiment settings
         self.config = get_config(config_paths)
         self.input_type = input_type
         self.model_path = model_path
-        self.agent_seed = agent_seed
         self.enable_physics = enable_physics
+
+        # create a logger
+        self.logger = utils_logging.setup_logger(__name__)
 
     @classmethod
     def overwrite_simulator_config(cls, config):
@@ -53,3 +58,42 @@ class HabitatSimEvaluator(Evaluator):
             raise e
 
         return
+
+    def generate_video(
+        self,
+        episode_id: str,
+        scene_id: str,
+        agent_seed: int = 7,
+        *args,
+        **kwargs
+    ) -> None:
+        r"""
+        Evaluate the episode of given episode ID and scene ID, and save the video to <video_dir>/.
+
+        :param episode_id: ID of the episode
+        :param scene_id: ID of the scene
+        :param agent_seed: seed for initializing agent
+        """
+        raise NotImplementedError
+
+    def generate_map(
+        self,
+        episode_id: str,
+        scene_id: str,
+        agent_seed: int,
+        map_height: int,
+        *args,
+        **kwargs
+    ) -> np.ndarray:
+        r"""
+        Evaluate the episode of given episode ID and scene ID, with agent initialized by the 
+        given seed. Return the top-down map.
+
+        :param episode_id: ID of the episode
+        :param scene_id: ID of the scene
+        :param agent_seed: seed for initializing agent
+        :param map_height: desired height of the map
+
+        :returns: Top-down map with initial/goal position, shortest path and actual path.
+        """
+        raise NotImplementedError
