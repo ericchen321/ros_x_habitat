@@ -16,6 +16,9 @@ dist/
 # Pycache stuff
 __pycache__/
 
+# pylint config
+.pylintrc
+
 # Log files
 logs/
 *.log
