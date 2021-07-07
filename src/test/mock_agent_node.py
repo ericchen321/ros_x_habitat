@@ -1,29 +1,28 @@
 #!/usr/bin/env python
 import argparse
+import os
+from math import radians
+from threading import Condition
+from threading import Lock
 from typing import (
-    TYPE_CHECKING,
     Any,
     Dict,
-    List,
 )
-import rospy
+
 import message_filters
+import numpy as np
+import rospy
+from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
-from rospy.numpy_msg import numpy_msg
+from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
+from message_filters import TimeSynchronizer
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
+from ros_x_habitat.srv import ResetAgent
+from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int16
-from message_filters import TimeSynchronizer
-from cv_bridge import CvBridge, CvBridgeError
-from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
-from math import radians
-import numpy as np
-import os
-from ros_x_habitat.srv import ResetAgent
-from threading import Lock
-from src.constants.constants import AgentResetCommands
-from threading import Condition
 
+from src.constants.constants import AgentResetCommands
 
 # load sensor readings and actions from disk
 episode_id = 49
@@ -67,7 +66,7 @@ class MockHabitatAgentNode:
         self,
         enable_physics: bool = False,
         control_period: float = 1.0,
-        sensor_pub_rate: float = 5.0
+        sensor_pub_rate: float = 5.0,
     ):
         self.enable_physics = enable_physics
         self.sensor_pub_rate = sensor_pub_rate
@@ -77,7 +76,7 @@ class MockHabitatAgentNode:
         self.pub_queue_size = 10
 
         # establish reset protocol with env
-        self.reset_service = rospy.Service('reset_agent', ResetAgent, self.reset_agent)
+        self.reset_service = rospy.Service("reset_agent", ResetAgent, self.reset_agent)
 
         if self.enable_physics:
             self.control_period = 1.0
@@ -87,7 +86,7 @@ class MockHabitatAgentNode:
         # not applicable in discrete mode
         if self.enable_physics:
             self.count_frames = 0
-        
+
         # lock guarding access to self.action, self.count_frames and
         # self.agent
         self.lock = Lock()
@@ -303,15 +302,15 @@ if __name__ == "__main__":
         default=10,
     )
     args = parser.parse_args()
-    
+
     # init mock agent node
     rospy.init_node("mock_agent_node")
     mock_agent_node = MockHabitatAgentNode(
-        enable_physics = args.enable_physics,
-        control_period = args.control_period,
-        sensor_pub_rate = args.sensor_pub_rate
+        enable_physics=args.enable_physics,
+        control_period=args.control_period,
+        sensor_pub_rate=args.sensor_pub_rate,
     )
-    
+
     # shutdown the mock agent node after getting the signal
     with mock_agent_node.shutdown_cv:
         while mock_agent_node.shutdown is False:

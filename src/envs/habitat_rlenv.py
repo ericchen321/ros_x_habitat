@@ -2,13 +2,13 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import gym
 import numpy as np
-
 from habitat.config import Config
-from habitat.core.env import Env
-from src.envs.physics_env import PhysicsEnv
 from habitat.core.dataset import Dataset, Episode
-from habitat.core.simulator import Observations, Simulator
+from habitat.core.env import Env
+from habitat.core.simulator import Observations
 from habitat.utils import profiling_wrapper
+
+from src.envs.physics_env import PhysicsEnv
 
 
 class HabitatRLEnv(gym.Env):

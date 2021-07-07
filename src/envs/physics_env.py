@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 
 from typing import Any, Dict, Iterator, List, Optional, Type, Union
+
+import habitat_sim as hsim
 import numpy as np
 from gym.spaces import Dict as SpaceDict
-
-from habitat.core.env import Env
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import EmbodiedTask
+from habitat.core.env import Env
 from habitat.core.simulator import Observations, Simulator
-import habitat_sim as hsim
 
 
 class PhysicsEnv(Env):
@@ -43,11 +43,7 @@ class PhysicsEnv(Env):
     _episode_start_time: Optional[float]
     _episode_over: bool
 
-    def __init__(
-        self,
-        config: Config,
-        dataset: Optional[Dataset] = None
-    ) -> None:
+    def __init__(self, config: Config, dataset: Optional[Dataset] = None) -> None:
         """Constructor
 
         :param config: config for the environment. Should contain id for
@@ -58,18 +54,18 @@ class PhysicsEnv(Env):
             ``_episodes`` should be populated from outside.
         """
         super().__init__(config, dataset)
-        
+
         # declare the physics object attributes manager;
         # this should be (re)-instantiated on every reset
         self.obj_templates_mgr = None
-        
+
         # declare the rigid object manager;
         # this should be (re)-instantiated on every reset
         self.rigid_obj_mgr = None
-        
+
         # declare the agent object
         self.agent_object = None
-        
+
     def step_physics(
         self,
         action: Union[int, str, Dict[str, Any]],
@@ -151,13 +147,17 @@ class PhysicsEnv(Env):
         # remove all objects in the scene, but keep their scene nodes
         obj_handles = self.rigid_obj_mgr.get_object_handles()
         for obj_handle in obj_handles:
-            self.rigid_obj_mgr.remove_object_by_handle(obj_handle, delete_object_node=False, delete_visual_node=False)
+            self.rigid_obj_mgr.remove_object_by_handle(
+                obj_handle, delete_object_node=False, delete_visual_node=False
+            )
 
         # load locobot asset and attach it to the agent's scene node
         locobot_template_id = self.obj_templates_mgr.load_configs(
             "data/objects/locobot_merged"
         )[0]
-        self.obj_templates_mgr.get_template_by_id(locobot_template_id).angular_damping = 0.0
+        self.obj_templates_mgr.get_template_by_id(
+            locobot_template_id
+        ).angular_damping = 0.0
         self.agent_object = self.rigid_obj_mgr.add_object_by_template_id(
             locobot_template_id, self._sim.agents[0].scene_node
         )

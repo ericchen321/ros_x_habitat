@@ -2,9 +2,8 @@
 # Arguments:
 #   Path to directory containing log files
 
-import sys
 import glob
-import linecache
+import sys
 
 
 def extract_metric(log_filename, lin_num, splitter):
@@ -23,7 +22,7 @@ if __name__ == "__main__":
     log_filenames = []
     for log_filename in glob.glob(f"{log_dir}/*.log"):
         log_filenames.append(log_filename)
-    
+
     agg_metrics = {
         "distance_to_goal": 0.0,
         "success": 0.0,
@@ -36,9 +35,11 @@ if __name__ == "__main__":
         # extract metrics
         line_index = 2
         for metric_name, _ in agg_metrics.items():
-            agg_metrics[metric_name] += extract_metric(log_filename, line_index, f"{metric_name},")
+            agg_metrics[metric_name] += extract_metric(
+                log_filename, line_index, f"{metric_name},"
+            )
             line_index += 1
-    
+
     num_episodes = len(log_filenames)
     print(f"Computed metrics from {num_episodes} episodes")
     for k, v in agg_metrics.items():

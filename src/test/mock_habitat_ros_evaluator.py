@@ -1,13 +1,10 @@
-from src.evaluators.evaluator import Evaluator
-from typing import Dict
-from habitat.config.default import get_config
-from habitat.core.agent import Agent
 from collections import defaultdict
-from ros_x_habitat.srv import *
-from subprocess import Popen
-import shlex
+from typing import Dict
+
 import rospy
-import numpy as np
+from ros_x_habitat.srv import *
+
+from src.evaluators.evaluator import Evaluator
 
 
 class MockHabitatROSEvaluator(Evaluator):
@@ -24,14 +21,14 @@ class MockHabitatROSEvaluator(Evaluator):
 
         # start the evaluator node
         rospy.init_node("mock_evaluator_habitat_ros")
-    
+
     def evaluate(
         self,
         episode_id_last: str = "-1",
         scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
         log_dir: str = "logs/",
         *args,
-        **kwargs
+        **kwargs,
     ) -> Dict[str, float]:
         r"""..
         Evaluate over episodes, starting from the last episode evaluated. Return evaluation
@@ -47,7 +44,7 @@ class MockHabitatROSEvaluator(Evaluator):
 
         count_episodes = 0
         agg_metrics: Dict = defaultdict(float)
-        eval_episode = rospy.ServiceProxy('eval_episode', EvalEpisode)
+        eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
         # evaluate episodes, starting from the one after the last episode
         # evaluated
@@ -62,7 +59,7 @@ class MockHabitatROSEvaluator(Evaluator):
                 else:
                     # evaluate the next episode
                     resp = eval_episode("-1", "")
-                
+
                 if resp.episode_id == "-1":
                     # no more episodes
                     print(f"Finished evaluation after: {count_episodes} episodes")
@@ -72,18 +69,18 @@ class MockHabitatROSEvaluator(Evaluator):
                     per_ep_metrics = {
                         "distance_to_goal": resp.distance_to_goal,
                         "success": resp.success,
-                        "spl": resp.spl
+                        "spl": resp.spl,
                     }
-                    
+
                     # calculate aggregated metrics over episodes eval'ed so far
                     for m, v in per_ep_metrics.items():
                         agg_metrics[m] += v
-                    
+
                     count_episodes += 1
             except rospy.ServiceException:
                 print(f"Evaluation call failed at {count_episodes}-th episode")
                 break
-        
+
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
 
         return avg_metrics

@@ -1,37 +1,33 @@
-import habitat_sim
 from typing import (
-    TYPE_CHECKING,
     Any,
-    Dict,
     List,
     Optional,
     Sequence,
-    Set,
     Union,
-    cast,
 )
+
+import habitat_sim
+import habitat_sim as hsim
 import numpy as np
 from gym import spaces
-from src.sims.physics_simulator import PhysicsSimulator
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.core.spaces import Space
 from habitat.core.simulator import (
     AgentState,
     Config,
-    DepthSensor,
     Observations,
-    RGBSensor,
-    SemanticSensor,
-    Sensor,
     SensorSuite,
     ShortestPathPoint,
     Simulator,
-    VisualObservation,
 )
-import habitat_sim as hsim
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSimSensor, overwrite_config
+from habitat.core.spaces import Space
+from habitat.sims.habitat_simulator.habitat_simulator import (
+    HabitatSimSensor,
+    overwrite_config,
+)
 from numpy import ndarray
+
+from src.sims.physics_simulator import PhysicsSimulator
 
 
 @registry.register_simulator(name="Sim-Phys")
@@ -113,23 +109,17 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
                     "sensor_model_type": lambda v: getattr(
                         habitat_sim.FisheyeSensorModelType, v
                     ),
-                    "sensor_subtype": lambda v: getattr(
-                        habitat_sim.SensorSubType, v
-                    ),
+                    "sensor_subtype": lambda v: getattr(habitat_sim.SensorSubType, v),
                 },
             )
             sim_sensor_cfg.uuid = sensor.uuid
-            sim_sensor_cfg.resolution = list(
-                sensor.observation_space.shape[:2]
-            )
+            sim_sensor_cfg.resolution = list(sensor.observation_space.shape[:2])
 
             # TODO(maksymets): Add configure method to Sensor API to avoid
             # accessing child attributes through parent interface
             # We know that the Sensor has to be one of these Sensors
             sim_sensor_cfg.sensor_type = sensor.sim_sensor_type
-            sim_sensor_cfg.gpu2gpu_transfer = (
-                self.habitat_config.HABITAT_SIM_V0.GPU_GPU
-            )
+            sim_sensor_cfg.gpu2gpu_transfer = self.habitat_config.HABITAT_SIM_V0.GPU_GPU
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
@@ -174,11 +164,9 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
         self._prev_sim_obs = sim_obs
         observations = self._sensor_suite.get_observations(sim_obs)
         return observations
-    
+
     def step_physics(
-        self,
-        agent_object: hsim.physics.ManagedRigidObject,
-        time_step: float
+        self, agent_object: hsim.physics.ManagedRigidObject, time_step: float
     ) -> Observations:
         sim_obs = super().step_physics(agent_object, time_step)
         self._prev_sim_obs = sim_obs
@@ -229,9 +217,7 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
             if isinstance(position_b[0], (Sequence, np.ndarray)):
                 path.requested_ends = np.array(position_b, dtype=np.float32)
             else:
-                path.requested_ends = np.array(
-                    [np.array(position_b, dtype=np.float32)]
-                )
+                path.requested_ends = np.array([np.array(position_b, dtype=np.float32)])
         else:
             path = episode._shortest_path_cache
 
@@ -376,9 +362,7 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
         if position is None or rotation is None:
             success = True
         else:
-            success = self.set_agent_state(
-                position, rotation, reset_sensors=False
-            )
+            success = self.set_agent_state(position, rotation, reset_sensors=False)
 
         if success:
             sim_obs = self.get_sensor_observations()
@@ -399,9 +383,7 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
     def distance_to_closest_obstacle(
         self, position: ndarray, max_search_radius: float = 2.0
     ) -> float:
-        return self.pathfinder.distance_to_closest_obstacle(
-            position, max_search_radius
-        )
+        return self.pathfinder.distance_to_closest_obstacle(position, max_search_radius)
 
     def island_radius(self, position: Sequence[float]) -> float:
         return self.pathfinder.island_radius(position)
@@ -414,7 +396,7 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
             bool: True if the previous step resulted in a collision, false otherwise
 
         Warning:
-            This feild is only updated when :meth:`step`, :meth:`step_physics`, :meth:`reset`, 
+            This feild is only updated when :meth:`step`, :meth:`step_physics`, :meth:`reset`,
             or :meth:`get_observations_at` are called.  It does not update when the agent is
             moved to a new loction.  Furthermore, it will _always_ be false after :meth:`reset`
             or :meth:`get_observations_at` as neither of those result in an action (step) being

@@ -1,14 +1,15 @@
+from threading import Condition
+
 import numpy as np
 import rospy
-import argparse
+from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
-from rospy.numpy_msg import numpy_msg
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
+from ros_x_habitat.srv import EvalEpisode, ResetAgent
+from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
-from cv_bridge import CvBridge, CvBridgeError
-from threading import Condition
-from ros_x_habitat.srv import EvalEpisode, ResetAgent
+
 from src.constants.constants import AgentResetCommands
 
 
@@ -38,12 +39,14 @@ class MockHabitatEnvNode:
         self.action_cv = Condition()
 
         # mock eval_episode service handler
-        self.eval_service = rospy.Service('eval_episode', EvalEpisode, self.eval_episode)
+        self.eval_service = rospy.Service(
+            "eval_episode", EvalEpisode, self.eval_episode
+        )
         self.episode_id = episode_id
         self.scene_id = scene_id
 
         # establish reset service with agent
-        self.reset_agent = rospy.ServiceProxy('reset_agent', ResetAgent)
+        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
 
         # publish to sensor topics
         self.pub_rgb = rospy.Publisher("rgb", Image, queue_size=self.pub_queue_size)
@@ -76,7 +79,7 @@ class MockHabitatEnvNode:
             pass
 
         print("mock env initialized")
-    
+
     def reset(self):
         r"""
         Resets the agent and the simulator. Requires being called only from
@@ -89,7 +92,7 @@ class MockHabitatEnvNode:
             assert resp.done
         except rospy.ServiceException:
             pass
-    
+
     def eval_episode(self, request):
         r"""
         mocks the real eval_episode handler.
@@ -105,8 +108,8 @@ class MockHabitatEnvNode:
             "episode_id": "-1",
             "scene_id": "lol",
             "distance_to_goal": 0.0,
-            "success" : 0.0,
-            "spl": 0.0
+            "success": 0.0,
+            "spl": 0.0,
         }
         return resp
 
@@ -145,12 +148,8 @@ class MockHabitatEnvNode:
             depth_msg.header = h
             # pointgoal + gps/compass
             ptgoal_with_gps_compass_msg = PointGoalWithGPSCompass()
-            ptgoal_with_gps_compass_msg.distance_to_goal = (
-                ptgoal_with_gps_compass[0]
-            )
-            ptgoal_with_gps_compass_msg.angle_to_goal = (
-                ptgoal_with_gps_compass[1]
-            )
+            ptgoal_with_gps_compass_msg.distance_to_goal = ptgoal_with_gps_compass[0]
+            ptgoal_with_gps_compass_msg.angle_to_goal = ptgoal_with_gps_compass[1]
             h = Header()
             h.stamp = t_curr
             ptgoal_with_gps_compass_msg.header = h

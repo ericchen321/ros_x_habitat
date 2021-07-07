@@ -1,6 +1,7 @@
 from typing import Any, Optional, Union, Dict, Type
-import numpy as np
 
+import habitat_sim as hsim
+import numpy as np
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import (
@@ -10,18 +11,15 @@ from habitat.core.registry import registry
 from habitat.core.simulator import (
     Simulator,
 )
-from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 from habitat.tasks.nav.nav import (
     merge_sim_episode_config,
     SimulatorTaskAction,
     MoveForwardAction,
     TurnLeftAction,
     TurnRightAction,
-    StopAction
+    StopAction,
 )
-import habitat_sim as hsim
 from habitat.utils.geometry_utils import angle_between_quaternions
-import magnum as mn
 
 
 @registry.register_task(name="Nav-Phys")
@@ -31,11 +29,12 @@ class PhysicsNavigationTask(EmbodiedTask):
     dual of habitat.nav.nav.PointGoalNavigationTask (which is the class for nav
     without physics).
     """
+
     def __init__(
         self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
-    
+
     def reset(self, episode: Episode):
         observations = self._sim.reset()
         observations.update(
@@ -46,7 +45,7 @@ class PhysicsNavigationTask(EmbodiedTask):
 
         for action_instance in self.actions.values():
             action_instance.reset(episode=episode, task=self)
-        
+
         self.is_stop_called = False
 
         return observations
@@ -90,11 +89,13 @@ class PhysicsNavigationTask(EmbodiedTask):
                 observations = self._sim.step_physics(agent_object, time_step)
                 # if collision occurred, quit the loop immediately
                 # NOTE: this is not working yet
-                #if self._sim.previous_step_collided:
+                # if self._sim.previous_step_collided:
                 #    break
             if isinstance(task_action, TurnLeftAction):
                 agent_final_rotation = self._sim.agents[0].get_state().rotation
-                angle_between_rotations = np.rad2deg(angle_between_quaternions(agent_final_rotation, agent_init_rotation))
+                angle_between_rotations = np.rad2deg(
+                    angle_between_quaternions(agent_final_rotation, agent_init_rotation)
+                )
                 print(f"rotated angle: {angle_between_rotations} degs")
 
         observations.update(
@@ -136,7 +137,7 @@ class PhysicsNavigationTask(EmbodiedTask):
         agent_vel_control.controlling_ang_vel = True
         agent_vel_control.lin_vel_is_local = True
         agent_vel_control.ang_vel_is_local = True
-        
+
         # Setting agent velocity controls based on each action type
         if isinstance(action, StopAction):
             agent_vel_control.linear_velocity = np.float32([0, 0, 0])
@@ -156,7 +157,11 @@ class PhysicsNavigationTask(EmbodiedTask):
             # the local y axis.
             # TODO: programmatically load this value
             agent_vel_control.linear_velocity = np.float32([0, 0, 0])
-            agent_vel_control.angular_velocity = np.float32([0, (np.deg2rad(10.0)/control_period), 0])
+            agent_vel_control.angular_velocity = np.float32(
+                [0, (np.deg2rad(10.0) / control_period), 0]
+            )
         elif isinstance(action, TurnRightAction):
             agent_vel_control.linear_velocity = np.float32([0, 0, 0])
-            agent_vel_control.angular_velocity = np.float32([0, (np.deg2rad(-10.0)/control_period), 0])
+            agent_vel_control.angular_velocity = np.float32(
+                [0, (np.deg2rad(-10.0) / control_period), 0]
+            )

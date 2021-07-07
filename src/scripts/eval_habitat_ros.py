@@ -1,11 +1,10 @@
 import argparse
 import csv
-import habitat
-from habitat.config import Config
-from habitat.config.default import get_config
-from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
-from habitat_baselines.agents.ppo_agents import PPOAgent
 import os
+
+from habitat.config.default import get_config
+
+from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
 
 # logging
 from src.utils import utils_logging
@@ -29,11 +28,11 @@ def main():
         type=str,
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
-    parser.add_argument(
-        "--seed-file-path", type=str, default="seed=7.csv"
-    )
+    parser.add_argument("--seed-file-path", type=str, default="seed=7.csv")
     parser.add_argument("--sensor-pub-rate", type=float, default=5.0)
-    parser.add_argument("--do-not-start-nodes-from-evaluator", default=False, action="store_true")
+    parser.add_argument(
+        "--do-not-start-nodes-from-evaluator", default=False, action="store_true"
+    )
     parser.add_argument("--log-dir", type=str, default="logs/")
     args = parser.parse_args()
 
@@ -43,13 +42,13 @@ def main():
     # get seeds if provided; otherwise use default seed from Habitat
     seeds = []
     if args.seed_file_path != "":
-        with open(args.seed_file_path, newline='') as csv_file:
+        with open(args.seed_file_path, newline="") as csv_file:
             csv_lines = csv.reader(csv_file)
             for line in csv_lines:
                 seeds.append(int(line[0]))
     else:
         seeds = [exp_config.SEED]
-    
+
     # create log dir
     try:
         os.mkdir(f"{args.log_dir}")
@@ -57,7 +56,9 @@ def main():
         pass
 
     # create logger and log experiment settings
-    logger = utils_logging.setup_logger(__name__, f"{args.log_dir}/summary-all_seeds.log")
+    logger = utils_logging.setup_logger(
+        __name__, f"{args.log_dir}/summary-all_seeds.log"
+    )
     logger.info("Experiment configuration:")
     logger.info(exp_config)
 
@@ -65,11 +66,25 @@ def main():
     evaluator = None
     if "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabitatROSEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, sensor_pub_rate=args.sensor_pub_rate, do_not_start_nodes=args.do_not_start_nodes_from_evaluator, enable_physics=False)
+        evaluator = HabitatROSEvaluator(
+            config_paths=args.task_config,
+            input_type=args.input_type,
+            model_path=args.model_path,
+            sensor_pub_rate=args.sensor_pub_rate,
+            do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
+            enable_physics=False,
+        )
     elif "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
         # TODO: pass in control period
-        evaluator = HabitatROSEvaluator(config_paths=args.task_config, input_type=args.input_type, model_path=args.model_path, sensor_pub_rate=args.sensor_pub_rate, do_not_start_nodes=args.do_not_start_nodes_from_evaluator, enable_physics=True)
+        evaluator = HabitatROSEvaluator(
+            config_paths=args.task_config,
+            input_type=args.input_type,
+            model_path=args.model_path,
+            sensor_pub_rate=args.sensor_pub_rate,
+            do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
+            enable_physics=True,
+        )
     else:
         logger.info("Simulator not properly specified")
         raise NotImplementedError
@@ -77,8 +92,8 @@ def main():
     logger.info("Started Evaluation")
     for seed in seeds:
         # create logger for each seed and log the seed
-        logger_per_seed = utils_logging.setup_logger(f"{__name__}-seed={seed}",
-        f"{args.log_dir}/summary-seed={seed}.log"
+        logger_per_seed = utils_logging.setup_logger(
+            f"{__name__}-seed={seed}", f"{args.log_dir}/summary-seed={seed}.log"
         )
         logger_per_seed.info(f"Seed = {seed}")
 

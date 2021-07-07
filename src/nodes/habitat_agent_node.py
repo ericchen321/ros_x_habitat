@@ -1,34 +1,34 @@
 #!/usr/bin/env python
 import argparse
+import time
+from math import radians
+from threading import Condition
+from threading import Lock
 from typing import (
-    TYPE_CHECKING,
     Any,
     Dict,
-    List,
 )
-import rospy
+
 import message_filters
+import numpy as np
+import rospy
+from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
-from rospy.numpy_msg import numpy_msg
+from habitat.config import Config
+from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
+from habitat_baselines.agents.ppo_agents import PPOAgent
+from message_filters import TimeSynchronizer
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
+from ros_x_habitat.srv import ResetAgent
+from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int16
-from message_filters import TimeSynchronizer
-from cv_bridge import CvBridge, CvBridgeError
-from habitat.config import Config
-from habitat_baselines.agents.ppo_agents import PPOAgent
-from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
-from math import radians
-import numpy as np
-import time
-from ros_x_habitat.srv import ResetAgent
-from threading import Lock
+
 from src.constants.constants import AgentResetCommands
-from threading import Condition
-import random
 
 # logging
 from src.utils import utils_logging
+
 
 def get_default_config():
     c = Config()
@@ -72,12 +72,12 @@ class HabitatAgentNode:
         self.pub_queue_size = 10
 
         # establish reset protocol with env
-        self.reset_service = rospy.Service('reset_agent', ResetAgent, self.reset_agent)
+        self.reset_service = rospy.Service("reset_agent", ResetAgent, self.reset_agent)
 
         # control_period defined for continuous mode
         if self.enable_physics:
             self.control_period = control_period
-        
+
         # the last action produced from the agent
         self.action = None
 
@@ -86,7 +86,7 @@ class HabitatAgentNode:
         # not applicable in discrete mode
         if self.enable_physics:
             self.count_frames = 0
-        
+
         # lock guarding access to self.action, self.count_frames and
         # self.agent
         self.lock = Lock()
@@ -102,9 +102,15 @@ class HabitatAgentNode:
             self.pub = rospy.Publisher("action", Int16, queue_size=self.pub_queue_size)
 
         # subscribe to sensor topics
-        if self.agent_config.INPUT_TYPE == "rgb" or self.agent_config.INPUT_TYPE == "rgbd":
+        if (
+            self.agent_config.INPUT_TYPE == "rgb"
+            or self.agent_config.INPUT_TYPE == "rgbd"
+        ):
             self.sub_rgb = message_filters.Subscriber("rgb", Image)
-        if self.agent_config.INPUT_TYPE == "depth" or self.agent_config.INPUT_TYPE == "rgbd":
+        if (
+            self.agent_config.INPUT_TYPE == "depth"
+            or self.agent_config.INPUT_TYPE == "rgbd"
+        ):
             self.sub_depth = message_filters.Subscriber("depth", numpy_msg(DepthImage))
         self.sub_pointgoal_with_gps_compass = message_filters.Subscriber(
             "pointgoal_with_gps_compass", PointGoalWithGPSCompass
@@ -135,7 +141,7 @@ class HabitatAgentNode:
             pass
 
         self.logger.info("agent initialized")
-    
+
     def reset_agent(self, request):
         r"""
         ROS service handler which resets the agent and related variables.
@@ -313,11 +319,11 @@ class HabitatAgentNode:
         :param depth_msg: Depth sensor readings in ROS message format.
         :param pointgoal_with_gps_compass_msg: Pointgoal + GPS/Compass readings.
         """
-                
+
         # ------------ log agent time start ------------
         t_agent_start = time.clock()
         # ----------------------------------------------
-        
+
         # convert current_observations from ROS to Habitat format
         observations = self.msgs_to_obs(
             rgb_msg=rgb_msg,
@@ -344,7 +350,7 @@ class HabitatAgentNode:
         # ------------ log agent time end ------------
         t_agent_end = time.clock()
         t_agent_elapsed = t_agent_end - t_agent_start
-        #print(f"time: {t_agent_elapsed} sec")
+        # print(f"time: {t_agent_elapsed} sec")
         # --------------------------------------------
 
 
@@ -381,10 +387,9 @@ if __name__ == "__main__":
         control_period=args.control_period,
         sensor_pub_rate=args.sensor_pub_rate,
     )
-    
+
     # shutdown the agent node after getting the signal
     with agent_node.shutdown_cv:
         while agent_node.shutdown is False:
             agent_node.shutdown_cv.wait()
         rospy.signal_shutdown("received request to shut down")
-        
