@@ -5,7 +5,7 @@ import numpy as np
 
 from habitat.config import Config
 from habitat.core.env import Env
-from src.classes.physics_env import PhysicsEnv
+from src.envs.physics_env import PhysicsEnv
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.simulator import Observations, Simulator
 from habitat.utils import profiling_wrapper

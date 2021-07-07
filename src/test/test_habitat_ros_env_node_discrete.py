@@ -9,9 +9,9 @@ import numpy as np
 from mock_env_node import MockHabitatEnvNode
 from mock_agent_node import MockHabitatAgentNode
 from mock_habitat_ros_evaluator import MockHabitatROSEvaluator
-from src.classes.habitat_agent_node import HabitatAgentNode, get_default_config
-from src.classes.constants import AgentResetCommands
-from src.classes.habitat_env_node import HabitatEnvNode
+from src.nodes.habitat_agent_node import HabitatAgentNode, get_default_config
+from src.constants.constants import AgentResetCommands
+from src.nodes.habitat_env_node import HabitatEnvNode
 from subprocess import Popen, call
 import shlex
 
@@ -59,11 +59,11 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
 
     def test_env_node_discrete(self):
         # start the env node
-        env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {self.env_pub_rate}")
+        env_node_args = shlex.split(f"python src/nodes/habitat_env_node.py --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {self.env_pub_rate}")
         Popen(env_node_args)
 
         # start the mock agent node
-        agent_node_args = shlex.split(f"python test/mock_agent_node.py --sensor-pub-rate {self.env_pub_rate}")
+        agent_node_args = shlex.split(f"python src/test/mock_agent_node.py --sensor-pub-rate {self.env_pub_rate}")
         Popen(agent_node_args)
 
         # init the mock evaluator node

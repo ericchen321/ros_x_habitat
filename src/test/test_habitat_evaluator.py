@@ -1,5 +1,5 @@
 import unittest
-from src.classes.habitat_evaluator import HabitatEvaluator
+from src.evaluators.habitat_evaluator import HabitatEvaluator
 import numpy as np
 import os
 from PIL import Image

@@ -21,7 +21,7 @@ import numpy as np
 import os
 from ros_x_habitat.srv import ResetAgent
 from threading import Lock
-from src.classes.constants import AgentResetCommands
+from src.constants.constants import AgentResetCommands
 from threading import Condition
 
 

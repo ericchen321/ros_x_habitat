@@ -1,11 +1,11 @@
-from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
+from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from typing import Dict, List
-from src.classes.habitat_eval_rlenv import HabitatEvalRLEnv
+from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from habitat.core.agent import Agent
 from collections import defaultdict
 
 # use TensorBoard to visualize
-from src.classes.utils_visualization import TensorboardWriter, generate_video
+from src.utils.utils_visualization import TensorboardWriter, generate_video
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
@@ -15,7 +15,7 @@ from habitat_baselines.agents.ppo_agents import PPOAgent
 
 # logging
 import os
-from src.classes import utils_logging
+from src.utils import utils_logging
 from traceback import print_exc
 
 # sim timing

@@ -1,4 +1,4 @@
-from src.classes.habitat_sim_evaluator import HabitatSimEvaluator
+from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from typing import Dict
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
@@ -9,14 +9,14 @@ import shlex
 import rospy
 
 # use TensorBoard to visualize
-from src.classes.utils_visualization import TensorboardWriter, generate_video
+from src.utils.utils_visualization import TensorboardWriter, generate_video
 from habitat.utils.visualizations.utils import observations_to_image
 import numpy as np
 from habitat.tasks.nav.nav import NavigationEpisode
 
 # logging
 import os
-from src.classes import utils_logging
+from src.utils import utils_logging
 from traceback import print_exc
 
 # sim timing
@@ -58,11 +58,11 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         else:
             if do_not_start_nodes is False:
                 # start the agent node
-                agent_node_args = shlex.split(f"python classes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}")
+                agent_node_args = shlex.split(f"python src/nodes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}")
                 Popen(agent_node_args)
 
                 # start the env node
-                env_node_args = shlex.split(f"python classes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}")
+                env_node_args = shlex.split(f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}")
                 Popen(env_node_args)
 
         # start the evaluator node
