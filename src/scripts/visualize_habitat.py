@@ -5,6 +5,7 @@ from habitat.config import Config
 from habitat.config.default import get_config
 from src.evaluators.habitat_evaluator import HabitatEvaluator
 from src.utils.utils_visualization import generate_grid_of_maps
+import os
 
 # logging
 from src.utils import utils_logging
@@ -63,11 +64,23 @@ def main():
 
     # evaluate and generate videos
     if args.make_videos:
+        # create video dir
+        try:
+            os.mkdir(f"{exp_config.VIDEO_DIR}")
+        except FileExistsError:
+            pass
+        
         for seed in seeds:
             evaluator.generate_video(args.episode_id, args.scene_id, seed)
 
     # evaluate and visualize top-down maps
     if args.make_maps:
+        # create map dir
+        try:
+            os.mkdir(f"{args.map_dir}")
+        except FileExistsError:
+            pass
+
         maps = []
         for seed in seeds:
             map_one_seed = evaluator.generate_map(args.episode_id, args.scene_id, seed, 200)
