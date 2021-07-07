@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
 import rospy
-import std_msgs.msg
-from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import Joy
 
 pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
 

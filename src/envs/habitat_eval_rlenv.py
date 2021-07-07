@@ -1,6 +1,8 @@
-from src.envs.habitat_rlenv import HabitatRLEnv
-from habitat.core.simulator import Observations
 from logging import Logger
+
+from habitat.core.simulator import Observations
+
+from src.envs.habitat_rlenv import HabitatRLEnv
 
 
 class HabitatEvalRLEnv(HabitatRLEnv):
@@ -18,7 +20,8 @@ class HabitatEvalRLEnv(HabitatRLEnv):
     def get_info(self, observations):
         return self.habitat_env.get_metrics()
 
-    def iter_to_episode(self, episode_id: str, scene_id: str, logger: Logger
+    def iter_to_episode(
+        self, episode_id: str, scene_id: str, logger: Logger
     ) -> Observations:
         r"""
         Advance the environment's episode iterator to the given episode.
@@ -33,9 +36,7 @@ class HabitatEvalRLEnv(HabitatRLEnv):
             try:
                 obs = self._env.reset()
                 e = self._env.current_episode
-                if (str(e.episode_id) == str(episode_id)) and (
-                    e.scene_id == scene_id
-                ):
+                if (str(e.episode_id) == str(episode_id)) and (e.scene_id == scene_id):
                     logger.info(
                         f"Last episode found: episode-id={episode_id}, scene-id={scene_id}"
                     )
@@ -44,7 +45,7 @@ class HabitatEvalRLEnv(HabitatRLEnv):
             except StopIteration:
                 logger.info("Last episode not found!")
                 raise StopIteration
-    
+
     def reset_episode_iterator(self) -> None:
         r"""
         Reset the environment's episode iterator.

@@ -5,14 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import sys
+import threading
+
 import rospy
-from rospy.numpy_msg import numpy_msg
-from rospy_tutorials.msg import Floats
 from geometry_msgs.msg import Twist
 from habitat.config import Config
+from rospy.numpy_msg import numpy_msg
+from rospy_tutorials.msg import Floats
+
 from src.envs.physics_env import PhysicsEnv
-import threading
-import sys
 
 sys.path = [
     b for b in sys.path if "2.7" not in b

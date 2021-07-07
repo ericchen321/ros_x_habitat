@@ -1,25 +1,24 @@
-from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
-from typing import Dict, List
-from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
-from habitat.core.agent import Agent
-from collections import defaultdict
-
-# use TensorBoard to visualize
-from src.utils.utils_visualization import TensorboardWriter, generate_video
-from habitat.utils.visualizations import maps
-from habitat.utils.visualizations.utils import observations_to_image
-import numpy as np
-from habitat.tasks.nav.nav import NavigationEpisode
-from habitat.config import Config
-from habitat_baselines.agents.ppo_agents import PPOAgent
-
 # logging
 import os
-from src.utils import utils_logging
-from traceback import print_exc
 
 # sim timing
 import time
+from collections import defaultdict
+from traceback import print_exc
+from typing import Dict
+
+import numpy as np
+from habitat.config import Config
+from habitat.utils.visualizations import maps
+from habitat.utils.visualizations.utils import observations_to_image
+from habitat_baselines.agents.ppo_agents import PPOAgent
+
+from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
+from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
+from src.utils import utils_logging
+
+# use TensorBoard to visualize
+from src.utils.utils_visualization import TensorboardWriter, generate_video
 
 
 def get_default_config():
@@ -32,6 +31,7 @@ def get_default_config():
     c.PTH_GPU_ID = 0
     c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
     return c
+
 
 class HabitatEvaluator(HabitatSimEvaluator):
     r"""Class to evaluate a Habitat agent in a Habitat simulator instance
@@ -170,9 +170,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     t_sim_start = time.clock()
                     # --------------------------------------------
 
-                    (observations_per_action, _, _, _) = self.env.step(
-                        action
-                    )
+                    (observations_per_action, _, _, _) = self.env.step(action)
                     count_steps += 1
 
                     # ------------  log sim time end  ------------
@@ -202,7 +200,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 utils_logging.close_logger(logger_per_episode)
 
             except StopIteration:
-                self.logger.info(f"Finished evaluation after: {count_episodes} episodes")
+                self.logger.info(
+                    f"Finished evaluation after: {count_episodes} episodes"
+                )
                 self.logger.info(
                     f"Last episode evaluated: episode={episode_id}, scene={scene_id}"
                 )
@@ -211,7 +211,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 self.logger.info(
                     f"Evaulation stopped after: {count_episodes} episodes due to OSError!"
                 )
-                self.logger.info(f"Current episode: episode={episode_id}, scene={scene_id}")
+                self.logger.info(
+                    f"Current episode: episode={episode_id}, scene={scene_id}"
+                )
                 print_exc()
                 break
 
@@ -221,12 +223,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         return avg_metrics
 
     def generate_video(
-        self,
-        episode_id: str,
-        scene_id: str,
-        agent_seed: int = 7,
-        *args,
-        **kwargs
+        self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
     ) -> None:
         # reset episode iterator
         self.env.reset_episode_iterator()
@@ -234,7 +231,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
         # iterate to the given episode
         observations_per_action = None
         info_per_action = None
-        observations_per_action = self.env.iter_to_episode(episode_id, scene_id, self.logger)
+        observations_per_action = self.env.iter_to_episode(
+            episode_id, scene_id, self.logger
+        )
 
         # instantiate an agent
         agent_config = get_default_config()
@@ -246,25 +245,21 @@ class HabitatEvaluator(HabitatSimEvaluator):
 
         # store observations over frames
         observations_per_episode = []
-        
+
         # act until the episode is over
         while not self.env._env.episode_over:
             action = self.agent.act(observations_per_action)
-            (observations_per_action, _, _, info_per_action) = self.env.step(
-                action
-            )
+            (observations_per_action, _, _, info_per_action) = self.env.step(action)
             # generate an output image for the action. The image includes observations
             # and a top-down map showing the agent's state in the environment
             out_im_per_action = observations_to_image(
                 observations_per_action, info_per_action
             )
             observations_per_episode.append(out_im_per_action)
-        
+
         # get metrics for video generation
         metrics = self.env._env.get_metrics()
-        per_ep_metrics = {
-            k: metrics[k] for k in ["distance_to_goal", "success", "spl"]
-        }
+        per_ep_metrics = {k: metrics[k] for k in ["distance_to_goal", "success", "spl"]}
 
         # set up Tensorboard writer
         writer = None
@@ -293,7 +288,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         agent_seed: int,
         map_height: int,
         *args,
-        **kwargs
+        **kwargs,
     ) -> np.ndarray:
         # reset episode iterator
         self.env.reset_episode_iterator()
@@ -301,7 +296,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
         # iterate to the given episode
         observations_per_action = None
         info_per_action = None
-        observations_per_action = self.env.iter_to_episode(episode_id, scene_id, self.logger)
+        observations_per_action = self.env.iter_to_episode(
+            episode_id, scene_id, self.logger
+        )
 
         # instantiate an agent
         agent_config = get_default_config()
@@ -314,13 +311,12 @@ class HabitatEvaluator(HabitatSimEvaluator):
         # act until the episode is over
         while not self.env._env.episode_over:
             action = self.agent.act(observations_per_action)
-            (observations_per_action, _, _, info_per_action) = self.env.step(
-                action
-            )
+            (observations_per_action, _, _, info_per_action) = self.env.step(action)
 
         # draw the map
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
-            info_per_action["top_down_map"], map_height,
+            info_per_action["top_down_map"],
+            map_height,
         )
 
         return top_down_map

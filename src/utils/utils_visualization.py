@@ -6,26 +6,16 @@
 
 # moved from habitat_baselines due to dependency issues
 
-import numpy as np
-import torch
-from torch.utils.tensorboard import SummaryWriter
-import copy
-import glob
-import numbers
 import os
-from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
-import torch.nn as nn
-from gym.spaces import Box
-
-from habitat.core.logging import logger
-from habitat.utils.visualizations.utils import images_to_video
-from habitat.utils.visualizations import maps
-from habitat.core.utils import try_cv2_import
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from habitat.core.utils import try_cv2_import
+from habitat.utils.visualizations.utils import images_to_video
 from mpl_toolkits.axes_grid1 import ImageGrid
-from PIL import Image
+from torch.utils.tensorboard import SummaryWriter
 
 cv2 = try_cv2_import()
 
@@ -82,6 +72,7 @@ class TensorboardWriter:
         # final shape of video tensor: (1, n, 3, H, W)
         self.writer.add_video(video_name, video_tensor, fps=fps, global_step=step_idx)
 
+
 def generate_video(
     video_option: List[str],
     video_dir: Optional[str],
@@ -131,6 +122,7 @@ def generate_video(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
 
+
 def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
     """
     Paste top-down-maps from agent initialized with the given seeds to a grid
@@ -146,16 +138,20 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
             the same order as seeds.
         map_dir: directory to store the map
     """
-    fig = plt.figure(figsize=(16., 4.))
-    grid = ImageGrid(fig, 111,  # similar to subplot(111)
-        nrows_ncols=(2, int(np.ceil(len(seeds)/2))),  # creates n/2 x 2 grid of axes
-        axes_pad=.4,  # pad between axes in inch.
+    fig = plt.figure(figsize=(16.0, 4.0))
+    grid = ImageGrid(
+        fig,
+        111,  # similar to subplot(111)
+        nrows_ncols=(2, int(np.ceil(len(seeds) / 2))),  # creates n/2 x 2 grid of axes
+        axes_pad=0.4,  # pad between axes in inch.
     )
-    
+
     for ax, im, seed in zip(grid, maps, seeds):
         # iterating over the grid to return the axes
-        ax.set_title(f"Seed={seed}", fontdict=None, loc='center', color = "k")
+        ax.set_title(f"Seed={seed}", fontdict=None, loc="center", color="k")
         ax.imshow(im)
-    
+
     plt.title(f"episode={episode_id}, scene={scene_id}")
-    plt.savefig(f"{map_dir}/episode={episode_id}-scene={os.path.basename(scene_id)}.png")
+    plt.savefig(
+        f"{map_dir}/episode={episode_id}-scene={os.path.basename(scene_id)}.png"
+    )
