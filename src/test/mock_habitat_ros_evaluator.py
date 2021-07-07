@@ -1,4 +1,4 @@
-from src.classes.evaluator import Evaluator
+from src.evaluators.evaluator import Evaluator
 from typing import Dict
 from habitat.config.default import get_config
 from habitat.core.agent import Agent

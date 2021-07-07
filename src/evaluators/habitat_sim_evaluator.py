@@ -1,8 +1,8 @@
-from src.classes.evaluator import Evaluator
+from src.evaluators.evaluator import Evaluator
 from habitat.config.default import get_config
 from habitat.config import Config
 from typing import List
-from src.classes import utils_logging
+from src.utils import utils_logging
 import numpy as np
 
 
@@ -48,8 +48,8 @@ class HabitatSimEvaluator(Evaluator):
             from habitat.sims.habitat_simulator.habitat_simulator import (
                 HabitatSim,
             )
-            from src.classes.habitat_physics_simulator import HabitatPhysicsSim
-            from src.classes.habitat_physics_task import PhysicsNavigationTask
+            from src.sims.habitat_physics_simulator import HabitatPhysicsSim
+            from src.tasks.habitat_physics_task import PhysicsNavigationTask
             from habitat.sims.habitat_simulator.actions import (
                 HabitatSimV1ActionSpaceConfiguration,
             )

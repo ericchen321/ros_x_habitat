@@ -3,12 +3,12 @@ import csv
 import habitat
 from habitat.config import Config
 from habitat.config.default import get_config
-from src.classes.habitat_ros_evaluator import HabitatROSEvaluator
+from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
 from habitat_baselines.agents.ppo_agents import PPOAgent
 import os
 
 # logging
-from src.classes import utils_logging
+from src.utils import utils_logging
 
 
 def main():

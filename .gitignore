@@ -13,8 +13,11 @@ dist/
 # Compiled Python bytecode
 *.py[cod]
 
+# Pycache stuff
+__pycache__/
+
 # Log files
-src/logs/
+logs/
 *.log
 
 # Package files
@@ -54,12 +57,12 @@ Thumbs.db
 *.wmv
 
 # Files for visualization
-src/tb/
-src/videos/
-src/habitat_maps/
+tb/
+videos/
+habitat_maps/
 
 # Saved models, scene files, episode info
-src/data/
+data/
 
 # build files
 build/

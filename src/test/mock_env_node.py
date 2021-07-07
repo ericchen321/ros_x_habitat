@@ -9,7 +9,7 @@ from std_msgs.msg import Header, Int16
 from cv_bridge import CvBridge, CvBridgeError
 from threading import Condition
 from ros_x_habitat.srv import EvalEpisode, ResetAgent
-from src.classes.constants import AgentResetCommands
+from src.constants.constants import AgentResetCommands
 
 
 class MockHabitatEnvNode:

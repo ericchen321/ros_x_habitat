@@ -1,4 +1,4 @@
-from src.classes.habitat_rlenv import HabitatRLEnv
+from src.envs.habitat_rlenv import HabitatRLEnv
 from habitat.core.simulator import Observations
 from logging import Logger
 
