@@ -1,13 +1,14 @@
 from collections import defaultdict
-from typing import Dict
+from typing import List, Tuple, Dict
+import numpy as np
 
 import rospy
 from ros_x_habitat.srv import *
 
-from src.evaluators.evaluator import Evaluator
+from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 
 
-class MockHabitatROSEvaluator(Evaluator):
+class MockHabitatROSEvaluator(HabitatSimEvaluator):
     r"""Class to evaluate Habitat agents in Habitat environments with ROS
     as middleware.
     """
@@ -29,7 +30,7 @@ class MockHabitatROSEvaluator(Evaluator):
         log_dir: str = "logs/",
         *args,
         **kwargs,
-    ) -> Dict[str, float]:
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, float]], List[np.ndarray]]:
         r"""..
         Evaluate over episodes, starting from the last episode evaluated. Return evaluation
         metrics.
@@ -42,8 +43,8 @@ class MockHabitatROSEvaluator(Evaluator):
         :return: dict containing metrics tracked by environment.
         """
 
+        metrics_list = []
         count_episodes = 0
-        agg_metrics: Dict = defaultdict(float)
         eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
         # evaluate episodes, starting from the one after the last episode
@@ -72,15 +73,10 @@ class MockHabitatROSEvaluator(Evaluator):
                         "spl": resp.spl,
                     }
 
-                    # calculate aggregated metrics over episodes eval'ed so far
-                    for m, v in per_ep_metrics.items():
-                        agg_metrics[m] += v
+                    metrics_list.append(per_ep_metrics)
 
-                    count_episodes += 1
             except rospy.ServiceException:
                 print(f"Evaluation call failed at {count_episodes}-th episode")
                 break
 
-        avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
-
-        return avg_metrics
+        return [], metrics_list

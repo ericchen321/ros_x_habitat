@@ -39,3 +39,4 @@ DATASET:
   DATA_PATH: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
 
 VIDEO_OPTION: ["disk"]
+VIDEO_DIR: "videos/test_habitat_evaluator_with_physics/"

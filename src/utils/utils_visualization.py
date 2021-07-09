@@ -16,6 +16,8 @@ from habitat.core.utils import try_cv2_import
 from habitat.utils.visualizations.utils import images_to_video
 from mpl_toolkits.axes_grid1 import ImageGrid
 from torch.utils.tensorboard import SummaryWriter
+import pandas as pd
+import seaborn as sns
 
 cv2 = try_cv2_import()
 
@@ -138,6 +140,7 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
             the same order as seeds.
         map_dir: directory to store the map
     """
+    plt.clf()
     fig = plt.figure(figsize=(16.0, 4.0))
     grid = ImageGrid(
         fig,
@@ -155,3 +158,66 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
     plt.savefig(
         f"{map_dir}/episode={episode_id}-scene={os.path.basename(scene_id)}.png"
     )
+    plt.clf()
+
+def generate_box_plots(
+    metrics_list: List[List[Dict[str, float]]],
+    seeds: List[int],
+    plot_dir: str,
+):
+    r"""
+    Generate box plots from metrics and seeds. Requires same metrics collected
+    from all seeds. Save the plots to plot_dir/<metric_name>-<n>_seeds.png,
+    where <metric_name> is for eg. "spl", <n> is the number of seeds.
+    Args:
+        metrics_list: list of metrics collected from experiment run with the
+            given seeds.
+        seeds: seeds to initialize agents. Should be in the same order as
+            metrics_list.
+        plot_dir: directory to save the box plot.
+    """
+    # check if we have metrics from all seeds
+    num_seeds = len(seeds)
+    assert len(metrics_list) == num_seeds
+    
+    # return if no data
+    if num_seeds == 0:
+        return
+    num_samples_per_seed = len(metrics_list[0])
+    if num_samples_per_seed == 0:
+        return
+
+    # check if all seeds have the same number of data points
+    for i in range(num_seeds):
+        assert  len(metrics_list[i]) == num_samples_per_seed
+
+    # extract metric names
+    metric_names = []
+    for metric_name, _ in metrics_list[0][0].items():
+        metric_names.append(metric_name)
+
+    # build dataframe
+    data = {}
+    total_num_samples = num_samples_per_seed * num_seeds
+    data["seed"] = np.ndarray((total_num_samples, ))
+    for metric_name in metric_names:
+        data[metric_name] = np.ndarray((total_num_samples, ))
+    # populate each array
+    total_sample_count = 0
+    for seed_index in range(num_seeds):
+        for sample_count in range(num_samples_per_seed):
+            # register a new sample
+            data["seed"][total_sample_count] = seeds[seed_index]
+            for metric_name in metric_names:
+                data[metric_name][total_sample_count] = metrics_list[seed_index][sample_count][metric_name]
+            total_sample_count += 1
+    df = pd.DataFrame(data)
+
+    # create box-and-warm plot for each metric
+    for metric_name in metric_names:
+        plt.clf()
+        plots = sns.boxplot(x="seed", y=metric_name, data=df)
+        plots = sns.swarmplot(x="seed", y=metric_name, data=df, color=".25")
+        plt.savefig(f"{plot_dir}/{metric_name}-{num_seeds}_seeds.png")
+    
+    plt.clf()
