@@ -2,6 +2,9 @@ import argparse
 import csv
 import os
 
+from typing import Dict
+from collections import defaultdict
+
 from habitat.config.default import get_config
 
 from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
@@ -103,16 +106,19 @@ def main():
         except FileExistsError:
             pass
 
-        metrics = evaluator.evaluate(
+        _, metrics_list = evaluator.evaluate(
             episode_id_last=args.episode_id,
             scene_id_last=args.scene_id,
             log_dir=f"{args.log_dir}/seed={seed}",
             agent_seed=seed,
         )
 
+        # compute average metrics
+        avg_metrics = evaluator.compute_avg_metrics(metrics_list)
+
         # log metrics
         logger_per_seed.info("Printing average metrics:")
-        for k, v in metrics.items():
+        for k, v in avg_metrics.items():
             logger_per_seed.info("{}: {:.3f}".format(k, v))
         utils_logging.close_logger(logger_per_seed)
     utils_logging.close_logger(logger)

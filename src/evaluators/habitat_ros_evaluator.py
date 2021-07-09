@@ -1,9 +1,8 @@
 # logging
 import os
 import shlex
-from collections import defaultdict
 from subprocess import Popen
-from typing import Dict
+from typing import List, Tuple, Dict
 
 # use TensorBoard to visualize
 import numpy as np
@@ -75,11 +74,12 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         agent_seed: int = 7,
         *args,
         **kwargs,
-    ) -> Dict[str, float]:
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, float]]]:
         logger = utils_logging.setup_logger(__name__)
 
         count_episodes = 0
-        agg_metrics: Dict = defaultdict(float)
+        ids = []
+        metrics_list = []
         eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
         # evaluate episodes, starting from the one after the last episode
@@ -117,12 +117,15 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                     # log episode ID and scene ID
                     logger_per_episode.info(f"episode id: {episode_id}")
                     logger_per_episode.info(f"scene id: {scene_id}")
+                    ids.append({"episode_id": episode_id, "scene_id": scene_id})
+
                     # print metrics of this episode
                     for k, v in per_ep_metrics.items():
                         logger_per_episode.info(f"{k},{v}")
-                    # calculate aggregated metrics over episodes eval'ed so far
-                    for m, v in per_ep_metrics.items():
-                        agg_metrics[m] += v
+                    
+                    # add to the metrics list
+                    metrics_list.append(per_ep_metrics)
+
                     count_episodes += 1
                     # shut down the episode logger
                     utils_logging.close_logger(logger_per_episode)
@@ -130,10 +133,21 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                 logger.info(f"Evaluation call failed at {count_episodes}-th episode")
                 break
 
-        avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
         utils_logging.close_logger(logger)
 
-        return avg_metrics
+        return ids, metrics_list
+    
+    def evaluate_and_get_maps(
+        self,
+        episode_id_last: str = "-1",
+        scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
+        log_dir: str = "logs/",
+        agent_seed: int = 7,
+        map_height: int = 200,
+        *args,
+        **kwargs,
+    ) -> Tuple[List[Dict[str, float]], List[np.ndarray]]:
+        raise NotImplementedError
 
     def generate_video(
         self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs

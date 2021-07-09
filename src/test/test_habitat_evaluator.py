@@ -18,15 +18,15 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
         )
 
     def test_evaluate_one_episode_discrete(self):
-        agg_metrics = self.evaluator_discrete.evaluate(
+        _, metrics_list = self.evaluator_discrete.evaluate(
             episode_id_last="48",
             scene_id_last="data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
             log_dir="logs",
             agent_seed=7,
         )
-        assert np.linalg.norm(agg_metrics["distance_to_goal"] - 0.026777) < 1e-5
-        assert np.linalg.norm(agg_metrics["spl"] - 0.682441) < 1e-5
-        # print("eval one episode test done!!!!!!")
+        avg_metrics = self.evaluator_discrete.compute_avg_metrics(metrics_list)
+        assert np.linalg.norm(avg_metrics["distance_to_goal"] - 0.026777) < 1e-5
+        assert np.linalg.norm(avg_metrics["spl"] - 0.682441) < 1e-5
 
     def test_generate_video_discrete(self):
         try:

@@ -63,6 +63,7 @@ Thumbs.db
 tb/
 videos/
 habitat_maps/
+plots/
 
 # Saved models, scene files, episode info
 data/

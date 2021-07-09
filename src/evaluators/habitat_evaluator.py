@@ -3,9 +3,8 @@ import os
 
 # sim timing
 import time
-from collections import defaultdict
 from traceback import print_exc
-from typing import Dict
+from typing import List, Tuple, Dict
 
 import numpy as np
 from habitat.config import Config
@@ -71,35 +70,41 @@ class HabitatEvaluator(HabitatSimEvaluator):
             config=self.config, enable_physics=self.enable_physics
         )
 
-    def evaluate(
+    def evaluate_and_get_maps(
         self,
         episode_id_last: str = "-1",
         scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
         log_dir: str = "logs/",
         agent_seed: int = 7,
+        map_height: int = 200,
         *args,
         **kwargs,
-    ) -> Dict[str, float]:
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, float]], List[np.ndarray]]:
         # make sure we have episodes to evaluate
         num_episodes = len(self.env._env.episodes)
         assert num_episodes > 0, "environment should contain at least one episode"
-        self.logger.info(f"Total number of episodes in the environment: {num_episodes}")
 
-        agg_metrics: Dict = defaultdict(float)
+        # create a logger
+        logger = utils_logging.setup_logger(__name__)
+        logger.info(f"Total number of episodes in the environment: {num_episodes}")
+
+        metrics_list = []
 
         # reset episode iterator
         self.env.reset_episode_iterator()
 
         # locate the last episode evaluated
         if episode_id_last != "-1":
-            self.env.iter_to_episode(episode_id_last, scene_id_last, self.logger)
+            self.env.iter_to_episode(episode_id_last, scene_id_last, logger)
         else:
-            self.logger.info(
+            logger.info(
                 f"No last episode specified. Proceed to evaluate from the next one"
             )
 
         # then evaluate the rest of the episodes from the environment
         count_episodes = 0
+        top_down_maps = []
+        ids = []
         episode_id = ""
         scene_id = ""
         while count_episodes < num_episodes:
@@ -149,8 +154,10 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 )
                 logger_per_episode.info(f"episode id: {episode_id}")
                 logger_per_episode.info(f"scene id: {scene_id}")
+                ids.append({"episode_id": episode_id, "scene_id": scene_id})
 
                 # act until one episode is over
+                info_per_action = None
                 while not self.env._env.episode_over:
 
                     # ------------ log agent time start ------------
@@ -170,7 +177,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     t_sim_start = time.clock()
                     # --------------------------------------------
 
-                    (observations_per_action, _, _, _) = self.env.step(action)
+                    (observations_per_action, _, _, info_per_action) = self.env.step(action)
                     count_steps += 1
 
                     # ------------  log sim time end  ------------
@@ -179,6 +186,13 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     # --------------------------------------------
 
                 # episode ended
+                # draw the map
+                top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+                    info_per_action["top_down_map"],
+                    map_height,
+                )
+                top_down_maps.append(top_down_map)
+
                 # get per-episode metrics. for now we extract distance-to-goal, success, spl
                 # from the environment, and we add sim_time and num_steps as two other metrics
                 metrics = self.env._env.get_metrics()
@@ -191,40 +205,62 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 # print metrics of this episode
                 for k, v in per_ep_metrics.items():
                     logger_per_episode.info(f"{k},{v}")
-                # calculate aggregated metrics over episodes eval'ed so far
-                for m, v in per_ep_metrics.items():
-                    agg_metrics[m] += v
+                
+                # add to the metrics list
+                metrics_list.append(per_ep_metrics)
+
                 count_episodes += 1
 
                 # shut down the episode logger
                 utils_logging.close_logger(logger_per_episode)
 
             except StopIteration:
-                self.logger.info(
+                logger.info(
                     f"Finished evaluation after: {count_episodes} episodes"
                 )
-                self.logger.info(
+                logger.info(
                     f"Last episode evaluated: episode={episode_id}, scene={scene_id}"
                 )
                 break
             except OSError:
-                self.logger.info(
+                logger.info(
                     f"Evaulation stopped after: {count_episodes} episodes due to OSError!"
                 )
-                self.logger.info(
+                logger.info(
                     f"Current episode: episode={episode_id}, scene={scene_id}"
                 )
                 print_exc()
                 break
+        
+        # destroy the logger
+        utils_logging.close_logger(logger)
 
-        avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
-        utils_logging.close_logger(self.logger)
+        return ids, metrics_list, top_down_maps
 
-        return avg_metrics
+    def evaluate(
+        self,
+        episode_id_last: str = "-1",
+        scene_id_last: str = "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
+        log_dir: str = "logs/",
+        agent_seed: int = 7,
+        *args,
+        **kwargs
+    ):
+        ids, metrics_list, _ = self.evaluate_and_get_maps(
+            episode_id_last,
+            scene_id_last,
+            log_dir,
+            agent_seed,
+            200
+        )
+        return ids, metrics_list
 
     def generate_video(
         self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
     ) -> None:
+        # create a logger
+        logger = utils_logging.setup_logger(__name__)
+
         # reset episode iterator
         self.env.reset_episode_iterator()
 
@@ -232,7 +268,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         observations_per_action = None
         info_per_action = None
         observations_per_action = self.env.iter_to_episode(
-            episode_id, scene_id, self.logger
+            episode_id, scene_id, logger
         )
 
         # instantiate an agent
@@ -281,6 +317,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
             tb_writer=writer,
         )
 
+        # destroy the logger
+        utils_logging.close_logger(logger)
+
     def generate_map(
         self,
         episode_id: str,
@@ -290,6 +329,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
         *args,
         **kwargs,
     ) -> np.ndarray:
+        # create a logger
+        logger = utils_logging.setup_logger(__name__)
+
         # reset episode iterator
         self.env.reset_episode_iterator()
 
@@ -297,7 +339,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         observations_per_action = None
         info_per_action = None
         observations_per_action = self.env.iter_to_episode(
-            episode_id, scene_id, self.logger
+            episode_id, scene_id, logger
         )
 
         # instantiate an agent
@@ -318,5 +360,8 @@ class HabitatEvaluator(HabitatSimEvaluator):
             info_per_action["top_down_map"],
             map_height,
         )
+
+        # destroy the logger
+        utils_logging.close_logger(logger)
 
         return top_down_map

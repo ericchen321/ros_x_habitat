@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Tuple, List, Dict
 
 
 class Evaluator:
@@ -15,7 +15,7 @@ class Evaluator:
         log_dir: str = "logs/",
         *args,
         **kwargs
-    ) -> Dict[str, float]:
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, float]]]:
         r"""..
         Evaluate over episodes, starting from the last episode evaluated. Return evaluation
         metrics.
@@ -24,6 +24,9 @@ class Evaluator:
             from start
         :param scene_id_last: Scene ID of the last episode evaluated
         :param log_dir: logging directory
-        :return: dict containing metrics tracked by environment.
+        :return:
+            1) list of dicts containing episode ID and scene ID of evaluated episodes. 
+            2) list of dicts containing evaluation metrics. Each dict is collected from
+            one episode. One-to-one correspondence with the ID list.
         """
         raise NotImplementedError
