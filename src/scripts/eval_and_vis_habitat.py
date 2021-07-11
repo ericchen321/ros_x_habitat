@@ -107,7 +107,7 @@ def main():
             scene_id_last=args.scene_id,
             log_dir=f"{args.log_dir}/seed={seed}",
             agent_seed=seed,
-            map_height=200
+            map_height=200,
         )
         maps.append(map_list_per_seed)
         metrics_list.append(metrics_list_per_seed)
@@ -120,7 +120,7 @@ def main():
         for k, v in avg_metrics.items():
             logger_per_seed.info("{}: {:.3f}".format(k, v))
         utils_logging.close_logger(logger_per_seed)
-    
+
     # make top-down maps for each episode
     if args.make_maps:
         # create map dir
@@ -137,12 +137,9 @@ def main():
                 for seed_index in range(len(seeds)):
                     maps_per_episode.append(maps[seed_index][count_episode])
                 utils_visualization.generate_grid_of_maps(
-                    episode_id,
-                    scene_id,
-                    seeds,
-                    maps_per_episode,
-                    args.map_dir)
-    
+                    episode_id, scene_id, seeds, maps_per_episode, args.map_dir
+                )
+
     # make box-and-whisker plots of metrics vs. seed
     if args.make_plots:
         # create plot dir

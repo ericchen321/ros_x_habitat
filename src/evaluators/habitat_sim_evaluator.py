@@ -4,7 +4,6 @@ from habitat.config.default import get_config
 from typing import List, Tuple, Dict
 from collections import defaultdict
 from src.evaluators.evaluator import Evaluator
-from src.utils import utils_logging
 
 
 class HabitatSimEvaluator(Evaluator):
