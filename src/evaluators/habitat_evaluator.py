@@ -177,7 +177,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     t_sim_start = time.clock()
                     # --------------------------------------------
 
-                    (observations_per_action, _, _, info_per_action) = self.env.step(action)
+                    (observations_per_action, _, _, info_per_action) = self.env.step(
+                        action
+                    )
                     count_steps += 1
 
                     # ------------  log sim time end  ------------
@@ -205,7 +207,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 # print metrics of this episode
                 for k, v in per_ep_metrics.items():
                     logger_per_episode.info(f"{k},{v}")
-                
+
                 # add to the metrics list
                 metrics_list.append(per_ep_metrics)
 
@@ -215,9 +217,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 utils_logging.close_logger(logger_per_episode)
 
             except StopIteration:
-                logger.info(
-                    f"Finished evaluation after: {count_episodes} episodes"
-                )
+                logger.info(f"Finished evaluation after: {count_episodes} episodes")
                 logger.info(
                     f"Last episode evaluated: episode={episode_id}, scene={scene_id}"
                 )
@@ -226,12 +226,10 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 logger.info(
                     f"Evaulation stopped after: {count_episodes} episodes due to OSError!"
                 )
-                logger.info(
-                    f"Current episode: episode={episode_id}, scene={scene_id}"
-                )
+                logger.info(f"Current episode: episode={episode_id}, scene={scene_id}")
                 print_exc()
                 break
-        
+
         # destroy the logger
         utils_logging.close_logger(logger)
 
@@ -244,14 +242,10 @@ class HabitatEvaluator(HabitatSimEvaluator):
         log_dir: str = "logs/",
         agent_seed: int = 7,
         *args,
-        **kwargs
+        **kwargs,
     ):
         ids, metrics_list, _ = self.evaluate_and_get_maps(
-            episode_id_last,
-            scene_id_last,
-            log_dir,
-            agent_seed,
-            200
+            episode_id_last, scene_id_last, log_dir, agent_seed, 200
         )
         return ids, metrics_list
 
@@ -267,9 +261,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         # iterate to the given episode
         observations_per_action = None
         info_per_action = None
-        observations_per_action = self.env.iter_to_episode(
-            episode_id, scene_id, logger
-        )
+        observations_per_action = self.env.iter_to_episode(episode_id, scene_id, logger)
 
         # instantiate an agent
         agent_config = get_default_config()
@@ -338,9 +330,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         # iterate to the given episode
         observations_per_action = None
         info_per_action = None
-        observations_per_action = self.env.iter_to_episode(
-            episode_id, scene_id, logger
-        )
+        observations_per_action = self.env.iter_to_episode(episode_id, scene_id, logger)
 
         # instantiate an agent
         agent_config = get_default_config()
