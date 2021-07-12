@@ -18,7 +18,7 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
         )
 
     def test_evaluate_one_episode_discrete(self):
-        _, metrics_list = self.evaluator_discrete.evaluate(
+        metrics_list = self.evaluator_discrete.evaluate(
             episode_id_last="48",
             scene_id_last="data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
             log_dir="logs",

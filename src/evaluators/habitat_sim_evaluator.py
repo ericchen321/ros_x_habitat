@@ -56,20 +56,45 @@ class HabitatSimEvaluator(Evaluator):
         return
 
     @classmethod
-    def compute_avg_metrics(cls, list_of_metrics) -> Dict:
+    def compute_avg_metrics(
+        cls,
+        dict_of_metrics: Dict[str, Dict[str, float]],
+    ) -> Dict:
         r"""
         Compute average metrics from a list of metrics.
-        :param list_of_metrics: metrics from each episode or seed or
-            whatever.
+        :param dict_of_metrics: a collection of metrics for which a key
+            identifies an episode, a value contains a dictionary of metrics
+            from that episode. Each metrics dictionary should contain only
+            numerically-valued metrics.
         :returns: average metrics as a dictionary.
         """
         agg_metrics: Dict = defaultdict(float)
-        for metrics in list_of_metrics:
+        for _, metrics in dict_of_metrics.items():
             for m, v in metrics.items():
                 agg_metrics[m] += v
-        avg_metrics = {k: v/len(list_of_metrics) for k, v in agg_metrics.items()}
+        avg_metrics = {k: v/len(dict_of_metrics) for k, v in agg_metrics.items()}
         return avg_metrics
 
+    @classmethod
+    def extract_metrics(
+        cls,
+        dict_of_metrics: Dict[str, Dict[str, float]],
+        metric_names: List[str],
+    ) -> Dict[str, Dict[str, float]]:
+        r"""
+        Extract specified metrics from dict_of_metrics and return.
+        :param dict_of_metrics: A dictionary of metrics from many episodes.
+        :param metric_names: Names of metrics to extract. Each metric must
+            have already been collected.
+        :return: A dictionary of metrics from the same episodes, but contains
+            only metrics with names specified in `metric_names`.
+        """
+        new_dict_of_metrics = {}
+        for episode_identifier, episode_metrics in dict_of_metrics.items():
+            new_dict_of_metrics[episode_identifier] = {
+                metric_name: episode_metrics[metric_name] for metric_name in metric_names
+            }
+        return new_dict_of_metrics
 
     def generate_video(
         self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
@@ -113,7 +138,7 @@ class HabitatSimEvaluator(Evaluator):
         map_height: int = 200,
         *args,
         **kwargs,
-    )-> Tuple[List[Dict[str, str]], List[Dict[str, float]], List[np.ndarray]]:
+    )-> Dict[str, Dict[str, float]]:
         r"""..
         Evaluate over episodes, starting from the last episode evaluated. Return evaluation
         metrics and top-down maps from the episodes.
@@ -123,10 +148,8 @@ class HabitatSimEvaluator(Evaluator):
         :param scene_id_last: Scene ID of the last episode evaluated
         :param log_dir: logging directory
         :param map_height: height of top-down maps
-        :return:
-            1) list of dicts containing episode ID and scene ID of evaluated episodes.  
-            2) list of dicts containing evaluation metrics. Each dict is collected from
-            one episode; One-to-one correspondence with the ID list.
-            3) top-down maps of each episode; One-to-one correspondence with the ID list.
+        :return: a dictionary where each key is an episode's unique identifier as
+            <episode-id>,<scene-id>; each value is the set of metrics (including top-down maps)
+            from the episode.
         """
         raise NotImplementedError

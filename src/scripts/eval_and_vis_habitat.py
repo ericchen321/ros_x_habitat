@@ -87,7 +87,6 @@ def main():
     logger.info("Started Evaluation")
     metrics_list = []
     maps = []
-    ids = []
     for seed in seeds:
         # create logger for each seed and log the seed
         logger_per_seed = utils_logging.setup_logger(
@@ -102,18 +101,35 @@ def main():
             pass
 
         # evaluate
-        ids, metrics_list_per_seed, map_list_per_seed = evaluator.evaluate_and_get_maps(
+        metrics_and_maps = evaluator.evaluate_and_get_maps(
             episode_id_last=args.episode_id,
             scene_id_last=args.scene_id,
             log_dir=f"{args.log_dir}/seed={seed}",
             agent_seed=seed,
             map_height=200
         )
-        maps.append(map_list_per_seed)
-        metrics_list.append(metrics_list_per_seed)
+
+        # extract top-down-maps
+        maps_per_seed = evaluator.extract_metrics(
+            metrics_and_maps,
+            ["top_down_map"]
+        )
+        maps.append(maps_per_seed)
+
+        # extract other metrics
+        metrics_per_seed = evaluator.extract_metrics(
+            metrics_and_maps,
+            ["distance_to_goal",
+            "success",
+            "spl",
+            "agent_time",
+            "sim_time",
+            "num_steps"]
+        )
+        metrics_list.append(metrics_per_seed)
 
         # compute average metrics
-        avg_metrics = evaluator.compute_avg_metrics(metrics_list_per_seed)
+        avg_metrics = evaluator.compute_avg_metrics(metrics_per_seed)
 
         # log metrics
         logger_per_seed.info("Printing average metrics:")
@@ -129,16 +145,17 @@ def main():
         except FileExistsError:
             pass
         if len(maps) > 0:
-            num_episodes = len(maps[0])
-            for count_episode in range(num_episodes):
-                episode_id = ids[count_episode]["episode_id"]
-                scene_id = ids[count_episode]["scene_id"]
+            for episode_identifier, _ in maps[0].items():
+                # plot maps for each episode. Here we assume the same
+                # episode has been evaluated with all seeds
                 maps_per_episode = []
                 for seed_index in range(len(seeds)):
-                    maps_per_episode.append(maps[seed_index][count_episode])
+                    maps_per_episode.append(
+                        maps[seed_index][episode_identifier]["top_down_map"]
+                    )
                 utils_visualization.generate_grid_of_maps(
-                    episode_id,
-                    scene_id,
+                    episode_identifier.split(",")[0],
+                    episode_identifier.split(",")[1],
                     seeds,
                     maps_per_episode,
                     args.map_dir)
