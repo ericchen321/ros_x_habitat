@@ -7,7 +7,7 @@ class Evaluator:
 
     Users should instantiate subclasses to 'Evaluator' for evaluation.
     """
-    
+
     def evaluate(
         self,
         episode_id_last: str = "-1",
@@ -25,7 +25,7 @@ class Evaluator:
         :param scene_id_last: Scene ID of the last episode evaluated
         :param log_dir: logging directory
         :return:
-            1) list of dicts containing episode ID and scene ID of evaluated episodes. 
+            1) list of dicts containing episode ID and scene ID of evaluated episodes.
             2) list of dicts containing evaluation metrics. Each dict is collected from
             one episode. One-to-one correspondence with the ID list.
         """

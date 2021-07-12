@@ -32,7 +32,8 @@ class HabitatEnvNode:
     def __init__(
         self,
         config_paths: str = None,
-        enable_physics: bool = False,
+        enable_physics_sim: bool = False,
+        agent_physics_enabled: bool = False,
         pub_rate: float = 5.0,
     ):
         # set up logger
@@ -44,13 +45,14 @@ class HabitatEnvNode:
         self.config.defrost()
         self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
         self.config.freeze()
-        self.enable_physics = enable_physics
+        self.enable_physics_sim = enable_physics_sim
+        self.agent_physics_enabled = agent_physics_enabled
         # overwrite env config if physics enabled
-        if self.enable_physics:
+        if self.enable_physics_sim:
             HabitatSimEvaluator.overwrite_simulator_config(self.config)
         # define environment
         self.env = HabitatEvalRLEnv(
-            config=self.config, enable_physics=self.enable_physics
+            config=self.config, enable_physics=self.enable_physics_sim
         )
 
         # enable_eval is set to true by eval_episode() to allow
@@ -108,7 +110,7 @@ class HabitatEnvNode:
             )
 
         # subscribe from command topics
-        if self.enable_physics:
+        if self.enable_physics_sim and self.agent_physics_enabled:
             self.sub = rospy.Subscriber(
                 "cmd_vel", Twist, self.callback, queue_size=self.sub_queue_size
             )
@@ -317,7 +319,10 @@ class HabitatEnvNode:
                 self.action_cv.wait()
             self.new_action_published = False
             # enact the action
-            (self.observations, _, _, _) = self.env.step(self.action)
+            if self.enable_physics_sim:
+                (self.observations, _, _, _) = self.env.step_physics(self.action)
+            else:
+                (self.observations, _, _, _) = self.env.step(self.action)
 
     def publish_and_step(self):
         r"""
@@ -345,7 +350,7 @@ class HabitatEnvNode:
         """
         # unpack agent action from ROS message, and send the action
         # to the simulator
-        if self.enable_physics is True:
+        if self.enable_physics_sim and self.agent_physics_enabled:
             # TODO: invoke step_physics() or something to set velocity
             pass
         else:
@@ -361,7 +366,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
-    parser.add_argument("--enable-physics", default=False, action="store_true")
+    parser.add_argument("--enable-physics-sim", default=False, action="store_true")
+    parser.add_argument("--agent-physics-enabled", default=False, action="store_true")
     parser.add_argument(
         "--sensor-pub-rate",
         type=float,
@@ -379,7 +385,8 @@ if __name__ == "__main__":
     rospy.init_node("env_node")
     env_node = HabitatEnvNode(
         config_paths=args.task_config,
-        enable_physics=args.enable_physics,
+        enable_physics_sim=args.enable_physics_sim,
+        agent_physics_enabled=args.agent_physics_enabled,
         pub_rate=args.sensor_pub_rate,
     )
 

@@ -160,6 +160,7 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
     )
     plt.clf()
 
+
 def generate_box_plots(
     metrics_list: List[List[Dict[str, float]]],
     seeds: List[int],
@@ -179,7 +180,7 @@ def generate_box_plots(
     # check if we have metrics from all seeds
     num_seeds = len(seeds)
     assert len(metrics_list) == num_seeds
-    
+
     # return if no data
     if num_seeds == 0:
         return
@@ -189,7 +190,7 @@ def generate_box_plots(
 
     # check if all seeds have the same number of data points
     for i in range(num_seeds):
-        assert  len(metrics_list[i]) == num_samples_per_seed
+        assert len(metrics_list[i]) == num_samples_per_seed
 
     # extract metric names
     metric_names = []
@@ -199,9 +200,9 @@ def generate_box_plots(
     # build dataframe
     data = {}
     total_num_samples = num_samples_per_seed * num_seeds
-    data["seed"] = np.ndarray((total_num_samples, ))
+    data["seed"] = np.ndarray((total_num_samples,))
     for metric_name in metric_names:
-        data[metric_name] = np.ndarray((total_num_samples, ))
+        data[metric_name] = np.ndarray((total_num_samples,))
     # populate each array
     total_sample_count = 0
     for seed_index in range(num_seeds):
@@ -209,7 +210,9 @@ def generate_box_plots(
             # register a new sample
             data["seed"][total_sample_count] = seeds[seed_index]
             for metric_name in metric_names:
-                data[metric_name][total_sample_count] = metrics_list[seed_index][sample_count][metric_name]
+                data[metric_name][total_sample_count] = metrics_list[seed_index][
+                    sample_count
+                ][metric_name]
             total_sample_count += 1
     df = pd.DataFrame(data)
 
@@ -219,5 +222,5 @@ def generate_box_plots(
         plots = sns.boxplot(x="seed", y=metric_name, data=df)
         plots = sns.swarmplot(x="seed", y=metric_name, data=df, color=".25")
         plt.savefig(f"{plot_dir}/{metric_name}-{num_seeds}_seeds.png")
-    
+
     plt.clf()

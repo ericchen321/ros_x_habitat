@@ -4,7 +4,6 @@ from habitat.config.default import get_config
 from typing import List, Tuple, Dict
 from collections import defaultdict
 from src.evaluators.evaluator import Evaluator
-from src.utils import utils_logging
 
 
 class HabitatSimEvaluator(Evaluator):
@@ -67,9 +66,8 @@ class HabitatSimEvaluator(Evaluator):
         for metrics in list_of_metrics:
             for m, v in metrics.items():
                 agg_metrics[m] += v
-        avg_metrics = {k: v/len(list_of_metrics) for k, v in agg_metrics.items()}
+        avg_metrics = {k: v / len(list_of_metrics) for k, v in agg_metrics.items()}
         return avg_metrics
-
 
     def generate_video(
         self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
@@ -90,7 +88,7 @@ class HabitatSimEvaluator(Evaluator):
         agent_seed: int,
         map_height: int,
         *args,
-        **kwargs
+        **kwargs,
     ) -> np.ndarray:
         r"""
         Evaluate the episode of given episode ID and scene ID, with agent initialized by the
@@ -113,7 +111,7 @@ class HabitatSimEvaluator(Evaluator):
         map_height: int = 200,
         *args,
         **kwargs,
-    )-> Tuple[List[Dict[str, str]], List[Dict[str, float]], List[np.ndarray]]:
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, float]], List[np.ndarray]]:
         r"""..
         Evaluate over episodes, starting from the last episode evaluated. Return evaluation
         metrics and top-down maps from the episodes.
@@ -124,7 +122,7 @@ class HabitatSimEvaluator(Evaluator):
         :param log_dir: logging directory
         :param map_height: height of top-down maps
         :return:
-            1) list of dicts containing episode ID and scene ID of evaluated episodes.  
+            1) list of dicts containing episode ID and scene ID of evaluated episodes.
             2) list of dicts containing evaluation metrics. Each dict is collected from
             one episode; One-to-one correspondence with the ID list.
             3) top-down maps of each episode; One-to-one correspondence with the ID list.
