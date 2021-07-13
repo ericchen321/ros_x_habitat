@@ -134,13 +134,12 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
 
     Args:
         episode_id: episode's ID.
-        scene_id: scene ID of the episode.
+        scene_id: scene ID of the episode, starts with data/dataset/...
         seeds: seeds used to initialize the agents.
         maps: maps produced by the agents navigating in np.ndarray format. Should be in
             the same order as seeds.
         map_dir: directory to store the map
     """
-    plt.clf()
     fig = plt.figure(figsize=(16.0, 4.0))
     grid = ImageGrid(
         fig,
@@ -153,16 +152,15 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
         # iterating over the grid to return the axes
         ax.set_title(f"Seed={seed}", fontdict=None, loc="center", color="k")
         ax.imshow(im)
-
-    plt.title(f"episode={episode_id}, scene={scene_id}")
-    plt.savefig(
+        
+    fig.savefig(
         f"{map_dir}/episode={episode_id}-scene={os.path.basename(scene_id)}.png"
     )
-    plt.clf()
+    plt.close(fig)
 
 
 def generate_box_plots(
-    metrics_list: List[List[Dict[str, float]]],
+    metrics_list: List[Dict[str, Dict[str, float]]],
     seeds: List[int],
     plot_dir: str,
 ):
@@ -189,13 +187,15 @@ def generate_box_plots(
         return
 
     # check if all seeds have the same number of data points
-    for i in range(num_seeds):
-        assert len(metrics_list[i]) == num_samples_per_seed
+    #for i in range(num_seeds):
+    #    assert  len(metrics_list[i]) == num_samples_per_seed
 
     # extract metric names
     metric_names = []
-    for metric_name, _ in metrics_list[0][0].items():
-        metric_names.append(metric_name)
+    for _, episode_metrics in metrics_list[0].items():
+        for metric_name, _ in episode_metrics.items():
+            metric_names.append(metric_name)
+        break
 
     # build dataframe
     data = {}
@@ -206,21 +206,21 @@ def generate_box_plots(
     # populate each array
     total_sample_count = 0
     for seed_index in range(num_seeds):
-        for sample_count in range(num_samples_per_seed):
+        for _, episode_metrics in metrics_list[seed_index].items():
             # register a new sample
             data["seed"][total_sample_count] = seeds[seed_index]
             for metric_name in metric_names:
-                data[metric_name][total_sample_count] = metrics_list[seed_index][
-                    sample_count
-                ][metric_name]
+                data[metric_name][total_sample_count] = episode_metrics[metric_name]
             total_sample_count += 1
     df = pd.DataFrame(data)
 
-    # create box-and-warm plot for each metric
+    # create box-and-strip plot for each metric
     for metric_name in metric_names:
-        plt.clf()
-        plots = sns.boxplot(x="seed", y=metric_name, data=df)
-        plots = sns.swarmplot(x="seed", y=metric_name, data=df, color=".25")
-        plt.savefig(f"{plot_dir}/{metric_name}-{num_seeds}_seeds.png")
-
-    plt.clf()
+        fig = plt.figure(figsize=(9.6, 7.2))
+        ax = fig.add_subplot(111)
+        ax.set_xticklabels(ax.get_xticklabels(),rotation=90) 
+        sns.boxplot(x="seed", y=metric_name, data=df, ax=ax)
+        sns.stripplot(x="seed", y=metric_name, data=df, color=".25", size=2, ax=ax)
+        fig.subplots_adjust(bottom=0.15)
+        fig.savefig(f"{plot_dir}/{metric_name}-{num_seeds}_seeds.png")
+        plt.close(fig)

@@ -30,20 +30,9 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
         log_dir: str = "logs/",
         *args,
         **kwargs,
-    ) -> Tuple[List[Dict[str, str]], List[Dict[str, float]], List[np.ndarray]]:
-        r"""..
-        Evaluate over episodes, starting from the last episode evaluated. Return evaluation
-        metrics.
-
-        :param episode_id_last: ID of the last episode evaluated; -1 for evaluating
-            from start
-        :param scene_id_last: Scene ID of the last episode evaluated
-        --- The following parameters are unused:
-        :param log_dir: logging directory
-        :return: dict containing metrics tracked by environment.
-        """
-
-        metrics_list = []
+    ) -> Dict[str, Dict[str, float]]:
+    
+        dict_of_metrics = {}
         count_episodes = 0
         eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
@@ -73,10 +62,11 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
                         "spl": resp.spl,
                     }
 
-                    metrics_list.append(per_ep_metrics)
+                    dict_of_metrics[f"{resp.episode_id},{resp.scene_id}"] = per_ep_metrics
+                    count_episodes += 1
 
             except rospy.ServiceException:
                 print(f"Evaluation call failed at {count_episodes}-th episode")
                 break
 
-        return [], metrics_list
+        return dict_of_metrics

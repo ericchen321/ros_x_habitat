@@ -78,12 +78,11 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         agent_seed: int = 7,
         *args,
         **kwargs,
-    ) -> Tuple[List[Dict[str, str]], List[Dict[str, float]]]:
+    ) -> Dict[str, Dict[str, float]]:
         logger = utils_logging.setup_logger(__name__)
 
         count_episodes = 0
-        ids = []
-        metrics_list = []
+        dict_of_metrics = {}
         eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
         # evaluate episodes, starting from the one after the last episode
@@ -106,7 +105,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                     break
                 else:
                     # get per-episode metrics
-                    per_ep_metrics = {
+                    per_episode_metrics = {
                         "distance_to_goal": resp.distance_to_goal,
                         "success": resp.success,
                         "spl": resp.spl,
@@ -121,26 +120,28 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                     # log episode ID and scene ID
                     logger_per_episode.info(f"episode id: {episode_id}")
                     logger_per_episode.info(f"scene id: {scene_id}")
-                    ids.append({"episode_id": episode_id, "scene_id": scene_id})
 
                     # print metrics of this episode
-                    for k, v in per_ep_metrics.items():
+                    for k, v in per_episode_metrics.items():
                         logger_per_episode.info(f"{k},{v}")
 
                     # add to the metrics list
-                    metrics_list.append(per_ep_metrics)
+                    dict_of_metrics[f"{episode_id},{scene_id}"] = per_episode_metrics
 
+                    # increment episode counter
                     count_episodes += 1
+
                     # shut down the episode logger
                     utils_logging.close_logger(logger_per_episode)
+                    
             except rospy.ServiceException:
                 logger.info(f"Evaluation call failed at {count_episodes}-th episode")
                 break
 
         utils_logging.close_logger(logger)
 
-        return ids, metrics_list
-
+        return dict_of_metrics
+    
     def evaluate_and_get_maps(
         self,
         episode_id_last: str = "-1",
@@ -150,7 +151,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         map_height: int = 200,
         *args,
         **kwargs,
-    ) -> Tuple[List[Dict[str, float]], List[np.ndarray]]:
+    ) -> Dict[str, Dict[str, float]]:
         raise NotImplementedError
 
     def generate_video(

@@ -334,13 +334,12 @@ class HabitatEnvNode:
         while not self.env._env.episode_over:
             self.publish_sensor_observations()
             self.step()
-            # if episode is done, disable evaluation and alert eval_episode()
-            if self.env._env.episode_over:
-                with self.enable_eval_cv:
-                    assert self.enable_eval is True
-                    self.enable_eval = False
-                    self.enable_eval_cv.notify()
             r.sleep()
+        # now the episode is done, disable evaluation and alert eval_episode()
+        with self.enable_eval_cv:
+            assert self.enable_eval is True
+            self.enable_eval = False
+            self.enable_eval_cv.notify()
 
     def callback(self, cmd_msg):
         r"""

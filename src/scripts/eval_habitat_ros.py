@@ -31,7 +31,7 @@ def main():
         type=str,
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
-    parser.add_argument("--seed-file-path", type=str, default="seed=7.csv")
+    parser.add_argument("--seed-file-path", type=str, default="seeds/seed=7.csv")
     parser.add_argument("--sensor-pub-rate", type=float, default=5.0)
     parser.add_argument(
         "--do-not-start-nodes-from-evaluator", default=False, action="store_true"
@@ -106,7 +106,7 @@ def main():
         except FileExistsError:
             pass
 
-        _, metrics_list = evaluator.evaluate(
+        dict_of_metrics = evaluator.evaluate(
             episode_id_last=args.episode_id,
             scene_id_last=args.scene_id,
             log_dir=f"{args.log_dir}/seed={seed}",
@@ -114,7 +114,7 @@ def main():
         )
 
         # compute average metrics
-        avg_metrics = evaluator.compute_avg_metrics(metrics_list)
+        avg_metrics = evaluator.compute_avg_metrics(dict_of_metrics)
 
         # log metrics
         logger_per_seed.info("Printing average metrics:")

@@ -79,7 +79,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         map_height: int = 200,
         *args,
         **kwargs,
-    ) -> Tuple[List[Dict[str, str]], List[Dict[str, float]], List[np.ndarray]]:
+    ) -> Dict[str, Dict[str, float]]:
         # make sure we have episodes to evaluate
         num_episodes = len(self.env._env.episodes)
         assert num_episodes > 0, "environment should contain at least one episode"
@@ -87,8 +87,6 @@ class HabitatEvaluator(HabitatSimEvaluator):
         # create a logger
         logger = utils_logging.setup_logger(__name__)
         logger.info(f"Total number of episodes in the environment: {num_episodes}")
-
-        metrics_list = []
 
         # reset episode iterator
         self.env.reset_episode_iterator()
@@ -103,10 +101,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
 
         # then evaluate the rest of the episodes from the environment
         count_episodes = 0
-        top_down_maps = []
-        ids = []
         episode_id = ""
         scene_id = ""
+        dict_of_metrics = {}
         while count_episodes < num_episodes:
             try:
                 count_steps = 0
@@ -154,7 +151,6 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 )
                 logger_per_episode.info(f"episode id: {episode_id}")
                 logger_per_episode.info(f"scene id: {scene_id}")
-                ids.append({"episode_id": episode_id, "scene_id": scene_id})
 
                 # act until one episode is over
                 info_per_action = None
@@ -188,29 +184,25 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     # --------------------------------------------
 
                 # episode ended
-                # draw the map
-                top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+                # collect metrics
+                per_episode_metrics = self.env._env.get_metrics()
+                per_episode_metrics["agent_time"] = t_agent_elapsed / count_steps
+                per_episode_metrics["sim_time"] = t_sim_elapsed / count_steps
+                per_episode_metrics["num_steps"] = count_steps
+                # colorize the map and replace "top_down_map" metric with it
+                per_episode_metrics["top_down_map"] = maps.colorize_draw_agent_and_fit_to_height(
                     info_per_action["top_down_map"],
                     map_height,
                 )
-                top_down_maps.append(top_down_map)
-
-                # get per-episode metrics. for now we extract distance-to-goal, success, spl
-                # from the environment, and we add sim_time and num_steps as two other metrics
-                metrics = self.env._env.get_metrics()
-                per_ep_metrics = {
-                    k: metrics[k] for k in ["distance_to_goal", "success", "spl"]
-                }
-                per_ep_metrics["agent_time"] = t_agent_elapsed / count_steps
-                per_ep_metrics["sim_time"] = t_sim_elapsed / count_steps
-                per_ep_metrics["num_steps"] = count_steps
+                
                 # print metrics of this episode
-                for k, v in per_ep_metrics.items():
-                    logger_per_episode.info(f"{k},{v}")
-
+                for k in ["distance_to_goal", "success", "spl", "agent_time", "sim_time", "num_steps"]:
+                    logger_per_episode.info(f"{k},{per_episode_metrics[k]}")
+                
                 # add to the metrics list
-                metrics_list.append(per_ep_metrics)
+                dict_of_metrics[f"{episode_id},{scene_id}"] = per_episode_metrics
 
+                # increment episode counter
                 count_episodes += 1
 
                 # shut down the episode logger
@@ -233,7 +225,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         # destroy the logger
         utils_logging.close_logger(logger)
 
-        return ids, metrics_list, top_down_maps
+        return dict_of_metrics
 
     def evaluate(
         self,
@@ -244,10 +236,14 @@ class HabitatEvaluator(HabitatSimEvaluator):
         *args,
         **kwargs,
     ):
-        ids, metrics_list, _ = self.evaluate_and_get_maps(
-            episode_id_last, scene_id_last, log_dir, agent_seed, 200
+        dict_of_metrics = self.evaluate_and_get_maps(
+            episode_id_last,
+            scene_id_last,
+            log_dir,
+            agent_seed,
+            200
         )
-        return ids, metrics_list
+        return dict_of_metrics
 
     def generate_video(
         self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs

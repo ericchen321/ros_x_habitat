@@ -44,7 +44,7 @@ class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
 
         # start the evaluator
         evaluator_args = shlex.split(
-            f"python eval_habitat_ros.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --task-config configs/pointnav_rgbd_val.yaml --episode-id {self.episode_id} --scene-id={self.scene_id} --sensor-pub-rate=5.0 --do-not-start-nodes-from-evaluator --log-dir=logs/test_habitat_ros_evaluator_discrete/ --tb-dir=tb/test_habitat_ros_evaluator_discrete/"
+            f"python src/scripts/eval_habitat_ros.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --task-config configs/pointnav_rgbd_val.yaml --episode-id {self.episode_id} --scene-id={self.scene_id} --sensor-pub-rate=5.0 --do-not-start-nodes-from-evaluator --log-dir=logs/test_habitat_ros_evaluator_discrete/"
         )
         call(evaluator_args)
 

@@ -72,8 +72,8 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
         mock_evaluator = MockHabitatROSEvaluator()
 
         # mock-eval one episode
-        _, metrics_list = mock_evaluator.evaluate("48", self.scene_id)
-        metrics = HabitatSimEvaluator.compute_avg_metrics(metrics_list)
+        dict_of_metrics = mock_evaluator.evaluate("48", self.scene_id)
+        metrics = HabitatSimEvaluator.compute_avg_metrics(dict_of_metrics)
         assert (
             np.linalg.norm(metrics["success"] - 1.0) < 1e-5
             and np.linalg.norm(metrics["spl"] - 0.68244) < 1e-5
