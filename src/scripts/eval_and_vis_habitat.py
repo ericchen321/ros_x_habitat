@@ -106,7 +106,7 @@ def main():
             scene_id_last=args.scene_id,
             log_dir=f"{args.log_dir}/seed={seed}",
             agent_seed=seed,
-            map_height=200
+            map_height=200,
         )
 
         # extract top-down-maps
@@ -136,7 +136,7 @@ def main():
         for k, v in avg_metrics.items():
             logger_per_seed.info("{}: {:.3f}".format(k, v))
         utils_logging.close_logger(logger_per_seed)
-    
+
     # make top-down maps for each episode
     if args.make_maps:
         # create map dir

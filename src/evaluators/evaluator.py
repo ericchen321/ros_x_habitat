@@ -7,7 +7,7 @@ class Evaluator:
 
     Users should instantiate subclasses to 'Evaluator' for evaluation.
     """
-    
+
     def evaluate(
         self,
         episode_id_last: str = "-1",

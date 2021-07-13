@@ -4,7 +4,6 @@ from habitat.config.default import get_config
 from typing import List, Tuple, Dict
 from collections import defaultdict
 from src.evaluators.evaluator import Evaluator
-from src.utils import utils_logging
 
 
 class HabitatSimEvaluator(Evaluator):
@@ -115,7 +114,7 @@ class HabitatSimEvaluator(Evaluator):
         agent_seed: int,
         map_height: int,
         *args,
-        **kwargs
+        **kwargs,
     ) -> np.ndarray:
         r"""
         Evaluate the episode of given episode ID and scene ID, with agent initialized by the
@@ -138,7 +137,7 @@ class HabitatSimEvaluator(Evaluator):
         map_height: int = 200,
         *args,
         **kwargs,
-    )-> Dict[str, Dict[str, float]]:
+    ) -> Dict[str, Dict[str, float]]:
         r"""..
         Evaluate over episodes, starting from the last episode evaluated. Return evaluation
         metrics and top-down maps from the episodes.

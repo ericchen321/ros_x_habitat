@@ -6,17 +6,9 @@ import os
 class TestVisualization(unittest.TestCase):
     def test_generate_box_plots_multiple_seeds(self):
         seeds = range(10)
-        sample_a = {
-            "spl": 0.8,
-            "success": 1.0}
-        sample_b = {
-            "spl": 0.2,
-            "success": 1.0
-        }
-        sample_c = {
-            "spl": 0.0,
-            "success": 0.0
-        }
+        sample_a = {"spl": 0.8, "success": 1.0}
+        sample_b = {"spl": 0.2, "success": 1.0}
+        sample_c = {"spl": 0.0, "success": 0.0}
         metrics_list = []
         for seed in seeds:
             dict_of_metrics = {

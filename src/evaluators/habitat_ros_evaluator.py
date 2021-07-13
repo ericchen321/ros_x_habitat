@@ -46,22 +46,26 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         # check if agent input type is valid
         assert input_type in ["rgb", "rgbd", "depth", "blind"]
 
-        if enable_physics:
-            # TODO: pass extra arguments to define agent and sim with dynamics
-            raise NotImplementedError
-        else:
-            if do_not_start_nodes is False:
-                # start the agent node
-                agent_node_args = shlex.split(
-                    f"python src/nodes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}"
-                )
-                Popen(agent_node_args)
+        # parse args for agent node
+        agent_node_args = shlex.split(
+            f"python src/nodes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}"
+        )
 
-                # start the env node
-                env_node_args = shlex.split(
-                    f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
-                )
-                Popen(env_node_args)
+        if enable_physics:
+            # parse args for env node for physics mode
+            agent_physics_enabled = False
+            env_node_args = shlex.split(
+                f"python src/nodes/habitat_env_node.py --task-config {config_paths} --enable-physics {enable_physics} --agent-physics-enabled {agent_physics_enabled} --sensor-pub-rate {sensor_pub_rate}"
+            )
+        else:
+            # parse args for env node for discreet mode
+            env_node_args = shlex.split(
+                f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
+            )
+
+        if do_not_start_nodes is False:
+            Popen(agent_node_args)
+            Popen(env_node_args)
 
         # start the evaluator node
         rospy.init_node("evaluator_habitat_ros")
@@ -120,7 +124,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                     # print metrics of this episode
                     for k, v in per_episode_metrics.items():
                         logger_per_episode.info(f"{k},{v}")
-                    
+
                     # add to the metrics list
                     dict_of_metrics[f"{episode_id},{scene_id}"] = per_episode_metrics
 

@@ -158,6 +158,7 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
     )
     plt.close(fig)
 
+
 def generate_box_plots(
     metrics_list: List[Dict[str, Dict[str, float]]],
     seeds: List[int],
@@ -177,7 +178,7 @@ def generate_box_plots(
     # check if we have metrics from all seeds
     num_seeds = len(seeds)
     assert len(metrics_list) == num_seeds
-    
+
     # return if no data
     if num_seeds == 0:
         return
@@ -199,9 +200,9 @@ def generate_box_plots(
     # build dataframe
     data = {}
     total_num_samples = num_samples_per_seed * num_seeds
-    data["seed"] = np.ndarray((total_num_samples, ))
+    data["seed"] = np.ndarray((total_num_samples,))
     for metric_name in metric_names:
-        data[metric_name] = np.ndarray((total_num_samples, ))
+        data[metric_name] = np.ndarray((total_num_samples,))
     # populate each array
     total_sample_count = 0
     for seed_index in range(num_seeds):

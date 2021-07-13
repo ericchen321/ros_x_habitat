@@ -27,10 +27,11 @@ def setup_logger(name, log_file=None, level=logging.INFO):
 
     return logger
 
+
 def close_logger(logger):
     r"""
     Close a logger. Assume only one handler exists.
     """
-    
+
     handler = logger.handlers[0]
     logger.removeHandler(handler)
