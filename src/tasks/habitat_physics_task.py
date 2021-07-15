@@ -96,7 +96,6 @@ class PhysicsNavigationTask(EmbodiedTask):
                 angle_between_rotations = np.rad2deg(
                     angle_between_quaternions(agent_final_rotation, agent_init_rotation)
                 )
-                print(f"rotated angle: {angle_between_rotations} degs")
 
         observations.update(
             self.sensor_suite.get_observations(

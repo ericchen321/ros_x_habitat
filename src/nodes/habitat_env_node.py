@@ -32,9 +32,23 @@ class HabitatEnvNode:
         self,
         config_paths: str = None,
         enable_physics_sim: bool = False,
-        agent_physics_enabled: bool = False,
+        use_continuous_agent: bool = False,
         pub_rate: float = 5.0,
     ):
+        r"""
+        Instantiates a node incapsulating a Habitat sim environment.
+        :param config_paths: path to Habitat env config file
+        :param enable_physics_sim: if true, turn on dynamic simulation
+            with Bullet
+        :param use_continuous_agent: if true, the agent would be one
+            that produces continuous velocities. Must be false if using
+            discrete simulator
+        :pub_rate: the rate at which the node publishes sensor readings
+        """
+        # precondition check
+        if use_continuous_agent:
+            assert enable_physics_sim
+
         # set up logger
         self.logger = utils_logging.setup_logger("env_node")
 
@@ -45,7 +59,7 @@ class HabitatEnvNode:
         self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
         self.config.freeze()
         self.enable_physics_sim = enable_physics_sim
-        self.agent_physics_enabled = agent_physics_enabled
+        self.use_continuous_agent = use_continuous_agent
         # overwrite env config if physics enabled
         if self.enable_physics_sim:
             HabitatSimEvaluator.overwrite_simulator_config(self.config)
@@ -110,7 +124,7 @@ class HabitatEnvNode:
             )
 
         # subscribe from command topics
-        if self.enable_physics_sim and self.agent_physics_enabled:
+        if self.use_continuous_agent:
             self.sub = rospy.Subscriber(
                 "cmd_vel", Twist, self.callback, queue_size=self.sub_queue_size
             )
@@ -217,7 +231,7 @@ class HabitatEnvNode:
                 }
                 metrics = self.env._env.get_metrics()
                 metrics_dic = {
-                    k: metrics[k] for k in [, "success", "spl"]
+                    k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
                 }
                 metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
                 resp.update(metrics_dic)
@@ -321,11 +335,11 @@ class HabitatEnvNode:
             while self.new_action_published is False:
                 self.action_cv.wait()
             self.new_action_published = False
-            # enact the action
-            if self.enable_physics_sim:
-                (self.observations, _, _, _) = self.env.step_physics(self.action)
-            else:
-                (self.observations, _, _, _) = self.env.step(self.action)
+            # enact the action. 
+            # NOTE: Here we call HabitatEvalRLEnv.step() which dispatches
+            # to Env.step() or PhysicsEnv.step_physics() depending on
+            # whether physics has been enabled
+            (self.observations, _, _, _) = self.env.step(self.action)
             self.count_steps += 1
 
     def publish_and_step(self):
@@ -353,8 +367,8 @@ class HabitatEnvNode:
         """
         # unpack agent action from ROS message, and send the action
         # to the simulator
-        if self.enable_physics_sim and self.agent_physics_enabled:
-            # TODO: invoke step_physics() or something to set velocity
+        if self.use_continuous_agent:
+            # TODO: possibly do nothing?
             pass
         else:
             with self.action_cv:
@@ -370,7 +384,7 @@ if __name__ == "__main__":
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
     parser.add_argument("--enable-physics-sim", default=False, action="store_true")
-    parser.add_argument("--agent-physics-enabled", default=False, action="store_true")
+    parser.add_argument("--use-continuous-agent", default=False, action="store_true")
     parser.add_argument(
         "--sensor-pub-rate",
         type=float,
@@ -389,7 +403,7 @@ if __name__ == "__main__":
     env_node = HabitatEnvNode(
         config_paths=args.task_config,
         enable_physics_sim=args.enable_physics_sim,
-        agent_physics_enabled=args.agent_physics_enabled,
+        use_continuous_agent=args.use_continuous_agent,
         pub_rate=args.sensor_pub_rate,
     )
 

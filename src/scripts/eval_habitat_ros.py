@@ -67,17 +67,7 @@ def main():
 
     # instantiate a discrete/continuous evaluator
     evaluator = None
-    if "SIMULATOR" in exp_config:
-        logger.info("Instantiating discrete simulator")
-        evaluator = HabitatROSEvaluator(
-            config_paths=args.task_config,
-            input_type=args.input_type,
-            model_path=args.model_path,
-            sensor_pub_rate=args.sensor_pub_rate,
-            do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
-            enable_physics=False,
-        )
-    elif "PHYSICS_SIMULATOR" in exp_config:
+    if "PHYSICS_SIMULATOR" in exp_config:
         logger.info("Instantiating continuous simulator with dynamics")
         # TODO: pass in control period
         evaluator = HabitatROSEvaluator(
@@ -87,6 +77,18 @@ def main():
             sensor_pub_rate=args.sensor_pub_rate,
             do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
             enable_physics=True,
+            use_continuous_agent=False,
+        )
+    elif "SIMULATOR" in exp_config:
+        logger.info("Instantiating discrete simulator")
+        evaluator = HabitatROSEvaluator(
+            config_paths=args.task_config,
+            input_type=args.input_type,
+            model_path=args.model_path,
+            sensor_pub_rate=args.sensor_pub_rate,
+            do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
+            enable_physics=False,
+            use_continuous_agent=False,
         )
     else:
         logger.info("Simulator not properly specified")
