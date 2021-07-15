@@ -1,13 +1,11 @@
 import argparse
-import csv
 import os
 
 from habitat.config.default import get_config
 from src.evaluators.habitat_evaluator import HabitatEvaluator
 from src.constants.constants import NumericalMetrics
 
-# logging
-from src.utils import utils_logging, utils_visualization
+from src.utils import utils_logging, utils_visualization, utils_files
 
 
 def main():
@@ -42,10 +40,7 @@ def main():
     # get seeds if provided; otherwise use default seed from Habitat
     seeds = []
     if args.seed_file_path != "":
-        with open(args.seed_file_path, newline="") as csv_file:
-            csv_lines = csv.reader(csv_file)
-            for line in csv_lines:
-                seeds.append(int(line[0]))
+        seeds = utils_files.load_seeds_from_file(args.seed_file_path)
     else:
         seeds = [exp_config.SEED]
 
