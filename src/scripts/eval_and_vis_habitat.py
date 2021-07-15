@@ -3,8 +3,8 @@ import csv
 import os
 
 from habitat.config.default import get_config
-
 from src.evaluators.habitat_evaluator import HabitatEvaluator
+from src.constants.constants import NumericalMetrics
 
 # logging
 from src.utils import utils_logging, utils_visualization
@@ -119,12 +119,7 @@ def main():
         # extract other metrics
         metrics_per_seed = evaluator.extract_metrics(
             metrics_and_maps,
-            ["distance_to_goal",
-            "success",
-            "spl",
-            "agent_time",
-            "sim_time",
-            "num_steps"]
+            [metric_name for metric_name in NumericalMetrics]
         )
         metrics_list.append(metrics_per_seed)
 

@@ -3,17 +3,12 @@ import os
 import shlex
 from subprocess import Popen
 from typing import List, Tuple, Dict
-
-# use TensorBoard to visualize
 import numpy as np
 import rospy
 from ros_x_habitat.srv import *
-
+from src.constants.constants import NumericalMetrics
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from src.utils import utils_logging
-
-
-# sim timing
 
 
 class HabitatROSEvaluator(HabitatSimEvaluator):
@@ -106,9 +101,10 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                 else:
                     # get per-episode metrics
                     per_episode_metrics = {
-                        "distance_to_goal": resp.distance_to_goal,
-                        "success": resp.success,
-                        "spl": resp.spl,
+                        NumericalMetrics.DISTANCE_TO_GOAL: resp.distance_to_goal,
+                        NumericalMetrics.SUCCESS: resp.success,
+                        NumericalMetrics.SPL: resp.spl,
+                        NumericalMetrics.NUM_STEPS: resp.num_steps,
                     }
                     # set up logger
                     episode_id = resp.episode_id

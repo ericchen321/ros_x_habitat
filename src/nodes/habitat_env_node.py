@@ -13,8 +13,7 @@ from ros_x_habitat.srv import EvalEpisode, ResetAgent
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
-
-from src.constants.constants import AgentResetCommands
+from src.constants.constants import AgentResetCommands, NumericalMetrics
 from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 
@@ -81,6 +80,7 @@ class HabitatEnvNode:
         # agent action and variables to keep things synchronized
         self.action = None
         self.observations = None
+        self.step_counter = 0
         self.new_action_published = False
         self.action_cv = Condition()
 
@@ -163,9 +163,10 @@ class HabitatEnvNode:
                 # self.logger.info(f"No last episode specified. Proceed to evaluate from the next one")
                 pass
 
-            # initialize observations
+            # initialize observations and step counter
             with self.action_cv:
                 self.observations = self.env.reset()
+                self.count_steps = 0
 
             # reset agent
             rospy.wait_for_service("reset_agent")
@@ -216,17 +217,19 @@ class HabitatEnvNode:
                 }
                 metrics = self.env._env.get_metrics()
                 metrics_dic = {
-                    k: metrics[k] for k in ["distance_to_goal", "success", "spl"]
+                    k: metrics[k] for k in [, "success", "spl"]
                 }
+                metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
                 resp.update(metrics_dic)
             else:
                 # signal that no episode has been evaluated
                 resp = {
                     "episode_id": "-1",
                     "scene_id": "-1",
-                    "distance_to_goal": 0.0,
-                    "success": 0.0,
-                    "spl": 0.0,
+                    NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
+                    NumericalMetrics.SUCCESS: 0.0,
+                    NumericalMetrics.SPL: 0.0,
+                    NumericalMetrics.NUM_STEPS: 0
                 }
             return resp
 
@@ -323,6 +326,7 @@ class HabitatEnvNode:
                 (self.observations, _, _, _) = self.env.step_physics(self.action)
             else:
                 (self.observations, _, _, _) = self.env.step(self.action)
+            self.count_steps += 1
 
     def publish_and_step(self):
         r"""
