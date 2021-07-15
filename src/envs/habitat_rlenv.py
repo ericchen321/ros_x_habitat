@@ -111,6 +111,8 @@ class HabitatRLEnv(gym.Env):
     @profiling_wrapper.RangeContext("RLEnv.step")
     def step(self, *args, **kwargs) -> Tuple[Observations, Any, bool, dict]:
         r"""Perform an action in the environment.
+        If physics is enabled, would call `PhysicsEnv.step_physics()`;
+        otherwise would call `Env.step()`.
 
         :return: :py:`(observations, reward, done, info)`
         """

@@ -14,9 +14,8 @@ from habitat_baselines.agents.ppo_agents import PPOAgent
 
 from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
+from src.constants.constants import NumericalMetrics
 from src.utils import utils_logging
-
-# use TensorBoard to visualize
 from src.utils.utils_visualization import TensorboardWriter, generate_video
 
 
@@ -107,6 +106,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         while count_episodes < num_episodes:
             try:
                 count_steps = 0
+                t_reset_elapsed = 0.0
                 t_sim_elapsed = 0.0
                 t_agent_elapsed = 0.0
 
@@ -129,15 +129,15 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 t_agent_elapsed += t_agent_end - t_agent_start
                 # --------------------------------------------
 
-                # ------------ log sim time start ------------
-                t_sim_start = time.clock()
+                # ------------ log reset time start ------------
+                t_reset_start = time.clock()
                 # --------------------------------------------
 
                 observations_per_action = self.env.reset()
 
-                # ------------  log sim time end  ------------
-                t_sim_end = time.clock()
-                t_sim_elapsed += t_sim_end - t_sim_start
+                # ------------  log reset time end  ------------
+                t_reset_end = time.clock()
+                t_reset_elapsed += t_reset_end - t_reset_start
                 # --------------------------------------------
 
                 current_episode = self.env._env.current_episode
@@ -186,18 +186,19 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 # episode ended
                 # collect metrics
                 per_episode_metrics = self.env._env.get_metrics()
-                per_episode_metrics["agent_time"] = t_agent_elapsed / count_steps
-                per_episode_metrics["sim_time"] = t_sim_elapsed / count_steps
-                per_episode_metrics["num_steps"] = count_steps
+                per_episode_metrics[NumericalMetrics.NUM_STEPS] = count_steps
+                per_episode_metrics[NumericalMetrics.AGENT_TIME] = t_agent_elapsed / count_steps
+                per_episode_metrics[NumericalMetrics.SIM_TIME] = t_sim_elapsed / count_steps
+                per_episode_metrics[NumericalMetrics.RESET_TIME] = t_reset_elapsed
                 # colorize the map and replace "top_down_map" metric with it
                 per_episode_metrics["top_down_map"] = maps.colorize_draw_agent_and_fit_to_height(
                     info_per_action["top_down_map"],
                     map_height,
                 )
                 
-                # print metrics of this episode
-                for k in ["distance_to_goal", "success", "spl", "agent_time", "sim_time", "num_steps"]:
-                    logger_per_episode.info(f"{k},{per_episode_metrics[k]}")
+                # print numerical metrics of this episode
+                for metric_name in NumericalMetrics:
+                    logger_per_episode.info(f"{metric_name},{per_episode_metrics[metric_name]}")
                 
                 # add to the metrics list
                 dict_of_metrics[f"{episode_id},{scene_id}"] = per_episode_metrics
@@ -283,7 +284,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
 
         # get metrics for video generation
         metrics = self.env._env.get_metrics()
-        per_ep_metrics = {k: metrics[k] for k in ["distance_to_goal", "success", "spl"]}
+        per_ep_metrics = {
+            k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
+        }
 
         # set up Tensorboard writer
         writer = None

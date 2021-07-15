@@ -9,8 +9,7 @@ from ros_x_habitat.srv import EvalEpisode, ResetAgent
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
-
-from src.constants.constants import AgentResetCommands
+from src.constants.constants import AgentResetCommands, NumericalMetrics
 
 
 class MockHabitatEnvNode:
@@ -107,9 +106,9 @@ class MockHabitatEnvNode:
         resp = {
             "episode_id": "-1",
             "scene_id": "lol",
-            "distance_to_goal": 0.0,
-            "success": 0.0,
-            "spl": 0.0,
+            NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
+            NumericalMetrics.SUCCESS: 0.0,
+            NumericalMetrics.SPL: 0.0,
         }
         return resp
 

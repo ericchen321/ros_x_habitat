@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 from PIL import Image
-
+from src.constants.constants import NumericalMetrics
 from src.evaluators.habitat_evaluator import HabitatEvaluator
 
 
@@ -25,8 +25,8 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
             agent_seed=7,
         )
         avg_metrics = self.evaluator_discrete.compute_avg_metrics(metrics_list)
-        assert np.linalg.norm(avg_metrics["distance_to_goal"] - 0.026777) < 1e-5
-        assert np.linalg.norm(avg_metrics["spl"] - 0.682441) < 1e-5
+        assert np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.026777) < 1e-5
+        assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.682441) < 1e-5
 
     def test_generate_video_discrete(self):
         try:
