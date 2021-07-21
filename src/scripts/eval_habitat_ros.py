@@ -89,7 +89,8 @@ def main():
         logger.info("Simulator not properly specified")
         raise NotImplementedError
 
-    logger.info("Started Evaluation")
+    logger.info("Started evaluation")
+    avg_metrics_all_seeds = {}
     for seed in seeds:
         # create logger for each seed and log the seed
         logger_per_seed = utils_logging.setup_logger(
@@ -110,14 +111,25 @@ def main():
             agent_seed=seed,
         )
 
-        # compute average metrics
-        avg_metrics = evaluator.compute_avg_metrics(dict_of_metrics)
+        # compute average metrics of this seed
+        avg_metrics_per_seed = evaluator.compute_avg_metrics(dict_of_metrics)
 
-        # log metrics
+        # save to dict of avg metrics across all seeds
+        avg_metrics_all_seeds[seed] = avg_metrics_per_seed
+
+        # log average metrics of this seed
         logger_per_seed.info("Printing average metrics:")
-        for k, v in avg_metrics.items():
+        for k, v in avg_metrics_per_seed.items():
             logger_per_seed.info("{}: {:.3f}".format(k, v))
         utils_logging.close_logger(logger_per_seed)
+    logger.info("Evaluation ended")
+
+    # log average metrics across all seeds
+    avg_metrics = evaluator.compute_avg_metrics(avg_metrics_all_seeds)
+    logger.info("Printing average metrics:")
+    for k, v in avg_metrics.items():
+        logger.info("{}: {:.3f}".format(k, v))
+        
     utils_logging.close_logger(logger)
 
 

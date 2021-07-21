@@ -79,8 +79,9 @@ def main():
         logger.info("Simulator not properly specified")
         raise NotImplementedError
 
-    logger.info("Started Evaluation")
+    logger.info("Started evaluation")
     metrics_list = []
+    avg_metrics_all_seeds = {}
     maps = []
     for seed in seeds:
         # create logger for each seed and log the seed
@@ -118,14 +119,24 @@ def main():
         )
         metrics_list.append(metrics_per_seed)
 
-        # compute average metrics
-        avg_metrics = evaluator.compute_avg_metrics(metrics_per_seed)
+        # compute average metrics of this seed
+        avg_metrics_per_seed = evaluator.compute_avg_metrics(metrics_per_seed)
 
-        # log metrics
+        # save to dict of avg metrics across all seeds
+        avg_metrics_all_seeds[seed] = avg_metrics_per_seed
+
+        # log average metrics of this seed
         logger_per_seed.info("Printing average metrics:")
-        for k, v in avg_metrics.items():
+        for k, v in avg_metrics_per_seed.items():
             logger_per_seed.info("{}: {:.3f}".format(k, v))
         utils_logging.close_logger(logger_per_seed)
+    logger.info("Evaluation ended")
+
+    # log average metrics across all seeds
+    avg_metrics = evaluator.compute_avg_metrics(avg_metrics_all_seeds)
+    logger.info("Printing average metrics:")
+    for k, v in avg_metrics.items():
+        logger.info("{}: {:.3f}".format(k, v))
 
     # make top-down maps for each episode
     if args.make_maps:
@@ -149,6 +160,7 @@ def main():
                     seeds,
                     maps_per_episode,
                     args.map_dir)
+    logger.info("Generated top-down maps")
     
     # make box-and-whisker plots of metrics vs. seed
     if args.make_plots:
@@ -159,6 +171,7 @@ def main():
             pass
         # create box plots of metrics vs seeds
         utils_visualization.generate_box_plots(metrics_list, seeds, args.plot_dir)
+    logger.info("Generated metric plots")
 
     utils_logging.close_logger(logger)
 
