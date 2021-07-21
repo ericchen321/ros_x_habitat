@@ -5,7 +5,7 @@ import rospy
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
-from ros_x_habitat.srv import EvalEpisode, ResetAgent
+from ros_x_habitat.srv import EvalEpisode, ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
@@ -46,6 +46,9 @@ class MockHabitatEnvNode:
 
         # establish reset service with agent
         self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
+
+        # establish agent time service with agent
+        self.get_agent_time = rospy.ServiceProxy("get_agent_time", GetAgentTime)
 
         # publish to sensor topics
         self.pub_rgb = rospy.Publisher("rgb", Image, queue_size=self.pub_queue_size)
@@ -90,7 +93,7 @@ class MockHabitatEnvNode:
             resp = self.reset_agent(int(AgentResetCommands.RESET))
             assert resp.done
         except rospy.ServiceException:
-            pass
+            raise rospy.ServiceException
 
     def eval_episode(self, request):
         r"""
@@ -183,5 +186,11 @@ class MockHabitatEnvNode:
         else:
             with self.action_cv:
                 self.action = cmd_msg.data
+                # get the agent time of the current episode
+                rospy.wait_for_service("get_agent_time")
+                try:
+                    agent_time_resp = self.get_agent_time()
+                except rospy.ServiceException:
+                    raise rospy.ServiceException
                 self.new_action_published = True
                 self.action_cv.notify()
