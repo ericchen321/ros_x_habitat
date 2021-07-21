@@ -68,9 +68,10 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                 f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
             )
 
+        self.do_not_start_nodes = do_not_start_nodes
         if do_not_start_nodes is False:
-            Popen(agent_node_args)
-            Popen(env_node_args)
+            self.agent_process = Popen(agent_node_args)
+            self.env_process = Popen(env_node_args)
 
         # start the evaluator node
         rospy.init_node("evaluator_habitat_ros")
@@ -150,6 +151,17 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         utils_logging.close_logger(logger)
 
         return dict_of_metrics
+
+    def shutdown_env_and_agent(
+        self,
+    ) -> None:
+        r"""
+        Shutdown env and agent node if the evaluator has instantiated
+        them.
+        """
+        if self.do_not_start_nodes is False:
+            self.env_process.kill()
+            self.agent_process.kill()
     
     def evaluate_and_get_maps(
         self,

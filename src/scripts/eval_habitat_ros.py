@@ -124,12 +124,15 @@ def main():
         utils_logging.close_logger(logger_per_seed)
     logger.info("Evaluation ended")
 
+    # end all node processes
+    evaluator.shutdown_env_and_agent()
+
     # log average metrics across all seeds
     avg_metrics = evaluator.compute_avg_metrics(avg_metrics_all_seeds)
     logger.info("Printing average metrics:")
     for k, v in avg_metrics.items():
         logger.info("{}: {:.3f}".format(k, v))
-        
+
     utils_logging.close_logger(logger)
 
 

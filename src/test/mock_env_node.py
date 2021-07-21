@@ -37,13 +37,6 @@ class MockHabitatEnvNode:
         self.new_action_published = False
         self.action_cv = Condition()
 
-        # mock eval_episode service handler
-        self.eval_service = rospy.Service(
-            "eval_episode", EvalEpisode, self.eval_episode
-        )
-        self.episode_id = episode_id
-        self.scene_id = scene_id
-
         # establish reset service with agent
         self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
 
@@ -79,6 +72,13 @@ class MockHabitatEnvNode:
             or self.pub_pointgoal_with_gps_compass.get_num_connections() == 0
         ):
             pass
+
+        # mock eval_episode service handler
+        self.eval_service = rospy.Service(
+            "eval_episode", EvalEpisode, self.eval_episode
+        )
+        self.episode_id = episode_id
+        self.scene_id = scene_id
 
         print("mock env initialized")
 

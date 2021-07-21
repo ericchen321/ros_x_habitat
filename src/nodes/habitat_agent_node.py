@@ -95,8 +95,9 @@ class HabitatAgentNode:
         self.lock = Lock()
 
         # shutdown triggers the node to be shutdown. Guarded by shutdown_cv
-        self.shutdown = False
         self.shutdown_cv = Condition()
+        with self.shutdown_cv:
+            self.shutdown = False
 
         # publish to command topics
         if self.enable_physics:
