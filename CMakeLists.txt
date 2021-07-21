@@ -60,6 +60,7 @@ add_service_files(
     FILES
     EvalEpisode.srv
     ResetAgent.srv
+    GetAgentTime.srv
 #   Service2.srv
 )
 

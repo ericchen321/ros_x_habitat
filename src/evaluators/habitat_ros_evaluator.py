@@ -115,6 +115,9 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                         NumericalMetrics.SUCCESS: resp.success,
                         NumericalMetrics.SPL: resp.spl,
                         NumericalMetrics.NUM_STEPS: resp.num_steps,
+                        NumericalMetrics.AGENT_TIME: resp.agent_time,
+                        NumericalMetrics.SIM_TIME: resp.sim_time,
+                        NumericalMetrics.RESET_TIME: resp.reset_time
                     }
                     # set up logger
                     episode_id = resp.episode_id

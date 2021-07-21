@@ -8,7 +8,6 @@ from typing import (
     Any,
     Dict,
 )
-
 import message_filters
 import numpy as np
 import rospy
@@ -19,14 +18,12 @@ from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 from habitat_baselines.agents.ppo_agents import PPOAgent
 from message_filters import TimeSynchronizer
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
-from ros_x_habitat.srv import ResetAgent
+from ros_x_habitat.srv import ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int16
-
 from src.constants.constants import AgentResetCommands
-
-# logging
+import time
 from src.utils import utils_logging
 
 
@@ -74,6 +71,9 @@ class HabitatAgentNode:
         # establish reset protocol with env
         self.reset_service = rospy.Service("reset_agent", ResetAgent, self.reset_agent)
 
+        # establish agent time protocol with env
+        self.agent_time_service = rospy.Service("get_agent_time", GetAgentTime, self.get_agent_time)
+
         # control_period defined for continuous mode
         if self.enable_physics:
             self.control_period = control_period
@@ -87,8 +87,11 @@ class HabitatAgentNode:
         if self.enable_physics:
             self.count_frames = 0
 
-        # lock guarding access to self.action, self.count_frames and
-        # self.agent
+        # for timing
+        self.agent_time = 0
+
+        # lock guarding access to self.action, self.count_frames,
+        # self.agent and self.agent_time
         self.lock = Lock()
 
         # shutdown triggers the node to be shutdown. Guarded by shutdown_cv
@@ -167,6 +170,15 @@ class HabitatAgentNode:
                 self.shutdown = True
                 self.shutdown_cv.notify()
                 return True
+    
+    def get_agent_time(self, request):
+        r"""
+        ROS service handler which returns the time that the agent takes
+        to produce the last action.
+        :param request: not used
+        :returns: agent time
+        """
+        return self.agent_time
 
     def depthmsg_to_cv2(self, depth_msg):
         r"""
@@ -319,11 +331,6 @@ class HabitatAgentNode:
         :param depth_msg: Depth sensor readings in ROS message format.
         :param pointgoal_with_gps_compass_msg: Pointgoal + GPS/Compass readings.
         """
-
-        # ------------ log agent time start ------------
-        t_agent_start = time.clock()
-        # ----------------------------------------------
-
         # convert current_observations from ROS to Habitat format
         observations = self.msgs_to_obs(
             rgb_msg=rgb_msg,
@@ -342,16 +349,19 @@ class HabitatAgentNode:
                 vel_msg = self.action_to_msg(self.action)
                 self.pub.publish(vel_msg)
         else:
+            # ------------ log agent time start ------------
+            t_agent_start = time.clock()
+            # ----------------------------------------------
+
             self.action = self.agent.act(observations)
+
+            # ------------ log agent time end ------------
+            t_agent_end = time.clock()
+            self.agent_time = t_agent_end - t_agent_start
+
             action_msg = self.action_to_msg(self.action)
             self.pub.publish(action_msg)
         self.lock.release()
-
-        # ------------ log agent time end ------------
-        t_agent_end = time.clock()
-        t_agent_elapsed = t_agent_end - t_agent_start
-        # print(f"time: {t_agent_elapsed} sec")
-        # --------------------------------------------
 
 
 if __name__ == "__main__":
