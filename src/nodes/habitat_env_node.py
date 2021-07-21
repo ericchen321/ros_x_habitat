@@ -9,15 +9,14 @@ from geometry_msgs.msg import Twist
 from habitat.config.default import get_config
 from habitat.core.simulator import Observations
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
-from ros_x_habitat.srv import EvalEpisode, ResetAgent
+from ros_x_habitat.srv import EvalEpisode, ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
-from src.constants.constants import AgentResetCommands, NumericalMetrics
+from src.constants.constants import NumericalMetrics
 from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
-
-# logging
+import time
 from src.utils import utils_logging
 
 
@@ -52,6 +51,11 @@ class HabitatEnvNode:
         # set up logger
         self.logger = utils_logging.setup_logger("env_node")
 
+        # declare timing variables
+        self.t_reset_elapsed = None
+        self.t_sim_elapsed = None
+        self.t_agent_elapsed = None
+
         # initialize Habitat environment
         self.config = get_config(config_paths)
         # embed top-down map and heading sensor in config
@@ -75,7 +79,7 @@ class HabitatEnvNode:
         # 2) by main() after all episodes have been evaluated.
         # all_episodes_evaluated is set to True by main() to indicate
         # no more episodes left to evaluate. eval_episodes() then signals
-        # back to evaluator
+        # back to evaluator, and set it to False again for re-use
         self.all_episodes_evaluated = False
         self.enable_eval = False
         self.enable_eval_cv = Condition()
@@ -83,23 +87,26 @@ class HabitatEnvNode:
         # enable_reset is set to true by eval_episode() to allow
         # reset() to run
         # enable_reset is set to false by reset() after simulator reset
-        self.enable_reset = False
-        self.episode_id_last = None
-        self.scene_id_last = None
         self.enable_reset_cv = Condition()
+        with self.enable_reset_cv:
+            self.enable_reset = False
+            self.episode_id_last = None
+            self.scene_id_last = None
+
+        # agent action and variables to keep things synchronized
+        self.action_cv = Condition()
+        with self.action_cv:
+            self.action = None
+            self.observations = None
+            self.step_counter = 0
+            self.new_action_published = False
+        # establish evaluation service with evaluator
         self.eval_service = rospy.Service(
             "eval_episode", EvalEpisode, self.eval_episode
         )
 
-        # agent action and variables to keep things synchronized
-        self.action = None
-        self.observations = None
-        self.step_counter = 0
-        self.new_action_published = False
-        self.action_cv = Condition()
-
-        # establish reset service with agent
-        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
+        # establish agent time service with agent
+        self.get_agent_time = rospy.ServiceProxy("get_agent_time", GetAgentTime)
 
         # define the max rate at which we publish sensor readings
         self.pub_rate = float(pub_rate)
@@ -174,21 +181,28 @@ class HabitatEnvNode:
                         self.logger.info("Last episode not found!")
                         raise StopIteration
             else:
-                # self.logger.info(f"No last episode specified. Proceed to evaluate from the next one")
+                # evaluate from the next episode
                 pass
 
             # initialize observations and step counter
             with self.action_cv:
-                self.observations = self.env.reset()
-                self.count_steps = 0
+                # reset timing variables
+                self.t_reset_elapsed = 0.0
+                self.t_sim_elapsed = 0.0
+                self.t_agent_elapsed = 0.0
 
-            # reset agent
-            rospy.wait_for_service("reset_agent")
-            try:
-                resp = self.reset_agent(int(AgentResetCommands.RESET))
-                assert resp.done
-            except rospy.ServiceException:
-                self.logger.info("Failed to reset agent!")
+                # ------------ log reset time start ------------
+                t_reset_start = time.clock()
+                # --------------------------------------------
+
+                self.observations = self.env.reset()
+
+                # ------------  log reset time end  ------------
+                t_reset_end = time.clock()
+                self.t_reset_elapsed += t_reset_end - t_reset_start
+                # -------------------------------------------- 
+
+                self.count_steps = 0
 
             self.enable_reset = False
 
@@ -226,16 +240,20 @@ class HabitatEnvNode:
             if self.all_episodes_evaluated is False:
                 # collect episode info and metrics
                 resp = {
-                    "episode_id": self.env._env.current_episode.episode_id,
-                    "scene_id": self.env._env.current_episode.scene_id,
+                    "episode_id": str(self.env._env.current_episode.episode_id),
+                    "scene_id": str(self.env._env.current_episode.scene_id),
                 }
                 metrics = self.env._env.get_metrics()
                 metrics_dic = {
                     k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
                 }
                 metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
+                metrics_dic[NumericalMetrics.AGENT_TIME] = self.t_agent_elapsed / self.count_steps
+                metrics_dic[NumericalMetrics.SIM_TIME] = self.t_sim_elapsed / self.count_steps
+                metrics_dic[NumericalMetrics.RESET_TIME] = self.t_reset_elapsed
                 resp.update(metrics_dic)
             else:
+                self.all_episodes_evaluated = False
                 # signal that no episode has been evaluated
                 resp = {
                     "episode_id": "-1",
@@ -243,7 +261,10 @@ class HabitatEnvNode:
                     NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
                     NumericalMetrics.SUCCESS: 0.0,
                     NumericalMetrics.SPL: 0.0,
-                    NumericalMetrics.NUM_STEPS: 0
+                    NumericalMetrics.NUM_STEPS: 0,
+                    NumericalMetrics.AGENT_TIME: 0.0,
+                    NumericalMetrics.SIM_TIME: 0.0,
+                    NumericalMetrics.RESET_TIME: 0.0
                 }
             return resp
 
@@ -339,7 +360,18 @@ class HabitatEnvNode:
             # NOTE: Here we call HabitatEvalRLEnv.step() which dispatches
             # to Env.step() or PhysicsEnv.step_physics() depending on
             # whether physics has been enabled
+
+            # ------------ log sim time start ------------
+            t_sim_start = time.clock()
+            # --------------------------------------------
+
             (self.observations, _, _, _) = self.env.step(self.action)
+
+            # ------------  log sim time end  ------------
+            t_sim_end = time.clock()
+            self.t_sim_elapsed += t_sim_end - t_sim_start
+            # --------------------------------------------
+
             self.count_steps += 1
 
     def publish_and_step(self):
@@ -372,7 +404,16 @@ class HabitatEnvNode:
             pass
         else:
             with self.action_cv:
+                # get the action
                 self.action = cmd_msg.data
+                # get the agent time of the current episode
+                rospy.wait_for_service("get_agent_time")
+                try:
+                    agent_time_resp = self.get_agent_time()
+                    self.t_agent_elapsed += agent_time_resp.agent_time
+                except rospy.ServiceException:
+                    self.logger.info("Failed to get agent time!")
+                # set action publish flag and notify
                 self.new_action_published = True
                 self.action_cv.notify()
 
@@ -413,17 +454,12 @@ if __name__ == "__main__":
             env_node.reset()
             env_node.publish_and_step()
         except StopIteration:
+            # set enable_reset and enable_eval to False, so the
+            # env node can evaluate again in the future
+            with env_node.enable_reset_cv:
+                env_node.enable_reset = False
             with env_node.enable_eval_cv:
                 env_node.all_episodes_evaluated = True
+                env_node.env.reset_episode_iterator()
                 env_node.enable_eval = False
                 env_node.enable_eval_cv.notify()
-            # request agent to shut down
-            rospy.wait_for_service("reset_agent")
-            try:
-                resp = env_node.reset_agent(int(AgentResetCommands.SHUTDOWN))
-                assert resp.done
-            except rospy.ServiceException:
-                env_node.logger.info("Failed to shut down agent!")
-            # shut down the env node
-            rospy.signal_shutdown("no episodes to evaluate")
-            break

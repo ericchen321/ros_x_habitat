@@ -1,5 +1,4 @@
 import argparse
-import csv
 import os
 
 from typing import Dict
@@ -9,8 +8,7 @@ from habitat.config.default import get_config
 
 from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
 
-# logging
-from src.utils import utils_logging
+from src.utils import utils_logging, utils_files
 
 
 def main():
@@ -45,10 +43,7 @@ def main():
     # get seeds if provided; otherwise use default seed from Habitat
     seeds = []
     if args.seed_file_path != "":
-        with open(args.seed_file_path, newline="") as csv_file:
-            csv_lines = csv.reader(csv_file)
-            for line in csv_lines:
-                seeds.append(int(line[0]))
+        seeds = utils_files.load_seeds_from_file(args.seed_file_path)
     else:
         seeds = [exp_config.SEED]
 
@@ -94,7 +89,8 @@ def main():
         logger.info("Simulator not properly specified")
         raise NotImplementedError
 
-    logger.info("Started Evaluation")
+    logger.info("Started evaluation")
+    avg_metrics_all_seeds = {}
     for seed in seeds:
         # create logger for each seed and log the seed
         logger_per_seed = utils_logging.setup_logger(
@@ -115,14 +111,28 @@ def main():
             agent_seed=seed,
         )
 
-        # compute average metrics
-        avg_metrics = evaluator.compute_avg_metrics(dict_of_metrics)
+        # compute average metrics of this seed
+        avg_metrics_per_seed = evaluator.compute_avg_metrics(dict_of_metrics)
 
-        # log metrics
+        # save to dict of avg metrics across all seeds
+        avg_metrics_all_seeds[seed] = avg_metrics_per_seed
+
+        # log average metrics of this seed
         logger_per_seed.info("Printing average metrics:")
-        for k, v in avg_metrics.items():
+        for k, v in avg_metrics_per_seed.items():
             logger_per_seed.info("{}: {:.3f}".format(k, v))
         utils_logging.close_logger(logger_per_seed)
+    logger.info("Evaluation ended")
+
+    # end all node processes
+    evaluator.shutdown_env_and_agent()
+
+    # log average metrics across all seeds
+    avg_metrics = evaluator.compute_avg_metrics(avg_metrics_all_seeds)
+    logger.info("Printing average metrics:")
+    for k, v in avg_metrics.items():
+        logger.info("{}: {:.3f}".format(k, v))
+
     utils_logging.close_logger(logger)
 
 

@@ -1,4 +1,5 @@
 import unittest
+from src.utils.utils_files import load_seeds_from_file
 from src.utils.utils_visualization import generate_box_plots
 from src.constants.constants import NumericalMetrics
 import os
@@ -6,7 +7,7 @@ import os
 
 class TestVisualization(unittest.TestCase):
     def test_generate_box_plots_multiple_seeds(self):
-        seeds = range(10)
+        seeds = load_seeds_from_file("seeds/10_seeds.csv")
         sample_a = {NumericalMetrics.SPL: 0.8, NumericalMetrics.SUCCESS: 1.0}
         sample_b = {NumericalMetrics.SPL: 0.2, NumericalMetrics.SUCCESS: 1.0}
         sample_c = {NumericalMetrics.SPL: 0.0, NumericalMetrics.SUCCESS: 0.0}
@@ -19,7 +20,7 @@ class TestVisualization(unittest.TestCase):
             }
             metrics_list.append(dict_of_metrics)
         
-        plot_dir = "plots/test_generate_box_plots/"
+        plot_dir = "metric_plots/test_generate_box_plots/"
         try:
             os.mkdir(plot_dir)
         except FileExistsError:

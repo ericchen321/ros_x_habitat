@@ -7,3 +7,6 @@ float32 distance_to_goal
 float32 success
 float32 spl
 int32 num_steps
+float32 agent_time
+float32 sim_time
+float32 reset_time

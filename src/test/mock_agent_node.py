@@ -17,7 +17,7 @@ from geometry_msgs.msg import Twist
 from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 from message_filters import TimeSynchronizer
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
-from ros_x_habitat.srv import ResetAgent
+from ros_x_habitat.srv import ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int16
@@ -77,6 +77,9 @@ class MockHabitatAgentNode:
 
         # establish reset protocol with env
         self.reset_service = rospy.Service("reset_agent", ResetAgent, self.reset_agent)
+
+        # establish agent time protocol with env
+        self.agent_time_service = rospy.Service("get_agent_time", GetAgentTime, self.get_agent_time)
 
         if self.enable_physics:
             self.control_period = 1.0
@@ -140,6 +143,15 @@ class MockHabitatAgentNode:
                 self.shutdown = True
                 self.shutdown_cv.notify()
                 return True
+    
+    def get_agent_time(self, request):
+        r"""
+        ROS service handler which returns the time that the agent takes
+        to produce the last action.
+        :param request: not used
+        :returns: agent time
+        """
+        return 0.12
 
     def depthmsg_to_cv2(self, depth_msg):
         r"""

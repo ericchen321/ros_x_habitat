@@ -216,7 +216,7 @@ def generate_box_plots(
 
     # create box-and-strip plot for each metric
     for metric_name in metric_names:
-        fig = plt.figure(figsize=(9.6, 7.2))
+        fig = plt.figure(figsize=(12.8, 9.6))
         ax = fig.add_subplot(111)
         ax.set_xticklabels(ax.get_xticklabels(),rotation=90) 
         sns.boxplot(x="seed", y=metric_name, data=df, ax=ax)

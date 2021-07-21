@@ -1,11 +1,10 @@
 import argparse
-import csv
 import os
 
 from habitat.config.default import get_config
 
 from src.evaluators.habitat_evaluator import HabitatEvaluator
-from src.utils.utils_visualization import generate_grid_of_maps
+from src.utils import utils_visualization, utils_files
 
 
 # logging
@@ -42,10 +41,7 @@ def main():
     # get seeds if provided; otherwise use default seed from Habitat
     seeds = []
     if args.seed_file_path != "":
-        with open(args.seed_file_path, newline="") as csv_file:
-            csv_lines = csv.reader(csv_file)
-            for line in csv_lines:
-                seeds.append(int(line[0]))
+        seeds = utils_files.load_seeds_from_file(args.seed_file_path)
     else:
         seeds = [exp_config.SEED]
 
@@ -93,7 +89,7 @@ def main():
                 args.episode_id, args.scene_id, seed, 200
             )
             maps.append(map_one_seed)
-        generate_grid_of_maps(args.episode_id, args.scene_id, seeds, maps, args.map_dir)
+        utils_visualization.generate_grid_of_maps(args.episode_id, args.scene_id, seeds, maps, args.map_dir)
 
 
 if __name__ == "__main__":

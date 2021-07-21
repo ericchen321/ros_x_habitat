@@ -5,9 +5,10 @@ from subprocess import Popen
 from typing import List, Tuple, Dict
 import numpy as np
 import rospy
-from ros_x_habitat.srv import *
+from ros_x_habitat.srv import EvalEpisode, ResetAgent
 from src.constants.constants import NumericalMetrics
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
+from src.constants.constants import AgentResetCommands
 from src.utils import utils_logging
 
 
@@ -68,12 +69,16 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                 f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
             )
 
+        self.do_not_start_nodes = do_not_start_nodes
         if do_not_start_nodes is False:
-            Popen(agent_node_args)
-            Popen(env_node_args)
+            self.agent_process = Popen(agent_node_args)
+            self.env_process = Popen(env_node_args)
 
         # start the evaluator node
         rospy.init_node("evaluator_habitat_ros")
+
+        # set up agent reset service client
+        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
 
     def evaluate(
         self,
@@ -93,6 +98,15 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         # evaluate episodes, starting from the one after the last episode
         # evaluated
         while not rospy.is_shutdown():
+            # reset agent
+            rospy.wait_for_service("reset_agent")
+            try:
+                resp = self.reset_agent(int(AgentResetCommands.RESET), agent_seed)
+                assert resp.done
+            except rospy.ServiceException:
+                logger.info("Failed to reset agent!")
+            
+            # evaluate episode
             rospy.wait_for_service("eval_episode")
             try:
                 # request env node to evaluate an episode
@@ -115,6 +129,9 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                         NumericalMetrics.SUCCESS: resp.success,
                         NumericalMetrics.SPL: resp.spl,
                         NumericalMetrics.NUM_STEPS: resp.num_steps,
+                        NumericalMetrics.AGENT_TIME: resp.agent_time,
+                        NumericalMetrics.SIM_TIME: resp.sim_time,
+                        NumericalMetrics.RESET_TIME: resp.reset_time
                     }
                     # set up logger
                     episode_id = resp.episode_id
@@ -147,6 +164,17 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         utils_logging.close_logger(logger)
 
         return dict_of_metrics
+
+    def shutdown_env_and_agent(
+        self,
+    ) -> None:
+        r"""
+        Shutdown env and agent node if the evaluator has instantiated
+        them.
+        """
+        if self.do_not_start_nodes is False:
+            self.env_process.kill()
+            self.agent_process.kill()
     
     def evaluate_and_get_maps(
         self,

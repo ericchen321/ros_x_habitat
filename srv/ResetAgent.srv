@@ -1,3 +1,4 @@
 int16 reset # 0 for reset, 1 for shutdown
+int32 seed # seed to instantiate agent
 ---
 bool done
