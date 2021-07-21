@@ -161,6 +161,7 @@ class HabitatAgentNode:
             self.lock.acquire()
             self.count_frames = 0
             self.action = None
+            self.agent_config.RANDOM_SEED = request.seed
             self.agent = PPOAgent(self.agent_config)
             self.agent.reset()
             self.lock.release()

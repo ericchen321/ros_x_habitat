@@ -5,9 +5,10 @@ from subprocess import Popen
 from typing import List, Tuple, Dict
 import numpy as np
 import rospy
-from ros_x_habitat.srv import *
+from ros_x_habitat.srv import EvalEpisode, ResetAgent
 from src.constants.constants import NumericalMetrics
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
+from src.constants.constants import AgentResetCommands
 from src.utils import utils_logging
 
 
@@ -76,6 +77,9 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         # start the evaluator node
         rospy.init_node("evaluator_habitat_ros")
 
+        # set up agent reset service client
+        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
+
     def evaluate(
         self,
         episode_id_last: str = "-1",
@@ -94,6 +98,15 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         # evaluate episodes, starting from the one after the last episode
         # evaluated
         while not rospy.is_shutdown():
+            # reset agent
+            rospy.wait_for_service("reset_agent")
+            try:
+                resp = self.reset_agent(int(AgentResetCommands.RESET), agent_seed)
+                assert resp.done
+            except rospy.ServiceException:
+                logger.info("Failed to reset agent!")
+            
+            # evaluate episode
             rospy.wait_for_service("eval_episode")
             try:
                 # request env node to evaluate an episode

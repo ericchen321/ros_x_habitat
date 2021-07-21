@@ -13,7 +13,7 @@ from ros_x_habitat.srv import EvalEpisode, ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
-from src.constants.constants import AgentResetCommands, NumericalMetrics
+from src.constants.constants import NumericalMetrics
 from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 import time
@@ -104,9 +104,6 @@ class HabitatEnvNode:
         self.eval_service = rospy.Service(
             "eval_episode", EvalEpisode, self.eval_episode
         )
-
-        # establish reset service with agent
-        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
 
         # establish agent time service with agent
         self.get_agent_time = rospy.ServiceProxy("get_agent_time", GetAgentTime)
@@ -206,14 +203,6 @@ class HabitatEnvNode:
                 # -------------------------------------------- 
 
                 self.count_steps = 0
-
-            # reset agent
-            rospy.wait_for_service("reset_agent")
-            try:
-                resp = self.reset_agent(int(AgentResetCommands.RESET))
-                assert resp.done
-            except rospy.ServiceException:
-                self.logger.info("Failed to reset agent!")
 
             self.enable_reset = False
 

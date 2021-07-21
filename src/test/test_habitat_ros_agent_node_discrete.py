@@ -11,6 +11,7 @@ import rospy
 import rostest
 
 from mock_env_node import MockHabitatEnvNode
+from ros_x_habitat.srv import ResetAgent
 from src.constants.constants import AgentResetCommands
 
 
@@ -53,6 +54,9 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
         # define env node publish rate
         self.env_pub_rate = 5.0
 
+        # set up agent reset service client
+        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
+
     def tearDown(self):
         pass
 
@@ -66,6 +70,14 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
         # init mock env node
         rospy.init_node("mock_env_node")
         mock_env_node = MockHabitatEnvNode(enable_physics=False)
+
+        # reset the agent
+        rospy.wait_for_service("reset_agent")
+        try:
+            resp = self.reset_agent(int(AgentResetCommands.RESET), 7)
+            assert resp.done
+        except rospy.ServiceException:
+            raise rospy.ServiceException
 
         # reset the mock env
         mock_env_node.reset()
@@ -81,10 +93,13 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
             mock_env_node.check_command(self.actions_discrete[i])
             r.sleep()
 
-        # shut down the agent node
+        # shut down the agent
         rospy.wait_for_service("reset_agent")
-        resp = mock_env_node.reset_agent(int(AgentResetCommands.SHUTDOWN))
-        assert resp.done
+        try:
+            resp = self.reset_agent(int(AgentResetCommands.SHUTDOWN), 0)
+            assert resp.done
+        except rospy.ServiceException:
+            raise rospy.ServiceException
 
         # shut down the mock env node
         rospy.signal_shutdown("test agent node in setting 2 done")

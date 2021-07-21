@@ -37,9 +37,6 @@ class MockHabitatEnvNode:
         self.new_action_published = False
         self.action_cv = Condition()
 
-        # establish reset service with agent
-        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
-
         # establish agent time service with agent
         self.get_agent_time = rospy.ServiceProxy("get_agent_time", GetAgentTime)
 
@@ -87,13 +84,7 @@ class MockHabitatEnvNode:
         Resets the agent and the simulator. Requires being called only from
         the main thread.
         """
-        # reset agent
-        rospy.wait_for_service("reset_agent")
-        try:
-            resp = self.reset_agent(int(AgentResetCommands.RESET))
-            assert resp.done
-        except rospy.ServiceException:
-            raise rospy.ServiceException
+        return
 
     def eval_episode(self, request):
         r"""
