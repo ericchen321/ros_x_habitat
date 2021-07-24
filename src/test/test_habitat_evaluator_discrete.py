@@ -30,8 +30,15 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
 
     def test_generate_video_discrete(self):
         try:
+            os.mkdir(
+                 "videos/test_habitat_evaluator_discrete/"
+            )
+        except FileExistsError:
+            pass
+        
+        try:
             os.remove(
-                "videos/test_habitat_evaluator/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.03-success=1.00-spl=0.68.mp4"
+                "videos/test_habitat_evaluator_discrete/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.03-success=1.00-spl=0.68.mp4"
             )
         except FileNotFoundError:
             pass
@@ -42,10 +49,17 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
             agent_seed=7,
         )
         assert os.path.isfile(
-            "videos/test_habitat_evaluator/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.03-success=1.00-spl=0.68.mp4"
+            "videos/test_habitat_evaluator_discrete/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.03-success=1.00-spl=0.68.mp4"
         )
 
     def test_generate_map_discrete(self):
+        try:
+            os.mkdir(
+                "habitat_maps/test_habitat_evaluator_discrete/"
+            )
+        except FileExistsError:
+            pass
+
         # for now we only check if the code runs
         top_down_map = self.evaluator_discrete.generate_map(
             episode_id="49",
@@ -54,7 +68,7 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
             map_height=400,
         )
         map_img = Image.fromarray(top_down_map, "RGB")
-        map_img.save("habitat_maps/sample.png")
+        map_img.save("habitat_maps/test_habitat_evaluator_discrete/test_generate_map_discrete.png")
 
 
 if __name__ == "__main__":
