@@ -63,7 +63,7 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
     def test_agent_node_discrete(self):
         # start the agent node
         agent_node_args = shlex.split(
-            f"python src/nodes/habitat_agent_node.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --sensor-pub-rate {self.env_pub_rate}"
+            f"python src/nodes/habitat_agent_node.py --node-name agent_node_under_test --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --sensor-pub-rate {self.env_pub_rate}"
         )
         Popen(agent_node_args)
 

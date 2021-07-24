@@ -66,6 +66,8 @@ def main():
         logger.info("Instantiating continuous simulator with dynamics")
         # TODO: pass in control period
         evaluator = HabitatROSEvaluator(
+            agent_node_name="agent_node",
+            env_node_name="env_node",
             config_paths=args.task_config,
             input_type=args.input_type,
             model_path=args.model_path,
@@ -77,6 +79,8 @@ def main():
     elif "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
         evaluator = HabitatROSEvaluator(
+            agent_node_name="agent_node",
+            env_node_name="env_node",
             config_paths=args.task_config,
             input_type=args.input_type,
             model_path=args.model_path,

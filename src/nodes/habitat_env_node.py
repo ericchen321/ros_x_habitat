@@ -422,6 +422,9 @@ if __name__ == "__main__":
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--node-name", type=str, default="env_node"
+    )
+    parser.add_argument(
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
     parser.add_argument("--enable-physics-sim", default=False, action="store_true")
@@ -440,7 +443,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # initialize the env node
-    rospy.init_node("env_node")
+    rospy.init_node(args.node_name)
     env_node = HabitatEnvNode(
         config_paths=args.task_config,
         enable_physics_sim=args.enable_physics_sim,

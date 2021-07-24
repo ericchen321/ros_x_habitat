@@ -369,6 +369,7 @@ class HabitatAgentNode:
 if __name__ == "__main__":
     # parse input arguments
     parser = argparse.ArgumentParser()
+    parser.add_argument("--node-name", default="agent_node", type=str)
     parser.add_argument(
         "--input-type",
         default="blind",
@@ -389,7 +390,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # initialize the agent node
-    rospy.init_node("agent_node")
+    rospy.init_node(args.node_name)
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path

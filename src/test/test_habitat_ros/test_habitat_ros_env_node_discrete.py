@@ -59,7 +59,7 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
     def test_env_node_discrete(self):
         # start the env node
         env_node_args = shlex.split(
-            f"python src/nodes/habitat_env_node.py --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {self.env_pub_rate}"
+            f"python src/nodes/habitat_env_node.py --node-name env_node_under_test --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {self.env_pub_rate}"
         )
         env_node_process = Popen(env_node_args)
 

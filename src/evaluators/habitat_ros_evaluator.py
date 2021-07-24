@@ -19,6 +19,8 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
 
     def __init__(
         self,
+        env_node_name: str,
+        agent_node_name: str,
         config_paths: str,
         input_type: str,
         model_path: str,
@@ -29,10 +31,12 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
     ) -> None:
         r"""..
 
+        :param env_node_name: name of the env node
+        :param agent_node_name: name of the agent node
+        :param config_paths: file to be used for creating the environment
         :param input_type: agent's input type, options: "rgb", "rgbd",
             "depth", "blind"
         :param model_path: path to agent's model
-        :param config_paths: file to be used for creating the environment
         :param sensor_pub_rate: rate at which the env node publishes sensor
             readings
         :param do_not_start_nodes: if True then the evaluator would not start
@@ -48,25 +52,25 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
 
         # parse args for agent node
         agent_node_args = shlex.split(
-            f"python src/nodes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}"
+            f"python src/nodes/habitat_agent_node.py --node-name {agent_node_name} --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}"
         )
 
         # parse args for env node
         if enable_physics and use_continuous_agent:
             # physic sim + continuous agent
             env_node_args = shlex.split(
-                f"python src/nodes/habitat_env_node.py --task-config {config_paths} --enable-physics --use-continuous-agent --sensor-pub-rate {sensor_pub_rate}"
+                f"python src/nodes/habitat_env_node.py --node-name {env_node_name} --task-config {config_paths} --enable-physics --use-continuous-agent --sensor-pub-rate {sensor_pub_rate}"
             )
         elif enable_physics and (not use_continuous_agent):
             # physics sim + discrete agent
             env_node_args = shlex.split(
-                f"python src/nodes/habitat_env_node.py --task-config {config_paths} --enable-physics --sensor-pub-rate {sensor_pub_rate}"
+                f"python src/nodes/habitat_env_node.py --node-name {env_node_name} --task-config {config_paths} --enable-physics --sensor-pub-rate {sensor_pub_rate}"
             )
         else:
             # discrete sim + discrete agent
             assert use_continuous_agent is False
             env_node_args = shlex.split(
-                f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
+                f"python src/nodes/habitat_env_node.py --node-name {env_node_name} --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
             )
 
         self.do_not_start_nodes = do_not_start_nodes
