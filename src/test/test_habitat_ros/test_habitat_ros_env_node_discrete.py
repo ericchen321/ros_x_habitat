@@ -65,7 +65,7 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
 
         # start the mock agent node
         agent_node_args = shlex.split(
-            f"python src/test/mock_agent_node.py --sensor-pub-rate {self.env_pub_rate}"
+            f"python src/test/test_habitat_ros/mock_agent_node.py --sensor-pub-rate {self.env_pub_rate}"
         )
         agent_node_process = Popen(agent_node_args)
 
