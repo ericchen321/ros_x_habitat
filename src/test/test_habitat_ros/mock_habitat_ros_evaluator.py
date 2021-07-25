@@ -60,9 +60,9 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
                 else:
                     # evaluate the next episode
                     print("requesting to evaluate the next episode!!!!!!!")
-                    resp = self.eval_episode(EvalEpisodeSpecialIDs.NEXT, "")
+                    resp = self.eval_episode(EvalEpisodeSpecialIDs.REQUEST_NEXT, "")
 
-                if resp.episode_id == EvalEpisodeSpecialIDs.NO_MORE_EPISODES:
+                if resp.episode_id == EvalEpisodeSpecialIDs.RESPONSE_NO_MORE_EPISODES:
                     # no more episodes
                     print(f"Finished evaluation after: {count_episodes} episodes")
                     break
@@ -86,7 +86,7 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
     def shutdown_env_node(self):
         rospy.wait_for_service("eval_episode")
         try:
-            resp = self.eval_episode(EvalEpisodeSpecialIDs.SHUTDOWN, "")
+            resp = self.eval_episode(EvalEpisodeSpecialIDs.REQUEST_SHUTDOWN, "")
         except rospy.ServiceException:
             print("Shutting down env node failed")
             raise rospy.ServiceException

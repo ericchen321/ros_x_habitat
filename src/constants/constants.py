@@ -6,9 +6,9 @@ class AgentResetCommands(IntEnum):
     SHUTDOWN = 1
 
 class EvalEpisodeSpecialIDs(str, Enum):
-    NEXT = "-1"
-    SHUTDOWN = "-2"
-    NO_MORE_EPISODES = "-1"
+    REQUEST_NEXT = "-1"
+    REQUEST_SHUTDOWN = "-2"
+    RESPONSE_NO_MORE_EPISODES = "-1"
 
 class NumericalMetrics(str, Enum):
     DISTANCE_TO_GOAL = "distance_to_goal"

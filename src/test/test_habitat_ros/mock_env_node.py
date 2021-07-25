@@ -129,7 +129,7 @@ class MockHabitatEnvNode:
             NumericalMetrics.SIM_TIME: 0.0,
             NumericalMetrics.RESET_TIME: 0.0
         }
-        if request.episode_id_last == EvalEpisodeSpecialIDs.SHUTDOWN:
+        if request.episode_id_last == EvalEpisodeSpecialIDs.REQUEST_SHUTDOWN:
             # if shutdown request, enable reset and return immediately
             with self.shutdown_cv:
                 self.shutdown = True
@@ -154,7 +154,7 @@ class MockHabitatEnvNode:
                 else:
                     # signal no more episodes
                     resp = {
-                        "episode_id": EvalEpisodeSpecialIDs.NO_MORE_EPISODES,
+                        "episode_id": EvalEpisodeSpecialIDs.RESPONSE_NO_MORE_EPISODES,
                         "scene_id": TestHabitatROSData.test_evaluator_scene_id,
                         NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
                         NumericalMetrics.SUCCESS: 0.0,
