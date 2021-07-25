@@ -13,6 +13,7 @@ import rostest
 from mock_env_node import MockHabitatEnvNode
 from ros_x_habitat.srv import ResetAgent
 from src.constants.constants import AgentResetCommands
+from src.test.data.data import TestHabitatROSData
 
 
 class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
@@ -21,36 +22,6 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
     """
 
     def setUp(self):
-        # load discrete test data
-        self.episode_id = "49"
-        self.scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
-        self.num_readings = 47
-        self.readings_rgb_discrete = []
-        self.readings_depth_discrete = []
-        self.readings_ptgoal_with_comp_discrete = []
-        self.actions_discrete = []
-        for i in range(0, self.num_readings):
-            self.readings_rgb_discrete.append(
-                np.load(
-                    f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/rgb-{self.episode_id}-{os.path.basename(self.scene_id)}-{i}.npy"
-                )
-            )
-            self.readings_depth_discrete.append(
-                np.load(
-                    f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/depth-{self.episode_id}-{os.path.basename(self.scene_id)}-{i}.npy"
-                )
-            )
-            self.readings_ptgoal_with_comp_discrete.append(
-                np.load(
-                    f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/pointgoal_with_gps_compass-{self.episode_id}-{os.path.basename(self.scene_id)}-{i}.npy"
-                )
-            )
-            self.actions_discrete.append(
-                np.load(
-                    f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/acts/action-{self.episode_id}-{os.path.basename(self.scene_id)}-{i}.npy"
-                )
-            )
-
         # define env node publish rate
         self.env_pub_rate = 5.0
 
@@ -84,13 +55,13 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
 
         # publish pre-saved sensor observations
         r = rospy.Rate(self.env_pub_rate)
-        for i in range(0, self.num_readings):
+        for i in range(0, TestHabitatROSData.test_acts_and_obs_discrete_num_obs):
             mock_env_node.publish_sensor_observations(
-                self.readings_rgb_discrete[i],
-                self.readings_depth_discrete[i],
-                self.readings_ptgoal_with_comp_discrete[i],
+                TestHabitatROSData.test_acts_and_obs_discrete_obs_rgb[i],
+                TestHabitatROSData.test_acts_and_obs_discrete_obs_depth[i],
+                TestHabitatROSData.test_acts_and_obs_discrete_obs_ptgoal_with_comp[i],
             )
-            mock_env_node.check_command(self.actions_discrete[i])
+            mock_env_node.check_command(TestHabitatROSData.test_acts_and_obs_discrete_acts[i])
             r.sleep()
 
         # shut down the agent

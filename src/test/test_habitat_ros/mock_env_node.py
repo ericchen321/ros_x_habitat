@@ -17,7 +17,8 @@ from src.constants.constants import (
     AgentResetCommands,
     NumericalMetrics,
     EvalEpisodeSpecialIDs)
-from src.test.data.test_habitat_ros_data import TestHabitatROSData
+from src.test.data.data import TestHabitatROSData
+from src.utils import utils_logging
 
 
 class MockHabitatEnvNode:
@@ -41,6 +42,9 @@ class MockHabitatEnvNode:
 
         self.pub_queue_size = 10
         self.sub_queue_size = 10
+
+        # set up logger
+        self.logger = utils_logging.setup_logger("mock_env_node")
 
         # shutdown is set to true by eval_episode() to indicate the
         # evaluator wants the node to shutdown
@@ -81,7 +85,7 @@ class MockHabitatEnvNode:
             )
 
         # wait until connections with the agent is established
-        print("env making sure agent is subscribed to sensor topics...")
+        self.logger.info("env making sure agent is subscribed to sensor topics...")
         while (
             self.pub_rgb.get_num_connections() == 0
             or self.pub_depth.get_num_connections() == 0
@@ -97,7 +101,7 @@ class MockHabitatEnvNode:
         with self.episode_counter_lock:
             self.episode_counter = 0
 
-        print("mock env initialized")
+        self.logger.info("mock env initialized")
 
     def reset(self):
         r"""

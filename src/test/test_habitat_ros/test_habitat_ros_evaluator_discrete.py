@@ -8,7 +8,7 @@ import os
 import rospy
 import rostest
 import numpy as np
-from src.test.data.test_habitat_ros_data import TestHabitatROSData
+from src.test.data.data import TestHabitatROSData
 from src.constants.constants import NumericalMetrics
 from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
 

@@ -12,6 +12,7 @@ import rostest
 from mock_habitat_ros_evaluator import MockHabitatROSEvaluator
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from src.constants.constants import NumericalMetrics
+from src.test.data.data import TestHabitatROSData
 
 
 class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
@@ -20,37 +21,7 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
     """
 
     def setUp(self):
-        # load discrete test data
-        self.episode_id = "49"
-        self.scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
-        self.num_readings = 47
-        self.readings_rgb_discrete = []
-        self.readings_depth_discrete = []
-        self.readings_ptgoal_with_comp_discrete = []
-        self.actions_discrete = []
-        for i in range(0, self.num_readings):
-            self.readings_rgb_discrete.append(
-                np.load(
-                    f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/rgb-{self.episode_id}-{os.path.basename(self.scene_id)}-{i}.npy"
-                )
-            )
-            self.readings_depth_discrete.append(
-                np.load(
-                    f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/depth-{self.episode_id}-{os.path.basename(self.scene_id)}-{i}.npy"
-                )
-            )
-            self.readings_ptgoal_with_comp_discrete.append(
-                np.load(
-                    f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/pointgoal_with_gps_compass-{self.episode_id}-{os.path.basename(self.scene_id)}-{i}.npy"
-                )
-            )
-            self.actions_discrete.append(
-                np.load(
-                    f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/acts/action-{self.episode_id}-{os.path.basename(self.scene_id)}-{i}.npy"
-                )
-            )
-
-        # define env node publish rate
+        # define env node pub rate
         self.env_pub_rate = 5.0
 
     def tearDown(self):
@@ -59,13 +30,13 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
     def test_env_node_discrete(self):
         # start the env node
         env_node_args = shlex.split(
-            f"python src/nodes/habitat_env_node.py --node-name env_node_under_test --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {self.env_pub_rate}"
+            f"python src/nodes/habitat_env_node.py --node-name env_node_under_test --task-config {TestHabitatROSData.test_acts_and_obs_task_config} --sensor-pub-rate {self.env_pub_rate}"
         )
         Popen(env_node_args)
 
         # start the mock agent node
         agent_node_args = shlex.split(
-            f"python src/test/test_habitat_ros/mock_agent_node.py --sensor-pub-rate {self.env_pub_rate}"
+            f"python src/test/test_habitat_ros/mock_agent_node.py"
         )
         Popen(agent_node_args)
 
@@ -73,8 +44,11 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
         mock_evaluator = MockHabitatROSEvaluator()
 
         # mock-eval one episode
-        dict_of_metrics = mock_evaluator.evaluate("48", self.scene_id)
+        dict_of_metrics = mock_evaluator.evaluate(str(int(TestHabitatROSData.test_acts_and_obs_discrete_episode_id)-1),
+            TestHabitatROSData.test_acts_and_obs_discrete_scene_id)
         metrics = HabitatSimEvaluator.compute_avg_metrics(dict_of_metrics)
+        print(f"success: {metrics[NumericalMetrics.SUCCESS]}")
+        print(f"spl: {metrics[NumericalMetrics.SPL]}")
         assert (
             np.linalg.norm(metrics[NumericalMetrics.SUCCESS] - 1.0) < 1e-5
             and np.linalg.norm(metrics[NumericalMetrics.SPL] - 0.68244) < 1e-5

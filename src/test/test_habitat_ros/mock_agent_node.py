@@ -21,38 +21,9 @@ from ros_x_habitat.srv import ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int16
-
 from src.constants.constants import AgentResetCommands
-
-# load sensor readings and actions from disk
-episode_id = 49
-scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
-num_readings = 47
-readings_rgb_discrete = []
-readings_depth_discrete = []
-readings_ptgoal_with_comp_discrete = []
-actions_discrete = []
-for i in range(0, num_readings):
-    readings_rgb_discrete.append(
-        np.load(
-            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/rgb-{episode_id}-{os.path.basename(scene_id)}-{i}.npy"
-        )
-    )
-    readings_depth_discrete.append(
-        np.load(
-            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/depth-{episode_id}-{os.path.basename(scene_id)}-{i}.npy"
-        )
-    )
-    readings_ptgoal_with_comp_discrete.append(
-        np.load(
-            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/obs/pointgoal_with_gps_compass-{episode_id}-{os.path.basename(scene_id)}-{i}.npy"
-        )
-    )
-    actions_discrete.append(
-        np.load(
-            f"/home/lci-user/Desktop/workspace/src/ros_x_habitat/src/test/acts/action-{episode_id}-{os.path.basename(scene_id)}-{i}.npy"
-        )
-    )
+from src.test.data.data import TestHabitatROSData
+from src.utils import utils_logging
 
 
 class MockHabitatAgentNode:
@@ -74,6 +45,9 @@ class MockHabitatAgentNode:
 
         self.sub_queue_size = 10
         self.pub_queue_size = 10
+
+        # set up logger
+        self.logger = utils_logging.setup_logger("mock_agent_node")
 
         # establish reset protocol with env
         self.reset_service = rospy.Service("reset_agent", ResetAgent, self.reset_agent)
@@ -118,11 +92,11 @@ class MockHabitatAgentNode:
         )
         self.ts.registerCallback(self.callback_rgbd)
 
-        print("agent making sure env subscribed to command topic...")
+        self.logger.info("agent making sure env subscribed to command topic...")
         while self.pub.get_num_connections() == 0:
             pass
 
-        print("agent initialized")
+        self.logger.info("mock agent initialized")
 
     def reset_agent(self, request):
         r"""
@@ -254,25 +228,25 @@ class MockHabitatAgentNode:
             pointgoal_with_gps_compass_msg=pointgoal_with_gps_compass_msg,
         )
 
-        if self.observations_count < num_readings:
+        if self.observations_count < TestHabitatROSData.test_acts_and_obs_discrete_num_obs:
             # check sensor readings' correctness
             assert (
                 np.linalg.norm(
-                    observations["rgb"] - readings_rgb_discrete[self.observations_count]
+                    observations["rgb"] - TestHabitatROSData.test_acts_and_obs_discrete_obs_rgb[self.observations_count]
                 )
                 < 1e-5
             ), f"RGB reading at step {self.observations_count} does not match"
             assert (
                 np.linalg.norm(
                     observations["depth"]
-                    - readings_depth_discrete[self.observations_count]
+                    - TestHabitatROSData.test_acts_and_obs_discrete_obs_depth[self.observations_count]
                 )
                 < 1e-5
             ), f"Depth reading at step {self.observations_count} does not match"
             assert (
                 np.linalg.norm(
                     observations["pointgoal_with_gps_compass"]
-                    - readings_ptgoal_with_comp_discrete[self.observations_count]
+                    - TestHabitatROSData.test_acts_and_obs_discrete_obs_ptgoal_with_comp[self.observations_count]
                 )
                 < 1e-5
             ), f"Pointgoal + GPS/Compass reading at step {self.observations_count} does not match"
@@ -287,11 +261,11 @@ class MockHabitatAgentNode:
                     == (self.sensor_pub_rate * self.control_period) - 1
                 ):
                     self.count_frames = 0
-                    action = actions_discrete[self.observations_count]
+                    action = TestHabitatROSData.test_acts_and_obs_discrete_acts[self.observations_count]
                     vel_msg = self.action_to_msg(action)
                     self.pub.publish(vel_msg)
             else:
-                action = {"action": actions_discrete[self.observations_count]}
+                action = {"action": TestHabitatROSData.test_acts_and_obs_discrete_acts[self.observations_count]}
                 action_msg = self.action_to_msg(action)
                 self.pub.publish(action_msg)
             self.lock.release()

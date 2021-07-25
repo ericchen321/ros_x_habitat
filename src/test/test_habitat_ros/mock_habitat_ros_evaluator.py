@@ -10,6 +10,7 @@ from src.constants.constants import (
     NumericalMetrics
 )
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
+from src.constants.constants import EvalEpisodeSpecialIDs
 
 
 class MockHabitatROSEvaluator(HabitatSimEvaluator):
@@ -53,13 +54,15 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
                 # request env node to evaluate an episode
                 resp = None
                 if count_episodes == 0:
+                    print(f"requesting to evaluate from after {episode_id_last},{scene_id_last}")
                     # jump to the first episode we want to evaluate
                     resp = self.eval_episode(episode_id_last, scene_id_last)
                 else:
                     # evaluate the next episode
+                    print("requesting to evaluate the next episode!!!!!!!")
                     resp = self.eval_episode(EvalEpisodeSpecialIDs.NEXT, "")
 
-                if resp.episode_id == "-1":
+                if resp.episode_id == EvalEpisodeSpecialIDs.NO_MORE_EPISODES:
                     # no more episodes
                     print(f"Finished evaluation after: {count_episodes} episodes")
                     break
