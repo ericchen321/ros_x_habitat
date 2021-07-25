@@ -4,7 +4,11 @@ import numpy as np
 
 import rospy
 from ros_x_habitat.srv import *
-from src.constants.constants import NumericalMetrics
+from src.constants.constants import (
+    AgentResetCommands,
+    EvalEpisodeSpecialIDs,
+    NumericalMetrics
+)
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 
 
@@ -23,6 +27,12 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
         # start the evaluator node
         rospy.init_node("mock_evaluator_habitat_ros")
 
+        # register eval episode client
+        self.eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
+
+        # register reset_agent client
+        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
+
     def evaluate(
         self,
         episode_id_last: str = "-1",
@@ -34,7 +44,6 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
     
         dict_of_metrics = {}
         count_episodes = 0
-        eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
         # evaluate episodes, starting from the one after the last episode
         # evaluated
@@ -45,10 +54,10 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
                 resp = None
                 if count_episodes == 0:
                     # jump to the first episode we want to evaluate
-                    resp = eval_episode(episode_id_last, scene_id_last)
+                    resp = self.eval_episode(episode_id_last, scene_id_last)
                 else:
                     # evaluate the next episode
-                    resp = eval_episode("-1", "")
+                    resp = self.eval_episode(EvalEpisodeSpecialIDs.NEXT, "")
 
                 if resp.episode_id == "-1":
                     # no more episodes
@@ -70,3 +79,20 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
                 break
 
         return dict_of_metrics
+
+    def shutdown_env_node(self):
+        rospy.wait_for_service("eval_episode")
+        try:
+            resp = self.eval_episode(EvalEpisodeSpecialIDs.SHUTDOWN, "")
+        except rospy.ServiceException:
+            print("Shutting down env node failed")
+            raise rospy.ServiceException
+
+    def shutdown_agent_node(self):
+        rospy.wait_for_service("reset_agent")
+        try:
+            resp = self.reset_agent(int(AgentResetCommands.SHUTDOWN), 0)
+            assert resp.done
+        except rospy.ServiceException:
+            print("Failed to shut down agent!")
+            raise rospy.ServiceException

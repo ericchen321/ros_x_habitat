@@ -61,13 +61,13 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
         env_node_args = shlex.split(
             f"python src/nodes/habitat_env_node.py --node-name env_node_under_test --task-config configs/pointnav_rgbd_val.yaml --sensor-pub-rate {self.env_pub_rate}"
         )
-        env_node_process = Popen(env_node_args)
+        Popen(env_node_args)
 
         # start the mock agent node
         agent_node_args = shlex.split(
             f"python src/test/test_habitat_ros/mock_agent_node.py --sensor-pub-rate {self.env_pub_rate}"
         )
-        agent_node_process = Popen(agent_node_args)
+        Popen(agent_node_args)
 
         # init the mock evaluator node
         mock_evaluator = MockHabitatROSEvaluator()
@@ -81,8 +81,8 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
         )
         
         # shut down nodes
-        env_node_process.kill()
-        agent_node_process.kill()
+        mock_evaluator.shutdown_agent_node()
+        mock_evaluator.shutdown_env_node()
 
 def main():
     rostest.rosrun(

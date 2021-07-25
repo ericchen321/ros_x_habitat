@@ -1,33 +1,52 @@
-from threading import Condition
+import argparse
+from threading import Condition, Lock
 
 import numpy as np
 import rospy
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
-from ros_x_habitat.srv import EvalEpisode, ResetAgent, GetAgentTime
+from ros_x_habitat.srv import (
+    EvalEpisode,
+    ResetAgent,
+    GetAgentTime)
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
-from src.constants.constants import AgentResetCommands, NumericalMetrics
+from src.constants.constants import (
+    AgentResetCommands,
+    NumericalMetrics,
+    EvalEpisodeSpecialIDs)
+from src.test.data.test_habitat_ros_data import TestHabitatROSData
 
 
 class MockHabitatEnvNode:
     def __init__(
         self,
-        enable_physics: bool = True,
-        episode_id: str = "-1",
-        scene_id: str = "haha",
+        enable_physics_sim: bool = False,
+        use_continuous_agent: bool = False,
+        pub_rate: float = 5.0
     ):
         r"""
         A simple node to mock the Habitat environment node. Publishes pre-recorded
         sensor values, and checks if the agent node produces correct actions.
         """
-        self.enable_physics = enable_physics
+        if use_continuous_agent:
+            assert enable_physics_sim
+
+        self.enable_physics_sim = enable_physics_sim
+        self.use_continuous_agent = use_continuous_agent
+
         self.action_count = 0
 
         self.pub_queue_size = 10
         self.sub_queue_size = 10
+
+        # shutdown is set to true by eval_episode() to indicate the
+        # evaluator wants the node to shutdown
+        self.shutdown_cv = Condition()
+        with self.shutdown_cv:
+            self.shutdown = False
 
         # agent action and variables to keep things synchronized
         # NOTE: self.action_cv's lock guards self.action, self.new_action_published,
@@ -52,7 +71,7 @@ class MockHabitatEnvNode:
         )
 
         # subscribe from command topics
-        if self.enable_physics:
+        if self.use_continuous_agent:
             self.sub = rospy.Subscriber(
                 "cmd_vel", Twist, self.callback, queue_size=self.sub_queue_size
             )
@@ -74,8 +93,9 @@ class MockHabitatEnvNode:
         self.eval_service = rospy.Service(
             "eval_episode", EvalEpisode, self.eval_episode
         )
-        self.episode_id = episode_id
-        self.scene_id = scene_id
+        self.episode_counter_lock = Lock()
+        with self.episode_counter_lock:
+            self.episode_counter = 0
 
         print("mock env initialized")
 
@@ -94,16 +114,49 @@ class MockHabitatEnvNode:
         :return: 1) episode ID and scene ID; 2) metrics including distance-to-
         goal, success and spl. All hard-coded.
         """
-        assert request.episode_id_last == self.episode_id
-        assert request.scene_id_last == self.scene_id
-
         resp = {
             "episode_id": "-1",
-            "scene_id": "lol",
+            "scene_id": "-1",
             NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
             NumericalMetrics.SUCCESS: 0.0,
             NumericalMetrics.SPL: 0.0,
+            NumericalMetrics.NUM_STEPS: 0,
+            NumericalMetrics.AGENT_TIME: 0.0,
+            NumericalMetrics.SIM_TIME: 0.0,
+            NumericalMetrics.RESET_TIME: 0.0
         }
+        if request.episode_id_last == EvalEpisodeSpecialIDs.SHUTDOWN:
+            # if shutdown request, enable reset and return immediately
+            with self.shutdown_cv:
+                self.shutdown = True
+                self.shutdown_cv.notify()
+        else:
+            with self.episode_counter_lock:
+                # check if the evaluator requests correct episode and scene id
+                if self.episode_counter == 0:
+                    assert request.episode_id_last == TestHabitatROSData.test_evaluator_episode_id_request
+                    assert request.scene_id_last == TestHabitatROSData.test_evaluator_scene_id
+
+                if self.episode_counter == 0:
+                    # respond with the test episode's metrics
+                    resp = {
+                        "episode_id": TestHabitatROSData.test_evaluator_episode_id_response,
+                        "scene_id": TestHabitatROSData.test_evaluator_scene_id,
+                        NumericalMetrics.DISTANCE_TO_GOAL: TestHabitatROSData.test_evaluator_distance_to_goal,
+                        NumericalMetrics.SUCCESS: TestHabitatROSData.test_evaluator_success,
+                        NumericalMetrics.SPL: TestHabitatROSData.test_evaluator_spl,
+                    }
+                    self.episode_counter += 1
+                else:
+                    # signal no more episodes
+                    resp = {
+                        "episode_id": EvalEpisodeSpecialIDs.NO_MORE_EPISODES,
+                        "scene_id": TestHabitatROSData.test_evaluator_scene_id,
+                        NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
+                        NumericalMetrics.SUCCESS: 0.0,
+                        NumericalMetrics.SPL: 0.0,
+                    }
+
         return resp
 
     def cv2_to_depthmsg(self, depth_img: DepthImage):
@@ -171,7 +224,7 @@ class MockHabitatEnvNode:
         r"""
         Reads a command from agent and check if it is correct.
         """
-        if self.enable_physics is True:
+        if self.use_continuous_agent:
             # TODO: do some checking
             pass
         else:
@@ -185,3 +238,27 @@ class MockHabitatEnvNode:
                     raise rospy.ServiceException
                 self.new_action_published = True
                 self.action_cv.notify()
+
+
+if __name__ == "__main__":
+    # parse input arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--enable-physics-sim", default=False, action="store_true")
+    parser.add_argument("--use-continuous-agent", default=False, action="store_true")
+    parser.add_argument(
+        "--sensor-pub-rate",
+        type=float,
+        default=5.0,
+    )
+    args = parser.parse_args()
+
+    rospy.init_node("mock_env_node")
+    mock_env_node = MockHabitatEnvNode(
+        enable_physics_sim=args.enable_physics_sim,
+        use_continuous_agent=args.use_continuous_agent,
+        pub_rate=args.sensor_pub_rate
+    )
+
+    with mock_env_node.shutdown_cv:
+        while mock_env_node.shutdown is False:
+            mock_env_node.shutdown_cv.wait()

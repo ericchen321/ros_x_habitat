@@ -69,7 +69,7 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
 
         # init mock env node
         rospy.init_node("mock_env_node")
-        mock_env_node = MockHabitatEnvNode(enable_physics=False)
+        mock_env_node = MockHabitatEnvNode(enable_physics_sim=False)
 
         # reset the agent
         rospy.wait_for_service("reset_agent")

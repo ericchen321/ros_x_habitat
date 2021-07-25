@@ -4,11 +4,13 @@ PACKAGE_NAME = "ros_x_habitat"
 import shlex
 import unittest
 from subprocess import Popen, call
-
+import os
 import rospy
 import rostest
-
-from mock_env_node import MockHabitatEnvNode
+import numpy as np
+from src.test.data.test_habitat_ros_data import TestHabitatROSData
+from src.constants.constants import NumericalMetrics
+from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
 
 
 class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
@@ -18,40 +20,76 @@ class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
 
     def setUp(self):
         # load discrete test data
-        self.episode_id = "47"
-        self.scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
-        self.distance_to_goal = (0.1,)
-        self.success = (1.0,)
-        self.spl = 0.25
+        self.episode_id_request = TestHabitatROSData.test_evaluator_episode_id_request
+        self.episode_id_response = TestHabitatROSData.test_evaluator_episode_id_response
+        self.scene_id = TestHabitatROSData.test_evaluator_scene_id
+        self.log_dir = TestHabitatROSData.test_evaluator_log_dir
+        self.agent_seed = TestHabitatROSData.test_evaluator_agent_seed
+        self.config_paths = TestHabitatROSData.test_evaluator_config_paths
+        self.input_type = TestHabitatROSData.test_evaluator_input_type
+        self.model_path = TestHabitatROSData.test_evaluator_model_path
+        self.distance_to_goal = TestHabitatROSData.test_evaluator_distance_to_goal
+        self.success = TestHabitatROSData.test_evaluator_success
+        self.spl = TestHabitatROSData.test_evaluator_spl
+
+        # create log dirs
+        try:
+            os.mkdir(self.log_dir)
+        except FileExistsError:
+            pass
+
+        # clean up log files from previous runs
+        try:
+            os.remove(f"{self.log_dir}/episode={self.episode_id_response}-scene={self.scene_id}.log")
+        except FileNotFoundError:
+            pass
 
     def tearDown(self):
         pass
 
-    def test_agent_node_discrete(self):
+    def test_evaluator_node_discrete(self):
+        print("started test...")
         # start the agent node
         agent_node_args = shlex.split(
             f"python src/nodes/habitat_agent_node.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --sensor-pub-rate 5.0"
         )
         Popen(agent_node_args)
 
-        # init the mock env node
-        rospy.init_node("mock_env_node")
-        MockHabitatEnvNode(
-            enable_physics=False,
-            episode_id=self.episode_id,
-            scene_id=self.scene_id,
+        # start the mock env node
+        mock_env_node_args = shlex.split(
+            f"python src/test/test_habitat_ros/mock_env_node.py"
         )
+        Popen(mock_env_node_args)
 
         # start the evaluator
-        evaluator_args = shlex.split(
-            f"python src/scripts/eval_habitat_ros.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --task-config configs/pointnav_rgbd_val.yaml --episode-id {self.episode_id} --scene-id={self.scene_id} --sensor-pub-rate=5.0 --do-not-start-nodes-from-evaluator --log-dir=logs/test_habitat_ros_evaluator_discrete/"
+        evaluator = HabitatROSEvaluator(
+            config_paths=self.config_paths,
+            input_type=self.input_type,
+            model_path=self.model_path,
+            enable_physics=False,
+            do_not_start_nodes=True
         )
-        call(evaluator_args)
 
-        # shut down the agent node
-        shutdown_agent_args = shlex.split(f"rosnode kill agent_node")
-        call(shutdown_agent_args)
+        # test HabitatROSEvaluator.evaluate()
+        dict_of_metrics = evaluator.evaluate(
+            episode_id_last=self.episode_id_request,
+            scene_id_last=self.scene_id,
+            log_dir=self.log_dir,
+            agent_seed=self.agent_seed
+        )
+        print(dict_of_metrics)
+        assert np.linalg.norm(dict_of_metrics[f"{self.episode_id_response},{self.scene_id}"][NumericalMetrics.DISTANCE_TO_GOAL] - self.distance_to_goal) < 1e-5
+        assert np.linalg.norm(dict_of_metrics[f"{self.episode_id_response},{self.scene_id}"][NumericalMetrics.SUCCESS] - self.success) < 1e-5
+        assert np.linalg.norm(dict_of_metrics[f"{self.episode_id_response},{self.scene_id}"][NumericalMetrics.SPL] - self.spl) < 1e-5
 
+        # check if the episodic log file is created
+        assert os.path.isfile(f"{self.log_dir}/episode={self.episode_id_response}-scene={self.scene_id}.log")
+        
+        # test HabitatROSEvaluator.shutdown_env_node()
+        evaluator.shutdown_env_node()
+
+        # test HabitatROSEvaluator.shutdown_agent_node()
+        evaluator.shutdown_agent_node()
 
 def main():
     rostest.rosrun(
