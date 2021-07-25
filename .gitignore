@@ -68,5 +68,9 @@ metric_plots/
 # Saved models, scene files, episode info
 data/
 
+# Test data
+!src/test/data/
+*.npy
+
 # build files
 build/
