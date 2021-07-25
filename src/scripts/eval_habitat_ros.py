@@ -69,21 +69,23 @@ def main():
             config_paths=args.task_config,
             input_type=args.input_type,
             model_path=args.model_path,
+            enable_physics=True,
+            agent_node_name="agent_node",
+            env_node_name="env_node",
             sensor_pub_rate=args.sensor_pub_rate,
             do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
-            enable_physics=True,
-            use_continuous_agent=False,
         )
     elif "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabitatROSEvaluator(
+        evaluator = HabitatROSEvaluator( 
             config_paths=args.task_config,
             input_type=args.input_type,
             model_path=args.model_path,
+            enable_physics=False,
+            agent_node_name="agent_node",
+            env_node_name="env_node",
             sensor_pub_rate=args.sensor_pub_rate,
             do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
-            enable_physics=False,
-            use_continuous_agent=False,
         )
     else:
         logger.info("Simulator not properly specified")
@@ -124,8 +126,9 @@ def main():
         utils_logging.close_logger(logger_per_seed)
     logger.info("Evaluation ended")
 
-    # end all node processes
-    evaluator.shutdown_env_and_agent()
+    # gracefully shutdown the env node and the agent node
+    evaluator.shutdown_env_node()
+    evaluator.shutdown_agent_node()
 
     # log average metrics across all seeds
     avg_metrics = evaluator.compute_avg_metrics(avg_metrics_all_seeds)

@@ -132,6 +132,15 @@ class PhysicsEnv(Env):
             self._current_episode._shortest_path_cache = None
 
         self._current_episode = next(self._episode_iterator)
+        
+        # remove all objects in the scene, but keep their scene nodes
+        obj_handles = self._sim.get_rigid_object_manager().get_object_handles()
+        for obj_handle in obj_handles:
+            self.rigid_obj_mgr.remove_object_by_handle(
+                obj_handle, delete_object_node=False, delete_visual_node=False
+            )
+
+        # restart the simulator instance
         self.reconfigure(self._config)
 
         observations = self.task.reset(episode=self.current_episode)
@@ -139,17 +148,10 @@ class PhysicsEnv(Env):
             episode=self.current_episode, task=self.task
         )
 
-        # instantiate the physics object attributes manager
+        # re-instantiate the physics object attributes manager
         self.obj_templates_mgr = self._sim.get_object_template_manager()
-        # instantiate the rigid object manager
+        # re-instantiate the rigid object manager
         self.rigid_obj_mgr = self._sim.get_rigid_object_manager()
-
-        # remove all objects in the scene, but keep their scene nodes
-        obj_handles = self.rigid_obj_mgr.get_object_handles()
-        for obj_handle in obj_handles:
-            self.rigid_obj_mgr.remove_object_by_handle(
-                obj_handle, delete_object_node=False, delete_visual_node=False
-            )
 
         # load locobot asset and attach it to the agent's scene node
         locobot_template_id = self.obj_templates_mgr.load_configs(

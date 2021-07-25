@@ -82,21 +82,15 @@ class PhysicsNavigationTask(EmbodiedTask):
                 control_period=control_period,
             )
             # step through all frames in the control period
-            total_steps = int(control_period * 1.0 / time_step)
-            if isinstance(task_action, TurnLeftAction):
-                agent_init_rotation = self._sim.agents[0].get_state().rotation
+            total_steps = round(control_period * 1.0 / time_step)
+            
             for frame in range(0, total_steps):
                 observations = self._sim.step_physics(agent_object, time_step)
                 # if collision occurred, quit the loop immediately
                 # NOTE: this is not working yet
                 # if self._sim.previous_step_collided:
                 #    break
-            if isinstance(task_action, TurnLeftAction):
-                agent_final_rotation = self._sim.agents[0].get_state().rotation
-                angle_between_rotations = np.rad2deg(
-                    angle_between_quaternions(agent_final_rotation, agent_init_rotation)
-                )
-
+                
         observations.update(
             self.sensor_suite.get_observations(
                 observations=observations,

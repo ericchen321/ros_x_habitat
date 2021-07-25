@@ -199,10 +199,12 @@ class HabitatPhysicsSim(PhysicsSimulator, Simulator):
         is_same_scene = habitat_config.SCENE == self._current_scene
         self.habitat_config = habitat_config
         self.sim_config = self.create_sim_config(self._sensor_suite)
-        if not is_same_scene:
-            self._current_scene = habitat_config.SCENE
-            self.close()
-            super().reconfigure(self.sim_config)
+        # NOTE: unlike HabitatSim.reconfigure(), we always close the simulator
+        # and start a new instance, in order to clean up info from previous
+        # episodes
+        self._current_scene = habitat_config.SCENE
+        self.close()
+        super().reconfigure(self.sim_config)
 
         self._update_agents_state()
 

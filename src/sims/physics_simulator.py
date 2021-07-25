@@ -1,7 +1,7 @@
 import time
 
 import attr
-from habitat_sim.simulator import Simulator
+from habitat_sim.simulator import Simulator, Configuration
 
 
 @attr.s(auto_attribs=True)
@@ -43,3 +43,8 @@ class PhysicsSimulator(Simulator):
         default_agent_observations["collided"] = agent_object.contact_test()
 
         return default_agent_observations
+
+    def reconfigure(self, config: Configuration) -> None:
+        self._sanitize_config(config)
+        self._Simulator__set_from_config(config)
+        self.config = config

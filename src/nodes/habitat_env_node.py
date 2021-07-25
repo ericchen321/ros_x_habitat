@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import argparse
-from threading import Condition
+from threading import Condition, Lock
 
 import numpy as np
 import rospy
@@ -13,7 +13,7 @@ from ros_x_habitat.srv import EvalEpisode, ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
-from src.constants.constants import NumericalMetrics
+from src.constants.constants import EvalEpisodeSpecialIDs, NumericalMetrics
 from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 import time
@@ -71,6 +71,12 @@ class HabitatEnvNode:
         self.env = HabitatEvalRLEnv(
             config=self.config, enable_physics=self.enable_physics_sim
         )
+
+        # shutdown is set to true by eval_episode() to indicate the
+        # evaluator wants the node to shutdown
+        self.shutdown_lock = Lock()
+        with self.shutdown_lock:
+            self.shutdown = False
 
         # enable_eval is set to true by eval_episode() to allow
         # publish_sensor_observations() and step() to run
@@ -161,8 +167,16 @@ class HabitatEnvNode:
             while self.enable_reset is False:
                 self.enable_reset_cv.wait()
 
+            # disable reset
+            self.enable_reset = False
+
+            # if shutdown is signalled, return immediately
+            with self.shutdown_lock:
+                if self.shutdown:
+                    return
+
             # locate the last episode specified
-            if self.episode_id_last != "-1":
+            if self.episode_id_last != EvalEpisodeSpecialIDs.REQUEST_NEXT:
                 # iterate to the last episode. If not found, the loop exits upon a
                 # StopIteration exception
                 last_ep_found = False
@@ -204,8 +218,6 @@ class HabitatEnvNode:
 
                 self.count_steps = 0
 
-            self.enable_reset = False
-
     def eval_episode(self, request):
         r"""
         ROS service handler which evaluates one episode and returns evaluation
@@ -215,58 +227,70 @@ class HabitatEnvNode:
         :return: 1) episode ID and scene ID; 2) metrics including distance-to-
         goal, success and spl.
         """
-        with self.enable_reset_cv:
-            # unpack evaluator request
-            self.episode_id_last = str(request.episode_id_last)
-            self.scene_id_last = str(request.scene_id_last)
+        # make a response dict
+        resp = {
+            "episode_id": EvalEpisodeSpecialIDs.RESPONSE_NO_MORE_EPISODES,
+            "scene_id": "",
+            NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
+            NumericalMetrics.SUCCESS: 0.0,
+            NumericalMetrics.SPL: 0.0,
+            NumericalMetrics.NUM_STEPS: 0,
+            NumericalMetrics.AGENT_TIME: 0.0,
+            NumericalMetrics.SIM_TIME: 0.0,
+            NumericalMetrics.RESET_TIME: 0.0
+        }
 
-            # enable (env) reset
-            assert self.enable_reset is False
-            self.enable_reset = True
-            self.enable_reset_cv.notify()
-
-        # enable evaluation
-        with self.enable_eval_cv:
-            assert self.enable_eval is False
-            self.enable_eval = True
-            self.enable_eval_cv.notify()
-
-        # wait for evaluation to be over
-        with self.enable_eval_cv:
-            while self.enable_eval is True:
-                self.enable_eval_cv.wait()
-
-            resp = None
-            if self.all_episodes_evaluated is False:
-                # collect episode info and metrics
-                resp = {
-                    "episode_id": str(self.env._env.current_episode.episode_id),
-                    "scene_id": str(self.env._env.current_episode.scene_id),
-                }
-                metrics = self.env._env.get_metrics()
-                metrics_dic = {
-                    k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
-                }
-                metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
-                metrics_dic[NumericalMetrics.AGENT_TIME] = self.t_agent_elapsed / self.count_steps
-                metrics_dic[NumericalMetrics.SIM_TIME] = self.t_sim_elapsed / self.count_steps
-                metrics_dic[NumericalMetrics.RESET_TIME] = self.t_reset_elapsed
-                resp.update(metrics_dic)
-            else:
-                self.all_episodes_evaluated = False
-                # signal that no episode has been evaluated
-                resp = {
-                    "episode_id": "-1",
-                    "scene_id": "-1",
-                    NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
-                    NumericalMetrics.SUCCESS: 0.0,
-                    NumericalMetrics.SPL: 0.0,
-                    NumericalMetrics.NUM_STEPS: 0,
-                    NumericalMetrics.AGENT_TIME: 0.0,
-                    NumericalMetrics.SIM_TIME: 0.0,
-                    NumericalMetrics.RESET_TIME: 0.0
-                }
+        if str(request.episode_id_last) == EvalEpisodeSpecialIDs.REQUEST_SHUTDOWN:
+            # if shutdown request, enable reset and return immediately
+            with self.shutdown_lock:
+                self.shutdown = True
+            with self.enable_reset_cv:
+                self.enable_reset = True
+                self.enable_reset_cv.notify()
             return resp
+        else:
+            # if not shutting down, enable reset and evaluation
+            with self.enable_reset_cv:
+                # unpack evaluator request
+                self.episode_id_last = str(request.episode_id_last)
+                self.scene_id_last = str(request.scene_id_last)
+
+                # enable (env) reset
+                assert self.enable_reset is False
+                self.enable_reset = True
+                self.enable_reset_cv.notify()
+
+            # enable evaluation
+            with self.enable_eval_cv:
+                assert self.enable_eval is False
+                self.enable_eval = True
+                self.enable_eval_cv.notify()
+
+            # wait for evaluation to be over
+            with self.enable_eval_cv:
+                while self.enable_eval is True:
+                    self.enable_eval_cv.wait()
+
+                if self.all_episodes_evaluated is False:
+                    # collect episode info and metrics
+                    resp = {
+                        "episode_id": str(self.env._env.current_episode.episode_id),
+                        "scene_id": str(self.env._env.current_episode.scene_id),
+                    }
+                    metrics = self.env._env.get_metrics()
+                    metrics_dic = {
+                        k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
+                    }
+                    metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
+                    metrics_dic[NumericalMetrics.AGENT_TIME] = self.t_agent_elapsed / self.count_steps
+                    metrics_dic[NumericalMetrics.SIM_TIME] = self.t_sim_elapsed / self.count_steps
+                    metrics_dic[NumericalMetrics.RESET_TIME] = self.t_reset_elapsed
+                    resp.update(metrics_dic)
+                else:
+                    # no episode is evaluated. Toggle the flag so the env node
+                    # can be reused
+                    self.all_episodes_evaluated = False
+                return resp
 
     def cv2_to_depthmsg(self, depth_img: DepthImage):
         r"""
@@ -324,26 +348,23 @@ class HabitatEnvNode:
     def publish_sensor_observations(self):
         r"""
         Waits until evaluation is enabled, then publishes current simulator
-        sensor readings. Requires to be called after simulator reset.
+        sensor readings. Requires to be called 1) after simulator reset and
+        2) when evaluation has been enabled.
         """
-        with self.enable_eval_cv:
-            # wait for evaluation to be enabled
-            while self.enable_eval is False:
-                self.enable_eval_cv.wait()
-            # publish sensor readings
-            with self.action_cv:
-                # pack observations in ROS message
-                observations_ros = self.obs_to_msgs(self.observations)
-                for sensor_uuid, _ in self.observations.items():
-                    # we publish to each of RGB, Depth and Ptgoal/GPS+Compass sensor
-                    if sensor_uuid == "rgb":
-                        self.pub_rgb.publish(observations_ros["rgb"])
-                    elif sensor_uuid == "depth":
-                        self.pub_depth.publish(observations_ros["depth"])
-                    elif sensor_uuid == "pointgoal_with_gps_compass":
-                        self.pub_pointgoal_with_gps_compass.publish(
-                            observations_ros["pointgoal_with_gps_compass"]
-                        )
+        # publish sensor readings
+        with self.action_cv:
+            # pack observations in ROS message
+            observations_ros = self.obs_to_msgs(self.observations)
+            for sensor_uuid, _ in self.observations.items():
+                # we publish to each of RGB, Depth and Ptgoal/GPS+Compass sensor
+                if sensor_uuid == "rgb":
+                    self.pub_rgb.publish(observations_ros["rgb"])
+                elif sensor_uuid == "depth":
+                    self.pub_depth.publish(observations_ros["depth"])
+                elif sensor_uuid == "pointgoal_with_gps_compass":
+                    self.pub_pointgoal_with_gps_compass.publish(
+                        observations_ros["pointgoal_with_gps_compass"]
+                    )
 
     def step(self):
         r"""
@@ -381,13 +402,18 @@ class HabitatEnvNode:
         """
         # publish observations at fixed rate
         r = rospy.Rate(self.pub_rate)
-        while not self.env._env.episode_over:
-            self.publish_sensor_observations()
-            self.step()
-            r.sleep()
-        # now the episode is done, disable evaluation and alert eval_episode()
         with self.enable_eval_cv:
-            assert self.enable_eval is True
+            # wait for evaluation to be enabled
+            while self.enable_eval is False:
+                self.enable_eval_cv.wait()
+
+            # publish observations and step until the episode ends
+            while not self.env._env.episode_over:
+                self.publish_sensor_observations()
+                self.step()
+                r.sleep()
+
+            # now the episode is done, disable evaluation and alert eval_episode()
             self.enable_eval = False
             self.enable_eval_cv.notify()
 
@@ -422,6 +448,9 @@ if __name__ == "__main__":
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--node-name", type=str, default="env_node"
+    )
+    parser.add_argument(
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
     parser.add_argument("--enable-physics-sim", default=False, action="store_true")
@@ -440,7 +469,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # initialize the env node
-    rospy.init_node("env_node")
+    rospy.init_node(args.node_name)
     env_node = HabitatEnvNode(
         config_paths=args.task_config,
         enable_physics_sim=args.enable_physics_sim,
@@ -449,10 +478,17 @@ if __name__ == "__main__":
     )
 
     # iterate over episodes
-    while not rospy.is_shutdown():
+    while True:
         try:
+            # reset the env
             env_node.reset()
-            env_node.publish_and_step()
+            with env_node.shutdown_lock:
+                # if shutdown signalled, exit
+                if env_node.shutdown:
+                    rospy.signal_shutdown("received request to shut down")
+                    break
+                # otherwise, evaluate the episode
+                env_node.publish_and_step()
         except StopIteration:
             # set enable_reset and enable_eval to False, so the
             # env node can evaluate again in the future

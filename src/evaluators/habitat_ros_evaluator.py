@@ -8,7 +8,7 @@ import rospy
 from ros_x_habitat.srv import EvalEpisode, ResetAgent
 from src.constants.constants import NumericalMetrics
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
-from src.constants.constants import AgentResetCommands
+from src.constants.constants import AgentResetCommands, EvalEpisodeSpecialIDs
 from src.utils import utils_logging
 
 
@@ -22,51 +22,51 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         config_paths: str,
         input_type: str,
         model_path: str,
-        sensor_pub_rate: float,
-        do_not_start_nodes: bool = False,
         enable_physics: bool = False,
-        use_continuous_agent: bool = False,
+        env_node_name: str = "env_node",
+        agent_node_name: str = "agent_node",
+        sensor_pub_rate: float = 5.0,
+        do_not_start_nodes: bool = False,
     ) -> None:
         r"""..
-
+        
+        :param config_paths: file to be used for creating the environment
         :param input_type: agent's input type, options: "rgb", "rgbd",
             "depth", "blind"
         :param model_path: path to agent's model
-        :param config_paths: file to be used for creating the environment
+        :param enable_physics: use dynamic simulation or not in the Habitat
+            environment
+        :param env_node_name: name of the env node
+        :param agent_node_name: name of the agent node
         :param sensor_pub_rate: rate at which the env node publishes sensor
             readings
         :param do_not_start_nodes: if True then the evaluator would not start
             the env node and the agent node.
-        :param enable_physics: use dynamic simulation or not
-        :param use_continuous_agent: if using a continuous agent (outputs velocity)
-            or a discrete agent (outputs action). This must be false when physics
-            has been disabled
         """
+        super().__init__(
+            config_paths=config_paths,
+            input_type=input_type,
+            model_path=model_path,
+            enable_physics=enable_physics)
 
         # check if agent input type is valid
         assert input_type in ["rgb", "rgbd", "depth", "blind"]
 
         # parse args for agent node
         agent_node_args = shlex.split(
-            f"python src/nodes/habitat_agent_node.py --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}"
+            f"python src/nodes/habitat_agent_node.py --node-name {agent_node_name} --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}"
         )
 
         # parse args for env node
-        if enable_physics and use_continuous_agent:
-            # physic sim + continuous agent
-            env_node_args = shlex.split(
-                f"python src/nodes/habitat_env_node.py --task-config {config_paths} --enable-physics --use-continuous-agent --sensor-pub-rate {sensor_pub_rate}"
-            )
-        elif enable_physics and (not use_continuous_agent):
+        if enable_physics:
             # physics sim + discrete agent
             env_node_args = shlex.split(
-                f"python src/nodes/habitat_env_node.py --task-config {config_paths} --enable-physics --sensor-pub-rate {sensor_pub_rate}"
+                f"python src/nodes/habitat_env_node.py --node-name {env_node_name} --task-config {config_paths} --enable-physics --sensor-pub-rate {sensor_pub_rate}"
             )
         else:
             # discrete sim + discrete agent
-            assert use_continuous_agent is False
             env_node_args = shlex.split(
-                f"python src/nodes/habitat_env_node.py --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
+                f"python src/nodes/habitat_env_node.py --node-name {env_node_name} --task-config {config_paths} --sensor-pub-rate {sensor_pub_rate}"
             )
 
         self.do_not_start_nodes = do_not_start_nodes
@@ -76,6 +76,9 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
 
         # start the evaluator node
         rospy.init_node("evaluator_habitat_ros")
+
+        # set up eval episode service client
+        self.eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
         # set up agent reset service client
         self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
@@ -93,7 +96,6 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
 
         count_episodes = 0
         dict_of_metrics = {}
-        eval_episode = rospy.ServiceProxy("eval_episode", EvalEpisode)
 
         # evaluate episodes, starting from the one after the last episode
         # evaluated
@@ -113,12 +115,12 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                 resp = None
                 if count_episodes == 0:
                     # jump to the first episode we want to evaluate
-                    resp = eval_episode(episode_id_last, scene_id_last)
+                    resp = self.eval_episode(episode_id_last, scene_id_last)
                 else:
                     # evaluate the next episode
-                    resp = eval_episode("-1", "")
+                    resp = self.eval_episode(EvalEpisodeSpecialIDs.REQUEST_NEXT, "")
 
-                if resp.episode_id == "-1":
+                if resp.episode_id == EvalEpisodeSpecialIDs.RESPONSE_NO_MORE_EPISODES:
                     # no more episodes
                     logger.info(f"Finished evaluation after: {count_episodes} episodes")
                     break
@@ -165,16 +167,28 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
 
         return dict_of_metrics
 
-    def shutdown_env_and_agent(
-        self,
-    ) -> None:
+    def shutdown_env_node(self):
         r"""
-        Shutdown env and agent node if the evaluator has instantiated
-        them.
+        Signal the env node to shutdown.
         """
-        if self.do_not_start_nodes is False:
-            self.env_process.kill()
-            self.agent_process.kill()
+        rospy.wait_for_service("eval_episode")
+        try:
+            resp = self.eval_episode(EvalEpisodeSpecialIDs.REQUEST_SHUTDOWN, "")
+        except rospy.ServiceException:
+            print("Shutting down env node failed")
+            raise rospy.ServiceException
+
+    def shutdown_agent_node(self):
+        r"""
+        Signal the agent node to shutdown.
+        """
+        rospy.wait_for_service("reset_agent")
+        try:
+            resp = self.reset_agent(int(AgentResetCommands.SHUTDOWN), 0)
+            assert resp.done
+        except rospy.ServiceException:
+            print("Failed to shut down agent!")
+            raise rospy.ServiceException
     
     def evaluate_and_get_maps(
         self,
