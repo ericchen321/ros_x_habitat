@@ -229,8 +229,8 @@ class HabitatEnvNode:
         """
         # make a response dict
         resp = {
-            "episode_id": "-1",
-            "scene_id": "-1",
+            "episode_id": EvalEpisodeSpecialIDs.NO_MORE_EPISODES,
+            "scene_id": "",
             NumericalMetrics.DISTANCE_TO_GOAL: 0.0,
             NumericalMetrics.SUCCESS: 0.0,
             NumericalMetrics.SPL: 0.0,
@@ -348,26 +348,23 @@ class HabitatEnvNode:
     def publish_sensor_observations(self):
         r"""
         Waits until evaluation is enabled, then publishes current simulator
-        sensor readings. Requires to be called after simulator reset.
+        sensor readings. Requires to be called 1) after simulator reset and
+        2) when evaluation has been enabled.
         """
-        with self.enable_eval_cv:
-            # wait for evaluation to be enabled
-            while self.enable_eval is False:
-                self.enable_eval_cv.wait()
-            # publish sensor readings
-            with self.action_cv:
-                # pack observations in ROS message
-                observations_ros = self.obs_to_msgs(self.observations)
-                for sensor_uuid, _ in self.observations.items():
-                    # we publish to each of RGB, Depth and Ptgoal/GPS+Compass sensor
-                    if sensor_uuid == "rgb":
-                        self.pub_rgb.publish(observations_ros["rgb"])
-                    elif sensor_uuid == "depth":
-                        self.pub_depth.publish(observations_ros["depth"])
-                    elif sensor_uuid == "pointgoal_with_gps_compass":
-                        self.pub_pointgoal_with_gps_compass.publish(
-                            observations_ros["pointgoal_with_gps_compass"]
-                        )
+        # publish sensor readings
+        with self.action_cv:
+            # pack observations in ROS message
+            observations_ros = self.obs_to_msgs(self.observations)
+            for sensor_uuid, _ in self.observations.items():
+                # we publish to each of RGB, Depth and Ptgoal/GPS+Compass sensor
+                if sensor_uuid == "rgb":
+                    self.pub_rgb.publish(observations_ros["rgb"])
+                elif sensor_uuid == "depth":
+                    self.pub_depth.publish(observations_ros["depth"])
+                elif sensor_uuid == "pointgoal_with_gps_compass":
+                    self.pub_pointgoal_with_gps_compass.publish(
+                        observations_ros["pointgoal_with_gps_compass"]
+                    )
 
     def step(self):
         r"""
@@ -405,13 +402,18 @@ class HabitatEnvNode:
         """
         # publish observations at fixed rate
         r = rospy.Rate(self.pub_rate)
-        while not self.env._env.episode_over:
-            self.publish_sensor_observations()
-            self.step()
-            r.sleep()
-        # now the episode is done, disable evaluation and alert eval_episode()
         with self.enable_eval_cv:
-            assert self.enable_eval is True
+            # wait for evaluation to be enabled
+            while self.enable_eval is False:
+                self.enable_eval_cv.wait()
+
+            # publish observations and step until the episode ends
+            while not self.env._env.episode_over:
+                self.publish_sensor_observations()
+                self.step()
+                r.sleep()
+
+            # now the episode is done, disable evaluation and alert eval_episode()
             self.enable_eval = False
             self.enable_eval_cv.notify()
 

@@ -120,7 +120,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                     # evaluate the next episode
                     resp = self.eval_episode(EvalEpisodeSpecialIDs.NEXT, "")
 
-                if resp.episode_id == "-1":
+                if resp.episode_id == EvalEpisodeSpecialIDs.NO_MORE_EPISODES:
                     # no more episodes
                     logger.info(f"Finished evaluation after: {count_episodes} episodes")
                     break
