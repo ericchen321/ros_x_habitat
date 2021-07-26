@@ -45,7 +45,7 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
 
         # init the mock evaluator node
         mock_evaluator = MockHabitatROSEvaluator(
-            node_name="mock_evaluator_habitat_ros",
+            node_name="mock_habitat_ros_evaluator_node",
             env_node_name=self.env_node_under_test_name,
             agent_node_name="mock_agent_node")
 
