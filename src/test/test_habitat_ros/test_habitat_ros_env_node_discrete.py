@@ -24,13 +24,16 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
         # define env node pub rate
         self.env_pub_rate = 5.0
 
+        # define the env node's name
+        self.env_node_under_test_name = "env_node_under_test"
+
     def tearDown(self):
         pass
 
     def test_env_node_discrete(self):
         # start the env node
         env_node_args = shlex.split(
-            f"python src/nodes/habitat_env_node.py --node-name env_node_under_test --task-config {TestHabitatROSData.test_acts_and_obs_discrete_task_config} --sensor-pub-rate {self.env_pub_rate}"
+            f"python src/nodes/habitat_env_node.py --node-name {self.env_node_under_test_name} --task-config {TestHabitatROSData.test_acts_and_obs_discrete_task_config} --sensor-pub-rate {self.env_pub_rate}"
         )
         Popen(env_node_args)
 
@@ -41,7 +44,10 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
         Popen(agent_node_args)
 
         # init the mock evaluator node
-        mock_evaluator = MockHabitatROSEvaluator()
+        mock_evaluator = MockHabitatROSEvaluator(
+            node_name="mock_evaluator_habitat_ros",
+            env_node_name=self.env_node_under_test_name,
+            agent_node_name="mock_agent_node")
 
         # mock-eval one episode
         dict_of_metrics = mock_evaluator.evaluate(str(int(TestHabitatROSData.test_acts_and_obs_discrete_episode_id)-1),

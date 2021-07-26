@@ -15,6 +15,6 @@ class NumericalMetrics(str, Enum):
     SUCCESS = "success"
     SPL = "spl"
     NUM_STEPS = "num_steps"
-    AGENT_TIME = "agent_time"
     SIM_TIME = "sim_time"
     RESET_TIME = "reset_time"
+    AGENT_TIME = "agent_time"

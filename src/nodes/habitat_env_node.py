@@ -29,6 +29,7 @@ class HabitatEnvNode:
 
     def __init__(
         self,
+        node_name: str,
         config_paths: str = None,
         enable_physics_sim: bool = False,
         use_continuous_agent: bool = False,
@@ -36,6 +37,7 @@ class HabitatEnvNode:
     ):
         r"""
         Instantiates a node incapsulating a Habitat sim environment.
+        :param node_name: name of the node
         :param config_paths: path to Habitat env config file
         :param enable_physics_sim: if true, turn on dynamic simulation
             with Bullet
@@ -48,13 +50,9 @@ class HabitatEnvNode:
         if use_continuous_agent:
             assert enable_physics_sim
 
-        # set up logger
-        self.logger = utils_logging.setup_logger("env_node")
-
-        # declare timing variables
-        self.t_reset_elapsed = None
-        self.t_sim_elapsed = None
-        self.t_agent_elapsed = None
+        # initialize node
+        self.node_name = node_name
+        rospy.init_node(self.node_name)
 
         # initialize Habitat environment
         self.config = get_config(config_paths)
@@ -104,15 +102,18 @@ class HabitatEnvNode:
         with self.action_cv:
             self.action = None
             self.observations = None
-            self.step_counter = 0
+            self.count_steps = None
+            self.t_reset_elapsed = None
+            self.t_sim_elapsed = None
             self.new_action_published = False
-        # establish evaluation service with evaluator
-        self.eval_service = rospy.Service(
-            "eval_episode", EvalEpisode, self.eval_episode
-        )
 
-        # establish agent time service with agent
-        self.get_agent_time = rospy.ServiceProxy("get_agent_time", GetAgentTime)
+        # set up logger
+        self.logger = utils_logging.setup_logger(self.node_name)
+
+        # establish evaluation service server
+        self.eval_service = rospy.Service(
+            f"eval_episode/{node_name}", EvalEpisode, self.eval_episode
+        )
 
         # define the max rate at which we publish sensor readings
         self.pub_rate = float(pub_rate)
@@ -203,7 +204,6 @@ class HabitatEnvNode:
                 # reset timing variables
                 self.t_reset_elapsed = 0.0
                 self.t_sim_elapsed = 0.0
-                self.t_agent_elapsed = 0.0
 
                 # ------------ log reset time start ------------
                 t_reset_start = time.clock()
@@ -235,7 +235,6 @@ class HabitatEnvNode:
             NumericalMetrics.SUCCESS: 0.0,
             NumericalMetrics.SPL: 0.0,
             NumericalMetrics.NUM_STEPS: 0,
-            NumericalMetrics.AGENT_TIME: 0.0,
             NumericalMetrics.SIM_TIME: 0.0,
             NumericalMetrics.RESET_TIME: 0.0
         }
@@ -281,10 +280,10 @@ class HabitatEnvNode:
                     metrics_dic = {
                         k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
                     }
-                    metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
-                    metrics_dic[NumericalMetrics.AGENT_TIME] = self.t_agent_elapsed / self.count_steps
-                    metrics_dic[NumericalMetrics.SIM_TIME] = self.t_sim_elapsed / self.count_steps
-                    metrics_dic[NumericalMetrics.RESET_TIME] = self.t_reset_elapsed
+                    with self.action_cv:
+                        metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
+                        metrics_dic[NumericalMetrics.SIM_TIME] = self.t_sim_elapsed / self.count_steps
+                        metrics_dic[NumericalMetrics.RESET_TIME] = self.t_reset_elapsed
                     resp.update(metrics_dic)
                 else:
                     # no episode is evaluated. Toggle the flag so the env node
@@ -432,19 +431,41 @@ class HabitatEnvNode:
             with self.action_cv:
                 # get the action
                 self.action = cmd_msg.data
-                # get the agent time of the current episode
-                rospy.wait_for_service("get_agent_time")
-                try:
-                    agent_time_resp = self.get_agent_time()
-                    self.t_agent_elapsed += agent_time_resp.agent_time
-                except rospy.ServiceException:
-                    self.logger.info("Failed to get agent time!")
+                
                 # set action publish flag and notify
                 self.new_action_published = True
                 self.action_cv.notify()
 
+    def evaluate_episodes(self):
+        r"""
+        An infinite loop where the env node keeps evaluating the next
+        episode in its RL environment. Breaks upon receiving shutdown
+        command.
+        """
+        # iterate over episodes
+        while True:
+            try:
+                # reset the env
+                self.reset()
+                with self.shutdown_lock:
+                    # if shutdown signalled, exit
+                    if self.shutdown:
+                        rospy.signal_shutdown("received request to shut down")
+                        break
+                    # otherwise, evaluate the episode
+                    self.publish_and_step()
+            except StopIteration:
+                # set enable_reset and enable_eval to False, so the
+                # env node can evaluate again in the future
+                with self.enable_reset_cv:
+                    self.enable_reset = False
+                with self.enable_eval_cv:
+                    self.all_episodes_evaluated = True
+                    self.env.reset_episode_iterator()
+                    self.enable_eval = False
+                    self.enable_eval_cv.notify()
 
-if __name__ == "__main__":
+def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -469,33 +490,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # initialize the env node
-    rospy.init_node(args.node_name)
     env_node = HabitatEnvNode(
+        node_name=args.node_name,
         config_paths=args.task_config,
         enable_physics_sim=args.enable_physics_sim,
         use_continuous_agent=args.use_continuous_agent,
         pub_rate=args.sensor_pub_rate,
     )
 
-    # iterate over episodes
-    while True:
-        try:
-            # reset the env
-            env_node.reset()
-            with env_node.shutdown_lock:
-                # if shutdown signalled, exit
-                if env_node.shutdown:
-                    rospy.signal_shutdown("received request to shut down")
-                    break
-                # otherwise, evaluate the episode
-                env_node.publish_and_step()
-        except StopIteration:
-            # set enable_reset and enable_eval to False, so the
-            # env node can evaluate again in the future
-            with env_node.enable_reset_cv:
-                env_node.enable_reset = False
-            with env_node.enable_eval_cv:
-                env_node.all_episodes_evaluated = True
-                env_node.env.reset_episode_iterator()
-                env_node.enable_eval = False
-                env_node.enable_eval_cv.notify()
+    # just evaluate
+    env_node.evaluate_episodes()
+
+
+if __name__ == "__main__":
+    main()

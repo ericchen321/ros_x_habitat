@@ -67,8 +67,9 @@ def main():
             input_type=args.input_type,
             model_path=args.model_path,
             enable_physics=True,
-            agent_node_name="agent_node",
+            node_name="habitat_ros_evaluator_node",
             env_node_name="env_node",
+            agent_node_name="agent_node",
             sensor_pub_rate=args.sensor_pub_rate,
             do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
         )
@@ -79,8 +80,9 @@ def main():
             input_type=args.input_type,
             model_path=args.model_path,
             enable_physics=False,
-            agent_node_name="agent_node",
+            node_name="habitat_ros_evaluator_node",
             env_node_name="env_node",
+            agent_node_name="agent_node",
             sensor_pub_rate=args.sensor_pub_rate,
             do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
         )

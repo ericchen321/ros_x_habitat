@@ -45,10 +45,9 @@ class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
         pass
 
     def test_evaluator_node_discrete(self):
-        print("started test...")
-        # start the agent node
+        # start the mock agent node
         agent_node_args = shlex.split(
-            f"python src/nodes/habitat_agent_node.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --sensor-pub-rate 5.0"
+            f"python src/test/test_habitat_ros/mock_agent_node.py"
         )
         Popen(agent_node_args)
 
@@ -64,6 +63,7 @@ class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
             input_type=self.input_type,
             model_path=self.model_path,
             enable_physics=False,
+            node_name="habitat_ros_evaluator_node_under_test",
             do_not_start_nodes=True
         )
 
@@ -74,10 +74,12 @@ class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
             log_dir=self.log_dir,
             agent_seed=self.agent_seed
         )
-        print(dict_of_metrics)
+        # check metrics from the mock env node
         assert np.linalg.norm(dict_of_metrics[f"{self.episode_id_response},{self.scene_id}"][NumericalMetrics.DISTANCE_TO_GOAL] - self.distance_to_goal) < 1e-5
         assert np.linalg.norm(dict_of_metrics[f"{self.episode_id_response},{self.scene_id}"][NumericalMetrics.SUCCESS] - self.success) < 1e-5
         assert np.linalg.norm(dict_of_metrics[f"{self.episode_id_response},{self.scene_id}"][NumericalMetrics.SPL] - self.spl) < 1e-5
+        # check metrics from the agent node
+        assert np.linalg.norm(dict_of_metrics[f"{self.episode_id_response},{self.scene_id}"][NumericalMetrics.AGENT_TIME] - 0.0) < 1e-5
 
         # check if the episodic log file is created
         assert os.path.isfile(f"{self.log_dir}/episode={self.episode_id_response}-scene={self.scene_id}.log")

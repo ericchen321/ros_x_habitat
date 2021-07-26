@@ -187,9 +187,9 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 # collect metrics
                 per_episode_metrics = self.env._env.get_metrics()
                 per_episode_metrics[NumericalMetrics.NUM_STEPS] = count_steps
-                per_episode_metrics[NumericalMetrics.AGENT_TIME] = t_agent_elapsed / count_steps
                 per_episode_metrics[NumericalMetrics.SIM_TIME] = t_sim_elapsed / count_steps
                 per_episode_metrics[NumericalMetrics.RESET_TIME] = t_reset_elapsed
+                per_episode_metrics[NumericalMetrics.AGENT_TIME] = t_agent_elapsed / count_steps
                 # colorize the map and replace "top_down_map" metric with it
                 per_episode_metrics["top_down_map"] = maps.colorize_draw_agent_and_fit_to_height(
                     info_per_action["top_down_map"],

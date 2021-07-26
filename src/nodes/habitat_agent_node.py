@@ -48,6 +48,7 @@ class HabitatAgentNode:
 
     def __init__(
         self,
+        node_name: str,
         agent_config: Config,
         output_velocities: bool = False,
         control_period: float = 1.0,
@@ -55,6 +56,7 @@ class HabitatAgentNode:
     ):
         r"""
         Instantiates a node incapsulating a Habitat agent.
+        :param node_name: name of the node
         :param agent_config: agent configuration
         :param output_velocities: if True, the node publishes velocities
             to `cmd_vel/`; otherwise publishes commands to `action`
@@ -63,6 +65,10 @@ class HabitatAgentNode:
         :sensor_pub_rate: the rate at which Gazebo (or some other ROS-based
             sim) publishes sensor observations
         """
+        # initialize the node
+        self.node_name = node_name
+        rospy.init_node(self.node_name)
+
         self.agent_config = agent_config
         self.output_velocities = output_velocities
         self.sensor_pub_rate = float(sensor_pub_rate)
@@ -77,7 +83,10 @@ class HabitatAgentNode:
         self.pub_queue_size = 10
 
         # lock guarding access to self.action, self.count_frames,
-        # self.agent and self.agent_time
+        # self.count_steps, self.agent and self.t_agent_elapsed
+        # NOTE: self.count_steps count the number of discrete steps;
+        # self.count_frames count the number of frames from a ROS-based
+        # sim
         self.lock = Lock()
         with self.lock:
             # the last action produced from the agent
@@ -93,7 +102,8 @@ class HabitatAgentNode:
             self.agent = PPOAgent(agent_config)
 
             # for timing
-            self.agent_time = 0
+            self.count_steps = None
+            self.t_agent_elapsed = 0
 
         # shutdown triggers the node to be shutdown. Guarded by shutdown_cv
         self.shutdown_cv = Condition()
@@ -101,13 +111,13 @@ class HabitatAgentNode:
             self.shutdown = False
 
         # set up logger
-        self.logger = utils_logging.setup_logger("agent_node")
+        self.logger = utils_logging.setup_logger(self.node_name)
 
-        # establish reset protocol with env
-        self.reset_service = rospy.Service("reset_agent", ResetAgent, self.reset_agent)
+        # establish agent reset service server
+        self.reset_service = rospy.Service(f"reset_agent/{self.node_name}", ResetAgent, self.reset_agent)
 
-        # establish agent time protocol with env
-        self.agent_time_service = rospy.Service("get_agent_time", GetAgentTime, self.get_agent_time)
+        # establish agent time service server
+        self.agent_time_service = rospy.Service(f"get_agent_time/{self.node_name}", GetAgentTime, self.get_agent_time)
         
         # publish to command topics
         if self.output_velocities:
@@ -170,6 +180,8 @@ class HabitatAgentNode:
             # episodes
             with self.lock:
                 self.count_frames = 0
+                self.count_steps = 0
+                self.t_agent_elapsed = 0.0
                 self.action = None
                 self.agent_config.RANDOM_SEED = request.seed
                 self.agent = PPOAgent(self.agent_config)
@@ -184,12 +196,14 @@ class HabitatAgentNode:
     
     def get_agent_time(self, request):
         r"""
-        ROS service handler which returns the time that the agent takes
-        to produce the last action.
+        ROS service handler which returns the average time for the agent
+        to produce an action since the last reset.
         :param request: not used
         :returns: agent time
         """
-        return self.agent_time
+        with self.lock:
+            avg_agent_time = self.t_agent_elapsed / self.count_steps
+        return avg_agent_time
 
     def depthmsg_to_cv2(self, depth_msg):
         r"""
@@ -298,10 +312,12 @@ class HabitatAgentNode:
                 if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
                     self.count_frames = 0
                     self.action = self.agent.act(observations)
+                    self.count_steps += 1
                     vel_msg = self.action_to_msg(self.action)
                     self.pub.publish(vel_msg)
             else:
                 self.action = self.agent.act(observations)
+                self.count_steps += 1
                 action_msg = self.action_to_msg(self.action)
                 self.pub.publish(action_msg)
 
@@ -326,10 +342,12 @@ class HabitatAgentNode:
                 if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
                     self.count_frames = 0
                     self.action = self.agent.act(observations)
+                    self.count_steps += 1
                     vel_msg = self.action_to_msg(self.action)
                     self.pub.publish(vel_msg)
             else:
                 self.action = self.agent.act(observations)
+                self.count_steps += 1
                 action_msg = self.action_to_msg(self.action)
                 self.pub.publish(action_msg)
 
@@ -356,6 +374,7 @@ class HabitatAgentNode:
                 if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
                     self.count_frames = 0
                     self.action = self.agent.act(observations)
+                    self.count_steps += 1
                     vel_msg = self.action_to_msg(self.action)
                     self.pub.publish(vel_msg)
             else:
@@ -367,13 +386,23 @@ class HabitatAgentNode:
 
                 # ------------ log agent time end ------------
                 t_agent_end = time.clock()
-                self.agent_time = t_agent_end - t_agent_start
+                self.t_agent_elapsed += t_agent_end - t_agent_start
+                self.count_steps += 1
 
                 action_msg = self.action_to_msg(self.action)
                 self.pub.publish(action_msg)
 
+    def spin_until_shutdown(self):
+        r"""
+        Put the current thread to sleep. Wake up and exit upon shutdown.
+        """
+        # shutdown the agent node after getting the signal
+        with self.shutdown_cv:
+            while self.shutdown is False:
+                self.shutdown_cv.wait()
+            rospy.signal_shutdown("received request to shut down")
 
-if __name__ == "__main__":
+def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--node-name", default="agent_node", type=str)
@@ -395,21 +424,22 @@ if __name__ == "__main__":
         default=10,
     )
     args = parser.parse_args()
-
-    # initialize the agent node
-    rospy.init_node(args.node_name)
     agent_config = get_default_config()
     agent_config.INPUT_TYPE = args.input_type
     agent_config.MODEL_PATH = args.model_path
+
+    # instantiate agent node
     agent_node = HabitatAgentNode(
+        node_name=args.node_name,
         agent_config=agent_config,
         output_velocities=args.output_velocities,
         control_period=args.control_period,
         sensor_pub_rate=args.sensor_pub_rate,
     )
 
-    # shutdown the agent node after getting the signal
-    with agent_node.shutdown_cv:
-        while agent_node.shutdown is False:
-            agent_node.shutdown_cv.wait()
-        rospy.signal_shutdown("received request to shut down")
+    # spins until receiving the shutdown signal
+    agent_node.spin_until_shutdown()
+
+
+if __name__ == "__main__":
+    main()
