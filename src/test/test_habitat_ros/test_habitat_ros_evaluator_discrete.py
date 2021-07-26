@@ -33,10 +33,7 @@ class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
         self.spl = TestHabitatROSData.test_evaluator_spl
 
         # create log dirs
-        try:
-            os.mkdirs(self.log_dir)
-        except FileExistsError:
-            pass
+        os.makedirs(name=self.log_dir, exist_ok=True)
 
         # clean up log files from previous runs
         try:

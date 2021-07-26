@@ -21,10 +21,7 @@ class TestVisualization(unittest.TestCase):
             metrics_list.append(dict_of_metrics)
         
         plot_dir = "metric_plots/test_generate_box_plots/"
-        try:
-            os.mkdirs(plot_dir)
-        except FileExistsError:
-            pass
+        os.makedirs(name=plot_dir, exist_ok=True)
         generate_box_plots(metrics_list, seeds, plot_dir)
 
 

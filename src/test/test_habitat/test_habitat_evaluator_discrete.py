@@ -29,12 +29,9 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
         assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.682441) < 1e-5
 
     def test_generate_video_discrete(self):
-        try:
-            os.mkdirs(
-                 "videos/test_habitat_evaluator_discrete/"
-            )
-        except FileExistsError:
-            pass
+        os.makedirs(
+            name="videos/test_habitat_evaluator_discrete/",
+            exist_ok=True)
         
         try:
             os.remove(
@@ -53,12 +50,9 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
         )
 
     def test_generate_map_discrete(self):
-        try:
-            os.mkdirs(
-                "habitat_maps/test_habitat_evaluator_discrete/"
-            )
-        except FileExistsError:
-            pass
+        os.makedirs(
+            name="habitat_maps/test_habitat_evaluator_discrete/",
+            exist_ok=True)
 
         # for now we only check if the code runs
         top_down_map = self.evaluator_discrete.generate_map(

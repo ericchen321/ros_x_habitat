@@ -30,12 +30,9 @@ class TestHabitatEvaluatorContinuousCase(unittest.TestCase):
 
 
     def test_generate_video_continuous(self):
-        try:
-            os.mkdirs(
-                 "videos/test_habitat_evaluator_continuous/"
-            )
-        except FileExistsError:
-            pass
+        os.makedirs(
+            name="videos/test_habitat_evaluator_continuous/",
+            exist_ok=True)
         
         try:
             os.remove(
@@ -54,12 +51,9 @@ class TestHabitatEvaluatorContinuousCase(unittest.TestCase):
         )
 
     def test_generate_map_continuous(self):
-        try:
-            os.mkdirs(
-                "habitat_maps/test_habitat_evaluator_continuous/"
-            )
-        except FileExistsError:
-            pass
+        os.makedirs(
+            name="habitat_maps/test_habitat_evaluator_continuous/",
+            exist_ok=True)
 
         # for now we only check if the code runs
         top_down_map = self.evaluator_continuous.generate_map(

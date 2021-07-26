@@ -48,10 +48,7 @@ def main():
         seeds = [exp_config.SEED]
 
     # create log dir
-    try:
-        os.mkdirs(f"{args.log_dir}")
-    except FileExistsError:
-        pass
+    os.makedirs(name=f"{args.log_dir}", exist_ok=True)
 
     # create logger and log experiment settings
     logger = utils_logging.setup_logger(
@@ -101,10 +98,7 @@ def main():
         logger_per_seed.info(f"Seed = {seed}")
 
         # create (per-episode) log dir
-        try:
-            os.mkdirs(f"{args.log_dir}/seed={seed}")
-        except FileExistsError:
-            pass
+        os.makedirs(name=f"{args.log_dir}/seed={seed}", exist_ok=True)
 
         dict_of_metrics = evaluator.evaluate(
             episode_id_last=args.episode_id,
