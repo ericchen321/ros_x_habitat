@@ -30,7 +30,7 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
 
     def test_generate_video_discrete(self):
         try:
-            os.mkdir(
+            os.mkdirs(
                  "videos/test_habitat_evaluator_discrete/"
             )
         except FileExistsError:
@@ -54,7 +54,7 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
 
     def test_generate_map_discrete(self):
         try:
-            os.mkdir(
+            os.mkdirs(
                 "habitat_maps/test_habitat_evaluator_discrete/"
             )
         except FileExistsError:

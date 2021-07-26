@@ -49,7 +49,7 @@ def main():
 
     # create log dir
     try:
-        os.mkdir(f"{args.log_dir}")
+        os.mkdirs(f"{args.log_dir}")
     except FileExistsError:
         pass
 
@@ -102,7 +102,7 @@ def main():
 
         # create (per-episode) log dir
         try:
-            os.mkdir(f"{args.log_dir}/seed={seed}")
+            os.mkdirs(f"{args.log_dir}/seed={seed}")
         except FileExistsError:
             pass
 

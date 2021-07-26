@@ -31,7 +31,7 @@ class TestHabitatEvaluatorContinuousCase(unittest.TestCase):
 
     def test_generate_video_continuous(self):
         try:
-            os.mkdir(
+            os.mkdirs(
                  "videos/test_habitat_evaluator_continuous/"
             )
         except FileExistsError:
@@ -55,7 +55,7 @@ class TestHabitatEvaluatorContinuousCase(unittest.TestCase):
 
     def test_generate_map_continuous(self):
         try:
-            os.mkdir(
+            os.mkdirs(
                 "habitat_maps/test_habitat_evaluator_continuous/"
             )
         except FileExistsError:

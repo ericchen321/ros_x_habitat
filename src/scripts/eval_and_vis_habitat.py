@@ -46,7 +46,7 @@ def main():
 
     # create log dir
     try:
-        os.mkdir(f"{args.log_dir}")
+        os.mkdirs(f"{args.log_dir}")
     except FileExistsError:
         pass
 
@@ -92,7 +92,7 @@ def main():
 
         # create (per-episode) log dir
         try:
-            os.mkdir(f"{args.log_dir}/seed={seed}")
+            os.mkdirs(f"{args.log_dir}/seed={seed}")
         except FileExistsError:
             pass
 
@@ -142,7 +142,7 @@ def main():
     if args.make_maps:
         # create map dir
         try:
-            os.mkdir(f"{args.map_dir}")
+            os.mkdirs(f"{args.map_dir}")
         except FileExistsError:
             pass
         if len(maps) > 0:
@@ -166,7 +166,7 @@ def main():
     if args.make_plots:
         # create plot dir
         try:
-            os.mkdir(f"{args.plot_dir}")
+            os.mkdirs(f"{args.plot_dir}")
         except FileExistsError:
             pass
         # create box plots of metrics vs seeds

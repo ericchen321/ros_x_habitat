@@ -68,7 +68,7 @@ def main():
     if args.make_videos:
         # create video dir
         try:
-            os.mkdir(f"{exp_config.VIDEO_DIR}")
+            os.mkdirs(f"{exp_config.VIDEO_DIR}")
         except FileExistsError:
             pass
 
@@ -79,7 +79,7 @@ def main():
     if args.make_maps:
         # create map dir
         try:
-            os.mkdir(f"{args.map_dir}")
+            os.mkdirs(f"{args.map_dir}")
         except FileExistsError:
             pass
 

@@ -34,7 +34,7 @@ class HabitatROSEvaluatorDiscreteCase(unittest.TestCase):
 
         # create log dirs
         try:
-            os.mkdir(self.log_dir)
+            os.mkdirs(self.log_dir)
         except FileExistsError:
             pass
 
