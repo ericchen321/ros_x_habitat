@@ -25,8 +25,9 @@ class TestHabitatEvaluatorContinuousCase(unittest.TestCase):
             agent_seed=7,
         )
         avg_metrics = self.evaluator_continuous.compute_avg_metrics(metrics_list)
-        assert np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.098500) < 1e-5
-        assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.703289) < 1e-5
+        assert np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.140662) < 1e-5
+        assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.793321) < 1e-5
+
 
     def test_generate_video_continuous(self):
         try:
@@ -49,7 +50,7 @@ class TestHabitatEvaluatorContinuousCase(unittest.TestCase):
             agent_seed=7,
         )
         assert os.path.isfile(
-            "videos/test_habitat_evaluator_continuous/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.10-success=1.00-spl=0.70.mp4"
+            "videos/test_habitat_evaluator_continuous/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.14-success=1.00-spl=0.79.mp4"
         )
 
     def test_generate_map_continuous(self):
