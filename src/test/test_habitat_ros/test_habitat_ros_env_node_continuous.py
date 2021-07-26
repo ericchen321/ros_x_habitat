@@ -15,7 +15,7 @@ from src.constants.constants import NumericalMetrics
 from src.test.data.data import TestHabitatROSData
 
 
-class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
+class HabitatROSEnvNodeContinuousCase(unittest.TestCase):
     r"""
     Test cases for Habitat agent + Habitat sim through ROS.
     """
@@ -27,16 +27,16 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_env_node_discrete(self):
+    def test_env_node_continuous(self):
         # start the env node
         env_node_args = shlex.split(
-            f"python src/nodes/habitat_env_node.py --node-name env_node_under_test --task-config {TestHabitatROSData.test_acts_and_obs_discrete_task_config} --sensor-pub-rate {self.env_pub_rate}"
+            f"python src/nodes/habitat_env_node.py --node-name env_node_under_test --task-config {TestHabitatROSData.test_acts_and_obs_continuous_task_config} --enable-physics-sim --sensor-pub-rate {self.env_pub_rate}"
         )
         Popen(env_node_args)
 
         # start the mock agent node
         agent_node_args = shlex.split(
-            f"python src/test/test_habitat_ros/mock_agent_node.py"
+            f"python src/test/test_habitat_ros/mock_agent_node.py --use-habitat-physics-sim"
         )
         Popen(agent_node_args)
 
@@ -44,14 +44,14 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
         mock_evaluator = MockHabitatROSEvaluator()
 
         # mock-eval one episode
-        dict_of_metrics = mock_evaluator.evaluate(str(int(TestHabitatROSData.test_acts_and_obs_discrete_episode_id)-1),
-            TestHabitatROSData.test_acts_and_obs_discrete_scene_id)
+        dict_of_metrics = mock_evaluator.evaluate(str(int(TestHabitatROSData.test_acts_and_obs_continuous_episode_id)-1),
+            TestHabitatROSData.test_acts_and_obs_continuous_scene_id)
         metrics = HabitatSimEvaluator.compute_avg_metrics(dict_of_metrics)
         print(f"success: {metrics[NumericalMetrics.SUCCESS]}")
         print(f"spl: {metrics[NumericalMetrics.SPL]}")
         assert (
             np.linalg.norm(metrics[NumericalMetrics.SUCCESS] - 1.0) < 1e-5
-            and np.linalg.norm(metrics[NumericalMetrics.SPL] - 0.68244) < 1e-5
+            and np.linalg.norm(metrics[NumericalMetrics.SPL] - 0.793321) < 1e-5
         )
         
         # shut down nodes
@@ -61,8 +61,8 @@ class HabitatROSEnvNodeDiscreteCase(unittest.TestCase):
 def main():
     rostest.rosrun(
         PACKAGE_NAME,
-        "tests_habitat_ros_env_node_discrete",
-        HabitatROSEnvNodeDiscreteCase,
+        "tests_habitat_ros_env_node_continuous",
+        HabitatROSEnvNodeContinuousCase,
     )
 
 
