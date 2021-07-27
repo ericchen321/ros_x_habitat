@@ -48,10 +48,7 @@ def main():
         seeds = [exp_config.SEED]
 
     # create log dir
-    try:
-        os.mkdir(f"{args.log_dir}")
-    except FileExistsError:
-        pass
+    os.makedirs(name=f"{args.log_dir}", exist_ok=True)
 
     # create logger and log experiment settings
     logger = utils_logging.setup_logger(
@@ -70,8 +67,9 @@ def main():
             input_type=args.input_type,
             model_path=args.model_path,
             enable_physics=True,
-            agent_node_name="agent_node",
+            node_name="habitat_ros_evaluator_node",
             env_node_name="env_node",
+            agent_node_name="agent_node",
             sensor_pub_rate=args.sensor_pub_rate,
             do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
         )
@@ -82,8 +80,9 @@ def main():
             input_type=args.input_type,
             model_path=args.model_path,
             enable_physics=False,
-            agent_node_name="agent_node",
+            node_name="habitat_ros_evaluator_node",
             env_node_name="env_node",
+            agent_node_name="agent_node",
             sensor_pub_rate=args.sensor_pub_rate,
             do_not_start_nodes=args.do_not_start_nodes_from_evaluator,
         )
@@ -101,10 +100,7 @@ def main():
         logger_per_seed.info(f"Seed = {seed}")
 
         # create (per-episode) log dir
-        try:
-            os.mkdir(f"{args.log_dir}/seed={seed}")
-        except FileExistsError:
-            pass
+        os.makedirs(name=f"{args.log_dir}/seed={seed}", exist_ok=True)
 
         dict_of_metrics = evaluator.evaluate(
             episode_id_last=args.episode_id,

@@ -11,7 +11,7 @@ import rospy
 import rostest
 
 from mock_env_node import MockHabitatEnvNode
-from ros_x_habitat.srv import ResetAgent
+from ros_x_habitat.srv import ResetAgent, GetAgentTime
 from src.constants.constants import AgentResetCommands
 from src.test.data.data import TestHabitatROSData
 
@@ -25,8 +25,14 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
         # define env node publish rate
         self.env_pub_rate = 5.0
 
+        # define the agent node's name
+        self.agent_node_under_test_name = "agent_node_under_test"
+
         # set up agent reset service client
-        self.reset_agent = rospy.ServiceProxy("reset_agent", ResetAgent)
+        self.reset_agent = rospy.ServiceProxy(f"reset_agent/{self.agent_node_under_test_name}", ResetAgent)
+
+        # set up agent time service client
+        self.get_agent_time = rospy.ServiceProxy(f"get_agent_time/{self.agent_node_under_test_name}", GetAgentTime)
 
     def tearDown(self):
         pass
@@ -34,16 +40,17 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
     def test_agent_node_discrete(self):
         # start the agent node
         agent_node_args = shlex.split(
-            f"python src/nodes/habitat_agent_node.py --node-name agent_node_under_test --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --sensor-pub-rate {self.env_pub_rate}"
+            f"python src/nodes/habitat_agent_node.py --node-name {self.agent_node_under_test_name} --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --sensor-pub-rate {self.env_pub_rate}"
         )
         Popen(agent_node_args)
 
         # init mock env node
-        rospy.init_node("mock_env_node")
-        mock_env_node = MockHabitatEnvNode(enable_physics_sim=False)
+        mock_env_node = MockHabitatEnvNode(
+            node_name="mock_env_node",
+            enable_physics_sim=False)
 
         # reset the agent
-        rospy.wait_for_service("reset_agent")
+        rospy.wait_for_service(f"reset_agent/{self.agent_node_under_test_name}")
         try:
             resp = self.reset_agent(int(AgentResetCommands.RESET), 7)
             assert resp.done
@@ -53,7 +60,7 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
         # reset the mock env
         mock_env_node.reset()
 
-        # publish pre-saved sensor observations
+        # publish pre-saved sensor observations and check the agent's actions
         r = rospy.Rate(self.env_pub_rate)
         for i in range(0, TestHabitatROSData.test_acts_and_obs_discrete_num_obs):
             mock_env_node.publish_sensor_observations(
@@ -64,8 +71,17 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
             mock_env_node.check_command(TestHabitatROSData.test_acts_and_obs_discrete_acts[i])
             r.sleep()
 
+        # check the agent time service server
+        rospy.wait_for_service(f"get_agent_time/{self.agent_node_under_test_name}")
+        try:
+            agent_time_resp = self.get_agent_time()
+            # check if agent time is in a reasonable range
+            assert agent_time_resp.agent_time >= 0.0 and agent_time_resp.agent_time <= 1.0
+        except rospy.ServiceException:
+            raise rospy.ServiceException
+        
         # shut down the agent
-        rospy.wait_for_service("reset_agent")
+        rospy.wait_for_service(f"reset_agent/{self.agent_node_under_test_name}")
         try:
             resp = self.reset_agent(int(AgentResetCommands.SHUTDOWN), 0)
             assert resp.done

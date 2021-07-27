@@ -35,6 +35,7 @@ class MockHabitatAgentNode:
 
     def __init__(
         self,
+        node_name: str,
         output_velocities: bool = False,
         control_period: float = 1.0,
         sensor_pub_rate: float = 5.0,
@@ -47,6 +48,9 @@ class MockHabitatAgentNode:
         if use_habitat_physics_sim:
             # if using Habitat sim, must be producing discrete actions
             assert output_velocities is False
+
+        self.node_name = node_name
+        rospy.init_node(self.node_name)
 
         self.output_velocities = output_velocities
 
@@ -75,13 +79,13 @@ class MockHabitatAgentNode:
             self.shutdown = False
 
         # set up logger
-        self.logger = utils_logging.setup_logger("mock_agent_node")
+        self.logger = utils_logging.setup_logger(self.node_name)
 
-        # establish reset protocol with env
-        self.reset_service = rospy.Service("reset_agent", ResetAgent, self.reset_agent)
+        # establish agent reset service server
+        self.reset_service = rospy.Service(f"reset_agent/{self.node_name}", ResetAgent, self.reset_agent)
 
-        # establish agent time protocol with env
-        self.agent_time_service = rospy.Service("get_agent_time", GetAgentTime, self.get_agent_time)
+        # establish agent time service server
+        self.agent_time_service = rospy.Service(f"get_agent_time/{self.node_name}", GetAgentTime, self.get_agent_time)
 
         # publish to command topics
         if self.output_velocities:
@@ -120,7 +124,7 @@ class MockHabitatAgentNode:
             with self.lock:
                 if self.output_velocities:
                     self.count_frames = 0
-                self.agent_time = 0
+                self.agent_time = 0.0
             return True
         elif request.reset == AgentResetCommands.SHUTDOWN:
             # shut down the agent node
@@ -307,8 +311,14 @@ class MockHabitatAgentNode:
                 self.pub.publish(action_msg)
                 self.observations_count += 1
 
+    def spin_until_shutdown(self):
+        # shutdown the mock agent node after getting the signal
+        with self.shutdown_cv:
+            while self.shutdown is False:
+                self.shutdown_cv.wait()
+            rospy.signal_shutdown("received request to shut down")
 
-if __name__ == "__main__":
+def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-velocities", default=False, action="store_true")
@@ -326,16 +336,16 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # init mock agent node
-    rospy.init_node("mock_agent_node")
     mock_agent_node = MockHabitatAgentNode(
+        node_name="mock_agent_node",
         output_velocities=args.output_velocities,
         control_period=args.control_period,
         sensor_pub_rate=args.sensor_pub_rate,
         use_habitat_physics_sim=args.use_habitat_physics_sim
     )
 
-    # shutdown the mock agent node after getting the signal
-    with mock_agent_node.shutdown_cv:
-        while mock_agent_node.shutdown is False:
-            mock_agent_node.shutdown_cv.wait()
-        rospy.signal_shutdown("received request to shut down")
+    mock_agent_node.spin_until_shutdown()
+
+
+if __name__ == "__main__":
+    main()

@@ -24,6 +24,7 @@ from src.utils import utils_logging
 class MockHabitatEnvNode:
     def __init__(
         self,
+        node_name: str,
         enable_physics_sim: bool = False,
         use_continuous_agent: bool = False,
         pub_rate: float = 5.0
@@ -35,6 +36,9 @@ class MockHabitatEnvNode:
         if use_continuous_agent:
             assert enable_physics_sim
 
+        self.node_name = node_name
+        rospy.init_node(self.node_name)
+
         self.enable_physics_sim = enable_physics_sim
         self.use_continuous_agent = use_continuous_agent
 
@@ -44,7 +48,7 @@ class MockHabitatEnvNode:
         self.sub_queue_size = 10
 
         # set up logger
-        self.logger = utils_logging.setup_logger("mock_env_node")
+        self.logger = utils_logging.setup_logger(self.node_name)
 
         # shutdown is set to true by eval_episode() to indicate the
         # evaluator wants the node to shutdown
@@ -59,9 +63,6 @@ class MockHabitatEnvNode:
         self.observations = None
         self.new_action_published = False
         self.action_cv = Condition()
-
-        # establish agent time service with agent
-        self.get_agent_time = rospy.ServiceProxy("get_agent_time", GetAgentTime)
 
         # publish to sensor topics
         self.pub_rgb = rospy.Publisher("rgb", Image, queue_size=self.pub_queue_size)
@@ -93,9 +94,9 @@ class MockHabitatEnvNode:
         ):
             pass
 
-        # mock eval_episode service handler
+        # mock eval_episode service server
         self.eval_service = rospy.Service(
-            "eval_episode", EvalEpisode, self.eval_episode
+            f"eval_episode/{self.node_name}", EvalEpisode, self.eval_episode
         )
         self.episode_counter_lock = Lock()
         with self.episode_counter_lock:
@@ -125,7 +126,6 @@ class MockHabitatEnvNode:
             NumericalMetrics.SUCCESS: 0.0,
             NumericalMetrics.SPL: 0.0,
             NumericalMetrics.NUM_STEPS: 0,
-            NumericalMetrics.AGENT_TIME: 0.0,
             NumericalMetrics.SIM_TIME: 0.0,
             NumericalMetrics.RESET_TIME: 0.0
         }
@@ -234,17 +234,10 @@ class MockHabitatEnvNode:
         else:
             with self.action_cv:
                 self.action = cmd_msg.data
-                # get the agent time of the current episode
-                rospy.wait_for_service("get_agent_time")
-                try:
-                    agent_time_resp = self.get_agent_time()
-                except rospy.ServiceException:
-                    raise rospy.ServiceException
                 self.new_action_published = True
                 self.action_cv.notify()
 
-
-if __name__ == "__main__":
+def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--enable-physics-sim", default=False, action="store_true")
@@ -256,8 +249,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    rospy.init_node("mock_env_node")
     mock_env_node = MockHabitatEnvNode(
+        node_name="mock_env_node",
         enable_physics_sim=args.enable_physics_sim,
         use_continuous_agent=args.use_continuous_agent,
         pub_rate=args.sensor_pub_rate
@@ -265,4 +258,8 @@ if __name__ == "__main__":
 
     with mock_env_node.shutdown_cv:
         while mock_env_node.shutdown is False:
-            mock_env_node.shutdown_cv.wait()
+            mock_env_node.shutdown_cv.wait()    
+
+
+if __name__ == "__main__":
+    main()

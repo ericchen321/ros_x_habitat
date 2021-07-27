@@ -45,10 +45,7 @@ def main():
         seeds = [exp_config.SEED]
 
     # create log dir
-    try:
-        os.mkdir(f"{args.log_dir}")
-    except FileExistsError:
-        pass
+    os.makedirs(name=f"{args.log_dir}", exist_ok=True)
 
     # create logger and log experiment settings
     logger = utils_logging.setup_logger(
@@ -91,10 +88,7 @@ def main():
         logger_per_seed.info(f"Seed = {seed}")
 
         # create (per-episode) log dir
-        try:
-            os.mkdir(f"{args.log_dir}/seed={seed}")
-        except FileExistsError:
-            pass
+        os.makedirs(name=f"{args.log_dir}/seed={seed}", exist_ok=True)
 
         # evaluate
         metrics_and_maps = evaluator.evaluate_and_get_maps(
@@ -141,10 +135,8 @@ def main():
     # make top-down maps for each episode
     if args.make_maps:
         # create map dir
-        try:
-            os.mkdir(f"{args.map_dir}")
-        except FileExistsError:
-            pass
+        os.makedirs(name = f"{args.map_dir}", exist_ok=True)
+
         if len(maps) > 0:
             for episode_identifier, _ in maps[0].items():
                 # plot maps for each episode. Here we assume the same
@@ -165,10 +157,8 @@ def main():
     # make box-and-whisker plots of metrics vs. seed
     if args.make_plots:
         # create plot dir
-        try:
-            os.mkdir(f"{args.plot_dir}")
-        except FileExistsError:
-            pass
+        os.makedirs(name=f"{args.plot_dir}", exist_ok=True)
+
         # create box plots of metrics vs seeds
         utils_visualization.generate_box_plots(metrics_list, seeds, args.plot_dir)
     logger.info("Generated metric plots")
