@@ -17,6 +17,31 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
             enable_physics=False,
         )
 
+    def test_compute_avg_metrics(self):
+        spls = [0.2, 0.4, 0.0, 0.0]
+        distance_to_goal = [0.01, 0.09, float("nan"), -1.0*float("inf")]
+        dict_of_metrics = {
+            "episode-0": {
+                NumericalMetrics.SPL: spls[0],
+                NumericalMetrics.DISTANCE_TO_GOAL: distance_to_goal[0]
+            },
+            "episode-1": {
+                NumericalMetrics.SPL: spls[1],
+                NumericalMetrics.DISTANCE_TO_GOAL: distance_to_goal[1]
+            },
+            "episode-2": {
+                NumericalMetrics.SPL: spls[2],
+                NumericalMetrics.DISTANCE_TO_GOAL: distance_to_goal[2]
+            },
+            "episode-3": {
+                NumericalMetrics.SPL: spls[3],
+                NumericalMetrics.DISTANCE_TO_GOAL: distance_to_goal[3]
+            },
+        }
+        avg_metrics = self.evaluator_discrete.compute_avg_metrics(dict_of_metrics)
+        assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.3) < 1e-5
+        assert np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.05) < 1e-5
+
     def test_evaluate_one_episode_discrete(self):
         metrics_list = self.evaluator_discrete.evaluate(
             episode_id_last="48",

@@ -11,17 +11,22 @@ class TestVisualization(unittest.TestCase):
         sample_a = {NumericalMetrics.SPL: 0.8, NumericalMetrics.SUCCESS: 1.0}
         sample_b = {NumericalMetrics.SPL: 0.2, NumericalMetrics.SUCCESS: 1.0}
         sample_c = {NumericalMetrics.SPL: 0.0, NumericalMetrics.SUCCESS: 0.0}
+        sample_d = {NumericalMetrics.SPL: float("nan"), NumericalMetrics.SUCCESS: 0.0}
+        sample_e = {NumericalMetrics.SPL: float("inf"), NumericalMetrics.SUCCESS: 0.0}
         metrics_list = []
         for seed in seeds:
             dict_of_metrics = {
                 "sample_a": sample_a,
                 "sample_b": sample_b,
-                "sample_c": sample_c
+                "sample_c": sample_c,
+                "sample_d": sample_d,
+                "sample_e": sample_e
             }
             metrics_list.append(dict_of_metrics)
         
         plot_dir = "metric_plots/test_generate_box_plots/"
         os.makedirs(name=plot_dir, exist_ok=True)
+        # we eye-ball check the generated plot for now
         generate_box_plots(metrics_list, seeds, plot_dir)
 
 
