@@ -1,30 +1,24 @@
 <?xml version="1.0"?>
 <launch>
 
-	<node pkg="ros_x_habitat" type="depth_ros.py" name="depth_ros" >
-		<remap from="depth" to="habitat/depth"/>
-	</node>
+<!--	<node pkg="ros_x_habitat" type="habitat_env_node.py" name="env_node"> -->
+<!--	</node> -->
 
-	<node pkg="ros_x_habitat" type="rgb_ros.py" name="rgb_ros">
-		<remap from="rgb" to="habitat/rgb"/>
-	</node>
+ 	<node pkg="joy" type="joy_node" name="joy_node">
+ 		<param name="autorepeat_rate " value="20" />
+ 		<param name="coalesce_interval " value="0.05" />
+ 	</node>
 
-<!-- 	<node pkg="joy" type="joy_node" name="joy_node"> -->
-<!-- 		<param name="autorepeat_rate " value="20" /> -->
-<!-- 		<param name="coalesce_interval " value="0.05" /> -->
-<!-- 	</node> -->
+ 	<node pkg="ros_x_habitat" type="joy_controller.py" name="joy_controller" />
 
-<!-- 	<node pkg="ros_x_habitat" type="joy_controller.py" name="joy_controller" /> -->
-
-	<node pkg="image_view" type="image_view" name="image_view">
-		<remap from="image" to="ros_img_rgb"/>
-	</node>
 	<node pkg="rqt_graph" type="rqt_graph" name="rqt_graph"/>
 	<node pkg="rqt_tf_tree" type="rqt_tf_tree" name="rqt_tf_tree"/>
 
+	<node pkg="ros_x_habitat" type="dummy_ptgoal_with_gps_compass_subscriber.py" name="dummy_ptgoal_with_gps_compass_subscriber">
+	</node>
+
 	<node pkg="depthimage_to_laserscan" type="depthimage_to_laserscan" name="depthimage_to_laserscan">
-		<remap from="image" to="ros_img_depth"/>
-		<remap from="camera_info" to="camera_info_topic"/>
+		<remap from="image" to="depth"/>
 		<param name="output_frame_id" value="laser"/>
 		<param name="scan_time" value="0.025" />
 	</node>

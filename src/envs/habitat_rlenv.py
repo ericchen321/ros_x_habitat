@@ -140,3 +140,13 @@ class HabitatRLEnv(gym.Env):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def set_agent_velocities(self, linear_vel: np.ndarray, angular_vel: np.ndarray) -> None:
+        r"""
+        Set linear and angular velocity for the agent in the environment.
+        Can only be called when physics is turned on.
+        :param linear_vel: linear velocity
+        :param angular_vel: angular velocity
+        """
+        assert self.enable_physics
+        self._env.set_agent_velocities(linear_vel, angular_vel)
