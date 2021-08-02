@@ -425,11 +425,12 @@ class HabitatEnvNode:
                     self.pub_rgb.publish(observations_ros["rgb"])
                 elif sensor_uuid == "depth":
                     self.pub_depth.publish(observations_ros["depth"])
-                    self.pub_camera_info.publish(
-                        self.make_depth_camera_info_msg(
-                            observations_ros["depth"].header,
-                            observations_ros["depth"].height,
-                            observations_ros["depth"].width))
+                    if self.use_continuous_agent:
+                        self.pub_camera_info.publish(
+                            self.make_depth_camera_info_msg(
+                                observations_ros["depth"].header,
+                                observations_ros["depth"].height,
+                                observations_ros["depth"].width))
                 elif sensor_uuid == "pointgoal_with_gps_compass":
                     self.pub_pointgoal_with_gps_compass.publish(
                         observations_ros["pointgoal_with_gps_compass"]

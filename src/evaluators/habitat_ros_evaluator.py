@@ -69,7 +69,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         if enable_physics:
             # physics sim + discrete agent
             env_node_args = shlex.split(
-                f"python src/nodes/habitat_env_node.py --node-name {self.env_node_name} --task-config {config_paths} --enable-physics --sensor-pub-rate {sensor_pub_rate}"
+                f"python src/nodes/habitat_env_node.py --node-name {self.env_node_name} --task-config {config_paths} --enable-physics-sim --sensor-pub-rate {sensor_pub_rate}"
             )
         else:
             # discrete sim + discrete agent
