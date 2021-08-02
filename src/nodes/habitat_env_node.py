@@ -16,7 +16,11 @@ from ros_x_habitat.srv import (
     Roam)
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header, Int16
-from src.constants.constants import EvalEpisodeSpecialIDs, NumericalMetrics
+from src.constants.constants import (
+    EvalEpisodeSpecialIDs,
+    NumericalMetrics,
+    PACKAGE_NAME,
+    ServiceNames)
 from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 import time
@@ -122,12 +126,12 @@ class HabitatEnvNode:
 
         # establish evaluation service server
         self.eval_service = rospy.Service(
-            f"eval_episode/{node_name}", EvalEpisode, self.eval_episode
+            f"{PACKAGE_NAME}/{node_name}/{ServiceNames.EVAL_EPISODE}", EvalEpisode, self.eval_episode
         )
 
         # establish roam service server
         self.roam_service = rospy.Service(
-            f"{node_name}/roam", Roam, self.roam
+            f"{PACKAGE_NAME}/{node_name}/{ServiceNames.ROAM}", Roam, self.roam
         )
 
         # define the max rate at which we publish sensor readings

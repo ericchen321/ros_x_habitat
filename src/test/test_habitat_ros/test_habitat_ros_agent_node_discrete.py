@@ -1,6 +1,3 @@
-PACKAGE_NAME = "ros_x_habitat"
-
-
 import os
 import shlex
 import unittest
@@ -12,7 +9,10 @@ import rostest
 
 from mock_env_node import MockHabitatEnvNode
 from ros_x_habitat.srv import ResetAgent, GetAgentTime
-from src.constants.constants import AgentResetCommands
+from src.constants.constants import (
+    AgentResetCommands,
+    PACKAGE_NAME,
+    ServiceNames)
 from src.test.data.data import TestHabitatROSData
 
 
@@ -29,10 +29,10 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
         self.agent_node_under_test_name = "agent_node_under_test"
 
         # set up agent reset service client
-        self.reset_agent = rospy.ServiceProxy(f"reset_agent/{self.agent_node_under_test_name}", ResetAgent)
+        self.reset_agent = rospy.ServiceProxy(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}", ResetAgent)
 
         # set up agent time service client
-        self.get_agent_time = rospy.ServiceProxy(f"get_agent_time/{self.agent_node_under_test_name}", GetAgentTime)
+        self.get_agent_time = rospy.ServiceProxy(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.GET_AGENT_TIME}", GetAgentTime)
 
     def tearDown(self):
         pass
@@ -50,7 +50,7 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
             enable_physics_sim=False)
 
         # reset the agent
-        rospy.wait_for_service(f"reset_agent/{self.agent_node_under_test_name}")
+        rospy.wait_for_service(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}")
         try:
             resp = self.reset_agent(int(AgentResetCommands.RESET), 7)
             assert resp.done
@@ -72,7 +72,7 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
             r.sleep()
 
         # check the agent time service server
-        rospy.wait_for_service(f"get_agent_time/{self.agent_node_under_test_name}")
+        rospy.wait_for_service(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.GET_AGENT_TIME}")
         try:
             agent_time_resp = self.get_agent_time()
             # check if agent time is in a reasonable range
@@ -81,7 +81,7 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
             raise rospy.ServiceException
         
         # shut down the agent
-        rospy.wait_for_service(f"reset_agent/{self.agent_node_under_test_name}")
+        rospy.wait_for_service(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}")
         try:
             resp = self.reset_agent(int(AgentResetCommands.SHUTDOWN), 0)
             assert resp.done

@@ -1,6 +1,3 @@
-PACKAGE_NAME = "ros_x_habitat"
-
-
 import shlex
 import unittest
 from subprocess import Popen, call
@@ -9,7 +6,7 @@ import rospy
 import rostest
 import numpy as np
 from src.test.data.data import TestHabitatROSData
-from src.constants.constants import NumericalMetrics
+from src.constants.constants import NumericalMetrics, PACKAGE_NAME
 from src.evaluators.habitat_ros_evaluator import HabitatROSEvaluator
 
 

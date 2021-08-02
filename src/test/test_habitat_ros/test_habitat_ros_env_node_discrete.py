@@ -1,6 +1,3 @@
-PACKAGE_NAME = "ros_x_habitat"
-
-
 import os
 import shlex
 import unittest
@@ -11,7 +8,7 @@ import rostest
 
 from mock_habitat_ros_evaluator import MockHabitatROSEvaluator
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
-from src.constants.constants import NumericalMetrics
+from src.constants.constants import NumericalMetrics, PACKAGE_NAME
 from src.test.data.data import TestHabitatROSData
 
 

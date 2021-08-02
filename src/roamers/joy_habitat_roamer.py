@@ -4,6 +4,7 @@ import shlex
 from geometry_msgs.msg import Twist
 from subprocess import Popen
 from ros_x_habitat.srv import Roam
+from src.constants.constants import PACKAGE_NAME, ServiceNames
 
 
 class JoyHabitatRoamer:
@@ -46,7 +47,7 @@ class JoyHabitatRoamer:
         self.env_process = Popen(env_node_args)
 
         # set up roam service client
-        self.roam_service_name = f"{self.hab_env_node_name}/roam"
+        self.roam_service_name = f"{PACKAGE_NAME}/{self.hab_env_node_name}/{ServiceNames.ROAM}"
         self.roam = rospy.ServiceProxy(self.roam_service_name, Roam)
 
         # set up cmd_vel publisher

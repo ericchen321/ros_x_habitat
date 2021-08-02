@@ -16,7 +16,9 @@ from std_msgs.msg import Header, Int16
 from src.constants.constants import (
     AgentResetCommands,
     NumericalMetrics,
-    EvalEpisodeSpecialIDs)
+    EvalEpisodeSpecialIDs,
+    PACKAGE_NAME,
+    ServiceNames)
 from src.test.data.data import TestHabitatROSData
 from src.utils import utils_logging
 
@@ -96,7 +98,7 @@ class MockHabitatEnvNode:
 
         # mock eval_episode service server
         self.eval_service = rospy.Service(
-            f"eval_episode/{self.node_name}", EvalEpisode, self.eval_episode
+            f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.EVAL_EPISODE}", EvalEpisode, self.eval_episode
         )
         self.episode_counter_lock = Lock()
         with self.episode_counter_lock:

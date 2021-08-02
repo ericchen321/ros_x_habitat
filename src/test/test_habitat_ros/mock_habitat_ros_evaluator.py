@@ -7,7 +7,9 @@ from ros_x_habitat.srv import *
 from src.constants.constants import (
     AgentResetCommands,
     EvalEpisodeSpecialIDs,
-    NumericalMetrics
+    NumericalMetrics,
+    PACKAGE_NAME,
+    ServiceNames
 )
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from src.constants.constants import EvalEpisodeSpecialIDs
@@ -39,8 +41,8 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
         rospy.init_node(self.node_name)
 
         # resolve service names
-        self.eval_episode_service_name = f"eval_episode/{self.env_node_name}"
-        self.reset_agent_service_name = f"reset_agent/{self.agent_node_name}"
+        self.eval_episode_service_name = f"{PACKAGE_NAME}/{self.env_node_name}/{ServiceNames.EVAL_EPISODE}"
+        self.reset_agent_service_name = f"{PACKAGE_NAME}/{self.agent_node_name}/{ServiceNames.RESET_AGENT}"
 
         # register eval episode client
         self.eval_episode = rospy.ServiceProxy(self.eval_episode_service_name, EvalEpisode)
