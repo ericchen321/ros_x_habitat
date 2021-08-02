@@ -50,9 +50,6 @@ class JoyHabitatRoamer:
         self.roam_service_name = f"{PACKAGE_NAME}/{self.hab_env_node_name}/{ServiceNames.ROAM}"
         self.roam = rospy.ServiceProxy(self.roam_service_name, Roam)
 
-        # set up cmd_vel publisher
-        self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
-
     def roam_until_shutdown(
         self,
         episode_id_last: str="-1",
