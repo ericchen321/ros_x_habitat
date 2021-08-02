@@ -11,7 +11,11 @@ from ros_x_habitat.srv import (
     GetAgentTime)
 from src.constants.constants import NumericalMetrics
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
-from src.constants.constants import AgentResetCommands, EvalEpisodeSpecialIDs
+from src.constants.constants import (
+    AgentResetCommands,
+    EvalEpisodeSpecialIDs,
+    PACKAGE_NAME,
+    ServiceNames)
 from src.utils import utils_logging
 
 
@@ -69,7 +73,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         if enable_physics:
             # physics sim + discrete agent
             env_node_args = shlex.split(
-                f"python src/nodes/habitat_env_node.py --node-name {self.env_node_name} --task-config {config_paths} --enable-physics --sensor-pub-rate {sensor_pub_rate}"
+                f"python src/nodes/habitat_env_node.py --node-name {self.env_node_name} --task-config {config_paths} --enable-physics-sim --sensor-pub-rate {sensor_pub_rate}"
             )
         else:
             # discrete sim + discrete agent
@@ -88,13 +92,13 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
 
         # resolve service names
         if self.do_not_start_nodes:
-            self.eval_episode_service_name = "eval_episode/mock_env_node"
-            self.reset_agent_service_name = "reset_agent/mock_agent_node"
-            self.get_agent_time_service_name = "get_agent_time/mock_agent_node"
+            self.eval_episode_service_name = f"{PACKAGE_NAME}/mock_env_node/{ServiceNames.EVAL_EPISODE}"
+            self.reset_agent_service_name = f"{PACKAGE_NAME}/mock_agent_node/{ServiceNames.RESET_AGENT}"
+            self.get_agent_time_service_name = f"{PACKAGE_NAME}/mock_agent_node/{ServiceNames.GET_AGENT_TIME}"
         else:
-            self.eval_episode_service_name = f"eval_episode/{self.env_node_name}"
-            self.reset_agent_service_name = f"reset_agent/{self.agent_node_name}"
-            self.get_agent_time_service_name = f"get_agent_time/{self.agent_node_name}"
+            self.eval_episode_service_name = f"{PACKAGE_NAME}/{self.env_node_name}/{ServiceNames.EVAL_EPISODE}"
+            self.reset_agent_service_name = f"{PACKAGE_NAME}/{self.agent_node_name}/{ServiceNames.RESET_AGENT}"
+            self.get_agent_time_service_name = f"{PACKAGE_NAME}/{self.agent_node_name}/{ServiceNames.GET_AGENT_TIME}"
 
         # set up eval episode service client
         self.eval_episode = rospy.ServiceProxy(self.eval_episode_service_name, EvalEpisode)

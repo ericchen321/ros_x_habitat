@@ -68,10 +68,22 @@ class HabitatSimEvaluator(Evaluator):
         :returns: average metrics as a dictionary.
         """
         agg_metrics: Dict = defaultdict(float)
+
+        count_episodes = 0
         for _, metrics in dict_of_metrics.items():
-            for m, v in metrics.items():
-                agg_metrics[m] += v
-        avg_metrics = {k: v/len(dict_of_metrics) for k, v in agg_metrics.items()}
+            # add metrics from one episode
+            # first we drop any episode that contains nan, inf or -inf
+            # values
+            contain_invalid_values = False
+            for _, metric_val in metrics.items():
+                if np.isinf(metric_val) or np.isnan(metric_val):
+                    contain_invalid_values = True
+            # we only count episodes in which all metrics are valid
+            if not contain_invalid_values:
+                for metric_name, metric_val in metrics.items():
+                    agg_metrics[metric_name] += metric_val
+                count_episodes += 1
+        avg_metrics = {k: v/count_episodes for k, v in agg_metrics.items()}
         return avg_metrics
 
     @classmethod

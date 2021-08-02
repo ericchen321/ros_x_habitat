@@ -8,6 +8,10 @@ pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
 
 
 def callback(data):
+    # to speed up
+    vel_linear_scale_factor = 4.0
+    vel_angular_scale_factor = 4.0
+
     # negative sign in vel_z because agent eyes look at negative z axis
     vel_max = 0.3  # m/s
     vel_z = 4 * data.axes[1] * vel_max
@@ -20,12 +24,12 @@ def callback(data):
     # h = std_msgs.msg.Header()
     # h.stamp = rospy.Time.now()
     vel_msg = Twist()
-    vel_msg.linear.x = vel_z
-    vel_msg.linear.y = vel_x
+    vel_msg.linear.x = vel_linear_scale_factor * vel_z
+    vel_msg.linear.y = vel_linear_scale_factor * vel_x
     vel_msg.linear.z = 0
     vel_msg.angular.x = 0
-    vel_msg.angular.y = pitch
-    vel_msg.angular.z = yaw
+    vel_msg.angular.y = vel_angular_scale_factor * pitch
+    vel_msg.angular.z = vel_angular_scale_factor * yaw
     # vel_msg.header = h
 
     pub.publish(vel_msg)

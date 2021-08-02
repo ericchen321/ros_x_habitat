@@ -68,7 +68,7 @@ class PhysicsEnv(Env):
 
     def step_physics(
         self,
-        action: Union[int, str, Dict[str, Any]],
+        action: Union[int, str, Dict[str, Any]] = None,
         time_step=1.0 / 60.0,
         control_period=1.0,
         **kwargs
@@ -80,7 +80,7 @@ class PhysicsEnv(Env):
             performed inside the environment. Action is a name or index of
             allowed task's action and action arguments (belonging to action's
             :ref:`action_space`) to support parametrized and continuous
-            actions.
+            actions. If Action is none, then iterate by one time step only.
         :param time_step: time step for physics simulation
         :param control_period:
         :return: observations after taking action in environment.
@@ -88,12 +88,14 @@ class PhysicsEnv(Env):
         assert (
             self._episode_start_time is not None
         ), "Cannot call step before calling reset"
-        assert (
-            self._episode_over is False
-        ), "Episode over, call reset before calling step"
+        # NOTE: we relax the episode-is-not-over condition due
+        # to the roam mode
+        #assert (
+        #    self._episode_over is False
+        #), "Episode over, call reset before calling step"
 
         # Support simpler interface as well
-        if isinstance(action, str) or isinstance(action, (int, np.integer)):
+        if action is not None and (isinstance(action, str) or isinstance(action, (int, np.integer))):
             action = {"action": action}
 
         # Step with physics
@@ -173,3 +175,18 @@ class PhysicsEnv(Env):
             obj.collidable = True
 
         return observations
+
+    def set_agent_velocities(self, linear_vel: np.ndarray, angular_vel: np.ndarray) -> None:
+        r"""
+        Set linear and angular velocity for the agent in the environment.
+        Can only be called when physics is turned on.
+        :param linear_vel: linear velocity
+        :param angular_vel: angular velocity
+        """
+        vel_control = self.agent_object.velocity_control
+        vel_control.controlling_lin_vel = True
+        vel_control.controlling_ang_vel = True
+        vel_control.lin_vel_is_local = True
+        vel_control.ang_vel_is_local = True
+        vel_control.linear_velocity = linear_vel
+        vel_control.angular_velocity = angular_vel

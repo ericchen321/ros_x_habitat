@@ -61,6 +61,7 @@ add_service_files(
     EvalEpisode.srv
     ResetAgent.srv
     GetAgentTime.srv
+    Roam.srv
 #   Service2.srv
 )
 

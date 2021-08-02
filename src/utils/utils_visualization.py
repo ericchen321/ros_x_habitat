@@ -8,7 +8,6 @@
 
 import os
 from typing import Any, Dict, List, Optional
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -213,6 +212,11 @@ def generate_box_plots(
                 data[metric_name][total_sample_count] = episode_metrics[metric_name]
             total_sample_count += 1
     df = pd.DataFrame(data)
+    
+    # drop invalid samples
+    # code adapted from piRSquared's work on
+    # https://stackoverflow.com/questions/45745085/python-pandas-how-to-remove-nan-and-inf-values
+    df = df[~df.isin([np.nan, np.inf, -np.inf]).any(1)]
 
     # create box-and-strip plot for each metric
     for metric_name in metric_names:

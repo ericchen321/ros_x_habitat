@@ -1,0 +1,4 @@
+string episode_id_last
+string scene_id_last
+---
+bool ack

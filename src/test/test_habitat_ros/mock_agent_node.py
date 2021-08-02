@@ -21,7 +21,10 @@ from ros_x_habitat.srv import ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int16
-from src.constants.constants import AgentResetCommands
+from src.constants.constants import (
+    AgentResetCommands,
+    PACKAGE_NAME,
+    ServiceNames)
 from src.test.data.data import TestHabitatROSData
 from src.utils import utils_logging
 
@@ -82,10 +85,10 @@ class MockHabitatAgentNode:
         self.logger = utils_logging.setup_logger(self.node_name)
 
         # establish agent reset service server
-        self.reset_service = rospy.Service(f"reset_agent/{self.node_name}", ResetAgent, self.reset_agent)
+        self.reset_service = rospy.Service(f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.RESET_AGENT}", ResetAgent, self.reset_agent)
 
         # establish agent time service server
-        self.agent_time_service = rospy.Service(f"get_agent_time/{self.node_name}", GetAgentTime, self.get_agent_time)
+        self.agent_time_service = rospy.Service(f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.GET_AGENT_TIME}", GetAgentTime, self.get_agent_time)
 
         # publish to command topics
         if self.output_velocities:

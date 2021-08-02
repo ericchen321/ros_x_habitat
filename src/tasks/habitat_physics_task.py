@@ -58,38 +58,43 @@ class PhysicsNavigationTask(EmbodiedTask):
         control_period: float,
         agent_object: hsim.physics.ManagedRigidObject,
     ):
-        if "action_args" not in action or action["action_args"] is None:
-            action["action_args"] = {}
-        action_name = action["action"]
-        if isinstance(action_name, (int, np.integer)):
-            action_name = self.get_action_name(action_name)
-        assert (
-            action_name in self.actions
-        ), f"Can't find '{action_name}' action in {self.actions.keys()}."
-        task_action = self.actions[action_name]
-
-        # complete the action with physics and collect observations
-        observations = None
-        if isinstance(task_action, StopAction):
-            # if given stop command, collect observations immediately
-            observations = self._sim.get_observations_at()
-            self.is_stop_called = True
+        if action is None:
+            # step by one frame
+            observations = self._sim.step_physics(agent_object, time_step)
         else:
-            # Setting agent velocity controls based on each action type
-            self._set_agent_velocities(
-                action=task_action,
-                agent_vel_control=agent_object.velocity_control,
-                control_period=control_period,
-            )
-            # step through all frames in the control period
-            total_steps = round(control_period * 1.0 / time_step)
-            
-            for frame in range(0, total_steps):
-                observations = self._sim.step_physics(agent_object, time_step)
-                # if collision occurred, quit the loop immediately
-                # NOTE: this is not working yet
-                # if self._sim.previous_step_collided:
-                #    break
+            # step multiple frames to complete an action
+            if "action_args" not in action or action["action_args"] is None:
+                action["action_args"] = {}
+            action_name = action["action"]
+            if isinstance(action_name, (int, np.integer)):
+                action_name = self.get_action_name(action_name)
+            assert (
+                action_name in self.actions
+            ), f"Can't find '{action_name}' action in {self.actions.keys()}."
+            task_action = self.actions[action_name]
+
+            # complete the action with physics and collect observations
+            observations = None
+            if isinstance(task_action, StopAction):
+                # if given stop command, collect observations immediately
+                observations = self._sim.get_observations_at()
+                self.is_stop_called = True
+            else:
+                # Setting agent velocity controls based on each action type
+                self._set_agent_velocities(
+                    action=task_action,
+                    agent_vel_control=agent_object.velocity_control,
+                    control_period=control_period,
+                )
+                # step through all frames in the control period
+                total_steps = round(control_period * 1.0 / time_step)
+                
+                for frame in range(0, total_steps):
+                    observations = self._sim.step_physics(agent_object, time_step)
+                    # if collision occurred, quit the loop immediately
+                    # NOTE: this is not working yet
+                    # if self._sim.previous_step_collided:
+                    #    break
                 
         observations.update(
             self.sensor_suite.get_observations(
