@@ -12,25 +12,20 @@
 
   <include file="$(find ros_x_habitat)/launch/mapping_default.launch"/>
 
-<!--   <include file="$(find hector_geotiff)/launch/geotiff_mapper.launch"> -->
-<!--     <arg name="trajectory_source_frame_name" value="base_frame"/> -->
-<!--     <arg name="map_file_path" value="$(arg geotiff_map_file_path)"/> -->
-<!--   </include> -->
-
-
   <!-- Use RGBD synchronization -->
   <!-- Here is a general example using a standalone nodelet,
        but it is recommended to attach this nodelet to nodelet
        manager of the camera to avoid topic serialization -->
   <node pkg="nodelet" type="nodelet" name="rgbd_sync" args="standalone rtabmap_ros/rgbd_sync" output="screen">
-    <remap from="rgb/image"       to="ros_img_rgb"/>
-    <remap from="depth/image"     to="ros_img_depth"/>
-    <remap from="rgb/camera_info" to="camera_info_topic"/>
+    <remap from="rgb/image"       to="rgb"/>
+    <remap from="depth/image"     to="depth"/>
+    <remap from="rgb/camera_info" to="camera_info"/>
     <remap from="rgbd_image"      to="rgbd_image"/> <!-- output -->
     <!-- Should be true for not synchronized camera topics
          (e.g., false for kinectv2, zed, realsense, true for xtion, kinect360)-->
     <param name="approx_sync"       value="true"/>
   </node>
+  
   <node name="rtabmap" pkg="rtabmap_ros" type="rtabmap" output="screen" args="--delete_db_on_start">
         <param name="frame_id" type="string" value="base_frame"/>
         <param name="subscribe_depth" type="bool" value="false"/>
