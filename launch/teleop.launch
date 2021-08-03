@@ -1,9 +1,6 @@
 <?xml version="1.0"?>
 <launch>
 
-<!--	<node pkg="ros_x_habitat" type="habitat_env_node.py" name="env_node"> -->
-<!--	</node> -->
-
  	<node pkg="joy" type="joy_node" name="joy_node">
  		<param name="autorepeat_rate " value="20" />
  		<param name="coalesce_interval " value="0.05" />
@@ -20,10 +17,8 @@
 	</node>
 
 	<node pkg="rqt_graph" type="rqt_graph" name="rqt_graph"/>
-	<node pkg="rqt_tf_tree" type="rqt_tf_tree" name="rqt_tf_tree"/>
 
-	<node pkg="ros_x_habitat" type="dummy_ptgoal_with_gps_compass_subscriber.py" name="dummy_ptgoal_with_gps_compass_subscriber">
-	</node>
+	<node pkg="ros_x_habitat" type="dummy_ptgoal_with_gps_compass_subscriber.py" name="dummy_ptgoal_with_gps_compass_subscriber" />
 
 	<node pkg="depthimage_to_laserscan" type="depthimage_to_laserscan" name="depthimage_to_laserscan">
 		<remap from="image" to="depth"/>
@@ -33,6 +28,7 @@
 
 	<node pkg="laser_scan_matcher" type="laser_scan_matcher_node" name="laser_scan_matcher_node" output="screen">
 		<param name="max_iterations" value="10"/>
+		<remap from="camera_info" to="camera_info"/>
 		<param name="fixed_frame" value="odom"/>
 		<param name="base_frame" value="base_frame"/>
 	</node>
