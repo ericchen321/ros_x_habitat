@@ -7,7 +7,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--launch-file-path", default="launch/teleop.launch", type=str)
     parser.add_argument("--hab-env-node-path", default="src/nodes/habitat_env_node.py", type=str)
-    parser.add_argument("--hab-env-config-path", default="configs/pointnav_rgbd_with_physics.yaml", type=str)
+    parser.add_argument("--hab-env-config-path", default="configs/pointnav_rgbd_roam.yaml", type=str)
     parser.add_argument("--hab-env-node-name", default="roamer_env_node", type=str)
     parser.add_argument("--episode-id", type=str, default="-1")
     parser.add_argument(
