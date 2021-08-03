@@ -396,7 +396,7 @@ class HabitatEnvNode:
             # we publish to each of RGB, Depth and GPS+Compass sensor
             if sensor_uuid == "rgb":
                 sensor_msg = CvBridge().cv2_to_imgmsg(
-                    sensor_data.astype(np.uint8), encoding="passthrough"
+                    sensor_data.astype(np.uint8), encoding="rgb8"
                 )
             elif sensor_uuid == "depth":
                 sensor_msg = self.cv2_to_depthmsg(sensor_data)

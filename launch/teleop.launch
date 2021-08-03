@@ -11,7 +11,13 @@
 
  	<node pkg="ros_x_habitat" type="joy_controller.py" name="joy_controller" />
 
-	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find ros_x_habitat)/ros_configs/roam_with_joy.rviz"/>
+	<node pkg="image_view" type="image_view" name="image_view_rgb">
+		<remap from="image" to="rgb"/>
+	</node>
+
+	<node pkg="image_view" type="image_view" name="image_view_depth">
+		<remap from="image" to="depth"/>
+	</node>
 
 	<node pkg="rqt_graph" type="rqt_graph" name="rqt_graph"/>
 	<node pkg="rqt_tf_tree" type="rqt_tf_tree" name="rqt_tf_tree"/>
