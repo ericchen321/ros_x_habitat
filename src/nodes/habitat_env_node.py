@@ -115,11 +115,17 @@ class HabitatEnvNode:
                 self.angular_vel = None
             else:
                 self.action = None
-            self.observations = None
             self.count_steps = None
+            self.new_command_published = False
+
+        self.observations = None
+
+        # timing variables and guarding lock
+        self.timing_lock = Lock()
+        with self.timing_lock:
             self.t_reset_elapsed = None
             self.t_sim_elapsed = None
-            self.new_command_published = False
+
 
         # set up logger
         self.logger = utils_logging.setup_logger(self.node_name)
@@ -231,23 +237,26 @@ class HabitatEnvNode:
                 # evaluate from the next episode
                 pass
 
-            # initialize observations and step counter
-            with self.command_cv:
-                # reset timing variables
+            # initialize timing variables
+            with self.timing_lock:
                 self.t_reset_elapsed = 0.0
                 self.t_sim_elapsed = 0.0
 
-                # ------------ log reset time start ------------
-                t_reset_start = time.clock()
-                # --------------------------------------------
+            # ------------ log reset time start ------------
+            t_reset_start = time.clock()
+            # --------------------------------------------
 
-                self.observations = self.env.reset()
+            # initialize observations
+            self.observations = self.env.reset()
 
-                # ------------  log reset time end  ------------
-                t_reset_end = time.clock()
+            # ------------  log reset time end  ------------
+            t_reset_end = time.clock()
+            with self.timing_lock:
                 self.t_reset_elapsed += t_reset_end - t_reset_start
-                # -------------------------------------------- 
+            # -------------------------------------------- 
 
+            # initialize step counter
+            with self.command_cv:
                 self.count_steps = 0
 
     def _enable_reset(self, request, enable_roam):
@@ -330,10 +339,11 @@ class HabitatEnvNode:
                     metrics_dic = {
                         k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
                     }
-                    with self.command_cv:
-                        metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
-                        metrics_dic[NumericalMetrics.SIM_TIME] = self.t_sim_elapsed / self.count_steps
-                        metrics_dic[NumericalMetrics.RESET_TIME] = self.t_reset_elapsed
+                    with self.timing_lock:
+                        with self.command_cv:
+                            metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
+                            metrics_dic[NumericalMetrics.SIM_TIME] = self.t_sim_elapsed / self.count_steps
+                            metrics_dic[NumericalMetrics.RESET_TIME] = self.t_reset_elapsed
                     resp.update(metrics_dic)
                 else:
                     # no episode is evaluated. Toggle the flag so the env node
@@ -420,26 +430,24 @@ class HabitatEnvNode:
         sensor readings. Requires to be called 1) after simulator reset and
         2) when evaluation has been enabled.
         """
-        # publish sensor readings
-        with self.command_cv:
-            # pack observations in ROS message
-            observations_ros = self.obs_to_msgs(self.observations)
-            for sensor_uuid, _ in self.observations.items():
-                # we publish to each of RGB, Depth and Ptgoal/GPS+Compass sensor
-                if sensor_uuid == "rgb":
-                    self.pub_rgb.publish(observations_ros["rgb"])
-                elif sensor_uuid == "depth":
-                    self.pub_depth.publish(observations_ros["depth"])
-                    if self.use_continuous_agent:
-                        self.pub_camera_info.publish(
-                            self.make_depth_camera_info_msg(
-                                observations_ros["depth"].header,
-                                observations_ros["depth"].height,
-                                observations_ros["depth"].width))
-                elif sensor_uuid == "pointgoal_with_gps_compass":
-                    self.pub_pointgoal_with_gps_compass.publish(
-                        observations_ros["pointgoal_with_gps_compass"]
-                    )
+        # pack observations in ROS message
+        observations_ros = self.obs_to_msgs(self.observations)
+        for sensor_uuid, _ in self.observations.items():
+            # we publish to each of RGB, Depth and Ptgoal/GPS+Compass sensor
+            if sensor_uuid == "rgb":
+                self.pub_rgb.publish(observations_ros["rgb"])
+            elif sensor_uuid == "depth":
+                self.pub_depth.publish(observations_ros["depth"])
+                if self.use_continuous_agent:
+                    self.pub_camera_info.publish(
+                        self.make_depth_camera_info_msg(
+                            observations_ros["depth"].header,
+                            observations_ros["depth"].height,
+                            observations_ros["depth"].width))
+            elif sensor_uuid == "pointgoal_with_gps_compass":
+                self.pub_pointgoal_with_gps_compass.publish(
+                    observations_ros["pointgoal_with_gps_compass"]
+                )
 
     def make_depth_camera_info_msg(self, header, height, width):
         r"""
@@ -469,31 +477,35 @@ class HabitatEnvNode:
         Requires 1) being called only when evaluation has been enabled and
         2) being called only from the main thread.
         """
-        with self.command_cv:
-            # wait for new action before stepping
-            while self.new_command_published is False:
-                self.command_cv.wait()
-            self.new_command_published = False
+        if not self.use_continuous_agent:
+            # if using Habitat agent, wait for new action before stepping
+            with self.command_cv:
+                while self.new_command_published is False:
+                    self.command_cv.wait()
+                self.new_command_published = False
             
-            # enact the action / velocities
-            # ------------ log sim time start ------------
-            t_sim_start = time.clock()
-            # --------------------------------------------
+        # enact the action / velocities
+        # ------------ log sim time start ------------
+        t_sim_start = time.clock()
+        # --------------------------------------------
 
-            if self.use_continuous_agent:
+        if self.use_continuous_agent:
+            with self.command_cv:
                 self.env.set_agent_velocities(self.linear_vel, self.angular_vel)
-                (self.observations, _, _, _) = self.env.step()
-            else:
-                # NOTE: Here we call HabitatEvalRLEnv.step() which dispatches
-                # to Env.step() or PhysicsEnv.step_physics() depending on
-                # whether physics has been enabled
-                (self.observations, _, _, _) = self.env.step(self.action)
+            (self.observations, _, _, _) = self.env.step()
+        else:
+            # NOTE: Here we call HabitatEvalRLEnv.step() which dispatches
+            # to Env.step() or PhysicsEnv.step_physics() depending on
+            # whether physics has been enabled
+            (self.observations, _, _, _) = self.env.step(self.action)
 
-            # ------------  log sim time end  ------------
-            t_sim_end = time.clock()
+        # ------------  log sim time end  ------------
+        t_sim_end = time.clock()
+        with self.timing_lock:
             self.t_sim_elapsed += t_sim_end - t_sim_start
-            # --------------------------------------------
+        # --------------------------------------------
 
+        with self.command_cv:
             self.count_steps += 1
 
     def publish_and_step_for_eval(self):
@@ -614,7 +626,7 @@ def main():
     parser.add_argument(
         "--sensor-pub-rate",
         type=float,
-        default=5.0,
+        default=20.0,
     )
     args = parser.parse_args()
 
