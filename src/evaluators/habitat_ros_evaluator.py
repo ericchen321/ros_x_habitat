@@ -235,20 +235,25 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
     ) -> Dict[str, Dict[str, float]]:
         raise NotImplementedError
 
-    def generate_video(
-        self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
+    def generate_videos(
+        self,
+        episode_ids: List[str],
+        scene_ids: List[str],
+        agent_seed: int = 7,
+        *args,
+        **kwargs
     ) -> None:
         # TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
         raise NotImplementedError
 
-    def generate_map(
+    def generate_maps(
         self,
-        episode_id: str,
-        scene_id: str,
+        episode_ids: List[str],
+        scene_ids: List[str],
         agent_seed: int,
         map_height: int,
         *args,
         **kwargs,
-    ) -> np.ndarray:
+    ) -> Dict[str, np.ndarray]:
         # TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
         raise NotImplementedError

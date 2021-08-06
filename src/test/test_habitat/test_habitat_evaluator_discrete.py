@@ -1,6 +1,5 @@
 import os
 import unittest
-
 import numpy as np
 from PIL import Image
 from src.constants.constants import NumericalMetrics
@@ -43,51 +42,102 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
         assert np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.05) < 1e-5
 
     def test_evaluate_one_episode_discrete(self):
-        metrics_list = self.evaluator_discrete.evaluate(
+        metrics_dict = self.evaluator_discrete.evaluate(
             episode_id_last="48",
             scene_id_last="data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
             log_dir="logs",
             agent_seed=7,
         )
-        avg_metrics = self.evaluator_discrete.compute_avg_metrics(metrics_list)
+        metrics_dict = self.evaluator_discrete.extract_metrics(
+            metrics_dict,
+            [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SPL])
+        avg_metrics = self.evaluator_discrete.compute_avg_metrics(metrics_dict)
         assert np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.026777) < 1e-5
         assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.682441) < 1e-5
 
-    def test_generate_video_discrete(self):
+    def test_generate_video_discrete_one_episode(self):
         os.makedirs(
-            name="videos/test_habitat_evaluator_discrete/",
+            name="videos/test_habitat_evaluator_discrete/one_episode/",
             exist_ok=True)
+        self.evaluator_discrete.config.defrost()
+        self.evaluator_discrete.config.VIDEO_DIR = "videos/test_habitat_evaluator_discrete/one_episode/"
+        self.evaluator_discrete.config.freeze()
+
+        episode_ids = ["3"]
+        scene_ids = ["data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"]
+
+        # eye-ball check produced videos
+        self.evaluator_discrete.generate_videos(
+            episode_ids=episode_ids,
+            scene_ids=scene_ids,
+            agent_seed=7
+        )
+
+    def test_generate_video_discrete_two_episodes(self):
+        os.makedirs(
+            name="videos/test_habitat_evaluator_discrete/two_episodes/",
+            exist_ok=True)
+        self.evaluator_discrete.config.defrost()
+        self.evaluator_discrete.config.VIDEO_DIR = "videos/test_habitat_evaluator_discrete/two_episodes/"
+        self.evaluator_discrete.config.freeze()
+
+        episode_ids = ["0", "4"]
+        scene_ids = ["data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
+            "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"]
+
+        # eye-ball check produced videos
+        self.evaluator_discrete.generate_videos(
+            episode_ids=episode_ids,
+            scene_ids=scene_ids,
+            agent_seed=7
+        )
+
+    def test_generate_maps_discrete_one_episode(self):
+        os.makedirs(
+            name="habitat_maps/test_habitat_evaluator_discrete/one_episode/",
+            exist_ok=True)
+
+        episode_ids = ["3"]
+        scene_ids = ["data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"]
         
-        try:
-            os.remove(
-                "videos/test_habitat_evaluator_discrete/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.03-success=1.00-spl=0.68.mp4"
-            )
-        except FileNotFoundError:
-            pass
-
-        self.evaluator_discrete.generate_video(
-            episode_id="49",
-            scene_id="data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
-            agent_seed=7,
-        )
-        assert os.path.isfile(
-            "videos/test_habitat_evaluator_discrete/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.03-success=1.00-spl=0.68.mp4"
-        )
-
-    def test_generate_map_discrete(self):
-        os.makedirs(
-            name="habitat_maps/test_habitat_evaluator_discrete/",
-            exist_ok=True)
-
-        # for now we only check if the code runs
-        top_down_map = self.evaluator_discrete.generate_map(
-            episode_id="49",
-            scene_id="data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
+        top_down_maps = self.evaluator_discrete.generate_maps(
+            episode_ids=episode_ids,
+            scene_ids=scene_ids,
             agent_seed=7,
             map_height=400,
         )
-        map_img = Image.fromarray(top_down_map, "RGB")
-        map_img.save("habitat_maps/test_habitat_evaluator_discrete/test_generate_map_discrete.png")
+
+        # check iff only one map's generated
+        assert len(top_down_maps) == 1
+
+        # eye-ball check produced maps
+        for episode_id, scene_id in zip(episode_ids, scene_ids):
+            map_img = Image.fromarray(top_down_maps[f"{episode_id},{scene_id}"], "RGB")
+            map_img.save(f"habitat_maps/test_habitat_evaluator_discrete/one_episode/episode={episode_id}-scene={os.path.basename(scene_id)}.png")
+
+    def test_generate_maps_discrete_two_episodes(self):
+        os.makedirs(
+            name="habitat_maps/test_habitat_evaluator_discrete/two_episodes/",
+            exist_ok=True)
+
+        episode_ids = ["0", "4"]
+        scene_ids = ["data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
+            "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"]
+        
+        top_down_maps = self.evaluator_discrete.generate_maps(
+            episode_ids=episode_ids,
+            scene_ids=scene_ids,
+            agent_seed=7,
+            map_height=400,
+        )
+
+        # check iff two maps are generated
+        assert len(top_down_maps) == 2
+
+        # eye-ball check produced maps
+        for episode_id, scene_id in zip(episode_ids, scene_ids):
+            map_img = Image.fromarray(top_down_maps[f"{episode_id},{scene_id}"], "RGB")
+            map_img.save(f"habitat_maps/test_habitat_evaluator_discrete/two_episodes/episode={episode_id}-scene={os.path.basename(scene_id)}.png")
 
 
 if __name__ == "__main__":
