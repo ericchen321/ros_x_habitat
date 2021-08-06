@@ -1,11 +1,7 @@
-# logging
 import os
-
-# sim timing
 import time
 from traceback import print_exc
 from typing import List, Tuple, Dict
-
 import numpy as np
 from habitat.config import Config
 from habitat.utils.visualizations import maps
@@ -16,7 +12,10 @@ from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from src.constants.constants import NumericalMetrics
 from src.utils import utils_logging
-from src.utils.utils_visualization import TensorboardWriter, generate_video
+from src.utils.utils_visualization import (
+    TensorboardWriter,
+    generate_video,
+    colorize_and_fit_to_height)
 
 
 def get_default_config():
@@ -403,6 +402,60 @@ class HabitatEvaluator(HabitatSimEvaluator):
 
         logger.info(f"Given {num_episodes} episodes to generate maps")
         logger.info(f"Generated maps of {count_episodes_visualized} episodes")
+
+        # destroy the logger
+        utils_logging.close_logger(logger)
+
+        return dict_of_maps
+
+    def get_blank_maps(
+        self,
+        episode_ids: List[str],
+        scene_ids: List[str],
+        map_height: int,
+        *args,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
+        # create a logger
+        logger = utils_logging.setup_logger(__name__)
+
+        # precondition checks
+        assert len(episode_ids) == len(scene_ids)
+        
+        num_episodes = len(episode_ids)
+        count_episodes_visualized = 0
+
+        # reset episode iterator
+        self.env.reset_episode_iterator()
+
+        # visualize episodes in the given lists
+        dict_of_maps: Dict[str, np.ndarray] = {}
+        while count_episodes_visualized < num_episodes:
+            try:
+                self.env.reset()
+
+                # get episode and scene id
+                current_episode = self.env._env.current_episode
+                episode_id = str(current_episode.episode_id)
+                scene_id = current_episode.scene_id
+                if (episode_id, scene_id) in zip(episode_ids, scene_ids):
+                    # if the current episode is in the visualization list,
+                    # we get its top-down map
+                    count_episodes_visualized += 1
+
+                    # draw and append the map
+                    top_down_map_raw = maps.get_topdown_map_from_sim(
+                        sim=self.env._env._sim,
+                        map_resolution=self.env._env._config.TASK.TOP_DOWN_MAP.MAP_RESOLUTION,
+                        draw_border=self.env._env._config.TASK.TOP_DOWN_MAP.DRAW_BORDER
+                    )
+                    top_down_map = colorize_and_fit_to_height(top_down_map_raw, map_height)
+                    dict_of_maps[f"{episode_id},{scene_id}"] = top_down_map
+            except StopIteration:
+                break
+
+        logger.info(f"Given {num_episodes} episodes to generate blank top-down maps")
+        logger.info(f"Generated blank top-down maps of {count_episodes_visualized} episodes")
 
         # destroy the logger
         utils_logging.close_logger(logger)

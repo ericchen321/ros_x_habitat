@@ -1,4 +1,3 @@
-# logging
 import os
 import shlex
 from subprocess import Popen
@@ -256,4 +255,14 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         **kwargs,
     ) -> Dict[str, np.ndarray]:
         # TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
+        raise NotImplementedError
+
+    def get_blank_maps(
+        self,
+        episode_ids: List[str],
+        scene_ids: List[str],
+        map_height: int,
+        *args,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
         raise NotImplementedError

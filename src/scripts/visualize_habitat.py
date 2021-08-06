@@ -7,9 +7,6 @@ from typing import Dict, List
 import numpy as np
 
 
-# logging
-
-
 def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
@@ -23,9 +20,10 @@ def main():
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
     parser.add_argument("--episodes-to-visualize-file-path", default="", type=str)
-    parser.add_argument("--seed-file-path", type=str, default="seed=7.csv")
+    parser.add_argument("--seed-file-path", type=str, default="")
     parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--make-maps", default=False, action="store_true")
+    parser.add_argument("--make-blank-maps", default=False, action="store_true")
     parser.add_argument("--map-height", type=int, default=200)
     parser.add_argument("--map-dir", type=str, default="habitat_maps/")
 
@@ -71,7 +69,8 @@ def main():
         for seed in seeds:
             evaluator.generate_videos(episode_ids, scene_ids, seed)
 
-    # evaluate and visualize top-down maps
+    # evaluate and visualize top-down maps with agent position, shortest
+    # and actual path
     if args.make_maps:
         # create map dir
         os.makedirs(name=f"{args.map_dir}", exist_ok=True)
@@ -93,6 +92,21 @@ def main():
                 scene_id,
                 seeds,
                 maps[f"{episode_id},{scene_id}"],
+                args.map_dir)
+
+    # visualize blank top-down maps
+    if args.make_blank_maps:
+        # create map dir
+        os.makedirs(name=f"{args.map_dir}", exist_ok=True)
+
+        # create a blank map for each episode
+        blank_maps = evaluator.get_blank_maps(episode_ids, scene_ids, args.map_height)
+
+        for episode_id, scene_id in zip(episode_ids, scene_ids):
+            utils_visualization.save_blank_map(
+                episode_id,
+                scene_id,
+                blank_maps[f"{episode_id},{scene_id}"],
                 args.map_dir)
 
 
