@@ -55,7 +55,7 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
         assert np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.026777) < 1e-5
         assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.682441) < 1e-5
 
-    def test_generate_video_discrete_one_episode(self):
+    def test_generate_video_one_episode_discrete(self):
         os.makedirs(
             name="videos/test_habitat_evaluator_discrete/one_episode/",
             exist_ok=True)
@@ -73,7 +73,7 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
             agent_seed=7
         )
 
-    def test_generate_video_discrete_two_episodes(self):
+    def test_generate_video_two_episodes_discrete(self):
         os.makedirs(
             name="videos/test_habitat_evaluator_discrete/two_episodes/",
             exist_ok=True)
@@ -92,7 +92,7 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
             agent_seed=7
         )
 
-    def test_generate_maps_discrete_one_episode(self):
+    def test_generate_maps_one_episode_discrete(self):
         os.makedirs(
             name="habitat_maps/test_habitat_evaluator_discrete/one_episode/",
             exist_ok=True)
@@ -115,7 +115,7 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
             map_img = Image.fromarray(top_down_maps[f"{episode_id},{scene_id}"], "RGB")
             map_img.save(f"habitat_maps/test_habitat_evaluator_discrete/one_episode/episode={episode_id}-scene={os.path.basename(scene_id)}.png")
 
-    def test_generate_maps_discrete_two_episodes(self):
+    def test_generate_maps_two_episodes_discrete(self):
         os.makedirs(
             name="habitat_maps/test_habitat_evaluator_discrete/two_episodes/",
             exist_ok=True)
@@ -138,6 +138,29 @@ class TestHabitatEvaluatorDiscreteCase(unittest.TestCase):
         for episode_id, scene_id in zip(episode_ids, scene_ids):
             map_img = Image.fromarray(top_down_maps[f"{episode_id},{scene_id}"], "RGB")
             map_img.save(f"habitat_maps/test_habitat_evaluator_discrete/two_episodes/episode={episode_id}-scene={os.path.basename(scene_id)}.png")
+
+    def test_get_original_maps_two_episodes_discrete(self):
+        os.makedirs(
+            name="habitat_maps/test_get_original_maps/two_episodes/",
+            exist_ok=True)
+
+        episode_ids = ["0", "4"]
+        scene_ids = ["data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
+            "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"]
+        
+        top_down_maps = self.evaluator_discrete.get_blank_maps(
+            episode_ids=episode_ids,
+            scene_ids=scene_ids,
+            map_height=400,
+        )
+
+        # check iff two maps are generated
+        assert len(top_down_maps) == 2
+
+        # eye-ball check produced maps
+        for episode_id, scene_id in zip(episode_ids, scene_ids):
+            map_img = Image.fromarray(top_down_maps[f"{episode_id},{scene_id}"], "RGB")
+            map_img.save(f"habitat_maps/test_get_original_maps/two_episodes/episode={episode_id}-scene={os.path.basename(scene_id)}.pgm")
 
 
 if __name__ == "__main__":

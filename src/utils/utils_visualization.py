@@ -17,6 +17,8 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from torch.utils.tensorboard import SummaryWriter
 import pandas as pd
 import seaborn as sns
+from habitat.utils.visualizations import maps
+from PIL import Image
 
 cv2 = try_cv2_import()
 
@@ -156,6 +158,55 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
         f"{map_dir}/episode={episode_id}-scene={os.path.basename(scene_id)}.png"
     )
     plt.close(fig)
+
+
+
+def colorize_and_fit_to_height(
+    top_down_map_raw: np.ndarray, output_height: int
+):
+    r"""Given the output of the TopDownMap measure, colorizes the map,
+    and fits to a desired output height. Modified on the basis of
+    maps.colorize_draw_agent_and_fit_to_height from habitat-lab
+
+    :param top_down_map_raw: raw top-down map
+    :param output_height: The desired output height
+    """
+    top_down_map = maps.colorize_topdown_map(
+        top_down_map_raw, None
+    )
+
+    if top_down_map.shape[0] > top_down_map.shape[1]:
+        top_down_map = np.rot90(top_down_map, 1)
+
+    # scale top down map to align with rgb view
+    old_h, old_w, _ = top_down_map.shape
+    top_down_height = output_height
+    top_down_width = int(float(top_down_height) / old_h * old_w)
+    # cv2 resize (dsize is width first)
+    top_down_map = cv2.resize(
+        top_down_map,
+        (top_down_width, top_down_height),
+        interpolation=cv2.INTER_CUBIC,
+    )
+
+    return top_down_map
+
+
+def save_blank_map(
+    episode_id: str,
+    scene_id: str,
+    blank_map: np.ndarray,
+    map_dir: str
+):
+    r"""
+    Save the given blank map in .pgm format in <map_dir>/
+    :param episode_id: episode ID
+    :param scene_id: scene ID
+    :param blank_map: blank top-down map of the specified episode
+    :param map_dir: directory to save the map
+    """
+    map_img = Image.fromarray(blank_map, "RGB")
+    map_img.save(f"{map_dir}/blank_map-episode={episode_id}-scene={os.path.basename(scene_id)}.pgm")
 
 
 def generate_box_plots(

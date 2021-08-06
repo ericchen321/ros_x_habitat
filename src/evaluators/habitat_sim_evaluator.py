@@ -148,6 +148,27 @@ class HabitatSimEvaluator(Evaluator):
         """
         raise NotImplementedError
 
+    def get_blank_maps(
+        self,
+        episode_ids: List[str],
+        scene_ids: List[str],
+        map_height: int,
+        *args,
+        **kwargs,
+    ) -> Dict[str, np.ndarray]:
+        r"""
+        Return the original (no agent marker, paths, etc.) top-down maps of the specified
+        episodes.
+
+        :param episode_ids: List of episode ID's
+        :param scene_id: List of scene ID's
+        :param map_height: desired height of the map
+
+        :returns: Dictionary of blank Top-down maps with initial/goal position, shortest
+            path and actual path.
+        """
+        raise NotImplementedError
+
     def evaluate_and_get_maps(
         self,
         episode_id_last: str = "-1",
