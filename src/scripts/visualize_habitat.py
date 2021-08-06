@@ -1,10 +1,10 @@
 import argparse
 import os
-
 from habitat.config.default import get_config
-
 from src.evaluators.habitat_evaluator import HabitatEvaluator
 from src.utils import utils_visualization, utils_files
+from typing import Dict, List
+import numpy as np
 
 
 # logging
@@ -22,15 +22,11 @@ def main():
     parser.add_argument(
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
-    parser.add_argument("--episode-id", type=str, default="-1")
-    parser.add_argument(
-        "--scene-id",
-        type=str,
-        default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
-    )
+    parser.add_argument("--episodes-to-visualize-file-path", default="", type=str)
     parser.add_argument("--seed-file-path", type=str, default="seed=7.csv")
     parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--make-maps", default=False, action="store_true")
+    parser.add_argument("--map-height", type=int, default=200)
     parser.add_argument("--map-dir", type=str, default="habitat_maps/")
 
     args = parser.parse_args()
@@ -44,6 +40,9 @@ def main():
         seeds = utils_files.load_seeds_from_file(args.seed_file_path)
     else:
         seeds = [exp_config.SEED]
+
+    # get episode ID's and scene ID's of episodes to visualize
+    episode_ids, scene_ids = utils_files.load_episode_identifiers(args.episodes_to_visualize_file_path)
 
     # instantiate a discrete/continuous evaluator
     evaluator = None
@@ -70,20 +69,31 @@ def main():
         os.makedirs(name=f"{exp_config.VIDEO_DIR}", exist_ok=True)
 
         for seed in seeds:
-            evaluator.generate_video(args.episode_id, args.scene_id, seed)
+            evaluator.generate_videos(episode_ids, scene_ids, seed)
 
     # evaluate and visualize top-down maps
     if args.make_maps:
         # create map dir
         os.makedirs(name=f"{args.map_dir}", exist_ok=True)
 
-        maps = []
+        # create a list of per-seed maps for each episode
+        maps: Dict[str, List[np.ndarray]] = {}
+        for episode_id, scene_id in zip(episode_ids, scene_ids):
+            maps[f"{episode_id},{scene_id}"] = []
+        
         for seed in seeds:
-            map_one_seed = evaluator.generate_map(
-                args.episode_id, args.scene_id, seed, 200
-            )
-            maps.append(map_one_seed)
-        utils_visualization.generate_grid_of_maps(args.episode_id, args.scene_id, seeds, maps, args.map_dir)
+            maps_one_seed = evaluator.generate_maps(episode_ids, scene_ids, seed, args.map_height)
+            # add map from each episode to maps
+            for episode_id, scene_id in zip(episode_ids, scene_ids):
+                maps[f"{episode_id},{scene_id}"].append(maps_one_seed[f"{episode_id},{scene_id}"])
+        
+        # make grid of maps for each episode
+        for episode_id, scene_id in zip(episode_ids, scene_ids):
+            utils_visualization.generate_grid_of_maps(episode_id,
+                scene_id,
+                seeds,
+                maps[f"{episode_id},{scene_id}"],
+                args.map_dir)
 
 
 if __name__ == "__main__":

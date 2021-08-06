@@ -246,47 +246,31 @@ class HabitatEvaluator(HabitatSimEvaluator):
         )
         return dict_of_metrics
 
-    def generate_video(
-        self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
+    def generate_videos(
+        self,
+        episode_ids: List[str],
+        scene_ids: List[str],
+        agent_seed: int = 7,
+        *args,
+        **kwargs
     ) -> None:
         # create a logger
         logger = utils_logging.setup_logger(__name__)
 
-        # reset episode iterator
-        self.env.reset_episode_iterator()
+        # precondition checks
+        assert len(episode_ids) == len(scene_ids)
+        
+        num_episodes = len(episode_ids)
+        count_episodes_visualized = 0
 
-        # iterate to the given episode
-        observations_per_action = None
-        info_per_action = None
-        observations_per_action = self.env.iter_to_episode(episode_id, scene_id, logger)
-
-        # instantiate an agent
+        # create agent config
         agent_config = get_default_config()
         agent_config.INPUT_TYPE = self.input_type
         agent_config.MODEL_PATH = self.model_path
         agent_config.RANDOM_SEED = agent_seed
-        self.agent = PPOAgent(agent_config)
-        self.agent.reset()
 
-        # store observations over frames
-        observations_per_episode = []
-
-        # act until the episode is over
-        while not self.env._env.episode_over:
-            action = self.agent.act(observations_per_action)
-            (observations_per_action, _, _, info_per_action) = self.env.step(action)
-            # generate an output image for the action. The image includes observations
-            # and a top-down map showing the agent's state in the environment
-            out_im_per_action = observations_to_image(
-                observations_per_action, info_per_action
-            )
-            observations_per_episode.append(out_im_per_action)
-
-        # get metrics for video generation
-        metrics = self.env._env.get_metrics()
-        per_ep_metrics = {
-            k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
-        }
+        # reset episode iterator
+        self.env.reset_episode_iterator()
 
         # set up Tensorboard writer
         writer = None
@@ -295,62 +279,132 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 self.config.TENSORBOARD_DIR, flush_secs=30
             )  # flush_specs from base_trainer.py
 
-        # generate video and tensorboard visualization
-        generate_video(
-            video_option=self.config.VIDEO_OPTION,
-            video_dir=self.config.VIDEO_DIR,
-            images=observations_per_episode,
-            episode_id=episode_id,
-            scene_id=scene_id,
-            agent_seed=agent_seed,
-            checkpoint_idx=0,
-            metrics=per_ep_metrics,
-            tb_writer=writer,
-        )
+        # visualize episodes in the given lists
+        while count_episodes_visualized < num_episodes:
+            try:
+                observations_per_action = self.env.reset()
+                info_per_action = None
+
+                # get episode and scene id
+                current_episode = self.env._env.current_episode
+                episode_id = str(current_episode.episode_id)
+                scene_id = current_episode.scene_id
+                if (episode_id, scene_id) in zip(episode_ids, scene_ids):
+                    # if the current episode is in the visualization list,
+                    # we evaluate it
+                    count_episodes_visualized += 1
+
+                    # store observations over frames
+                    # NOTE: we are not storing the initial observations returned
+                    # from env.reset() because we cannot get the initial info for
+                    # observations_to_image()
+                    observations_per_episode = []
+
+                    # instantiate an agent
+                    self.agent = PPOAgent(agent_config)
+                    self.agent.reset()
+
+                    # act until the episode is over
+                    while not self.env._env.episode_over:
+                        action = self.agent.act(observations_per_action)
+                        (observations_per_action, _, _, info_per_action) = self.env.step(action)
+                        out_im_per_action = observations_to_image(
+                            observations_per_action, info_per_action
+                        )
+                        observations_per_episode.append(out_im_per_action)
+                    
+                    # get metrics for video generation
+                    metrics = self.env._env.get_metrics()
+                    per_ep_metrics = {
+                        k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
+                    }
+
+                    # generate video and tensorboard visualization
+                    generate_video(
+                        video_option=self.config.VIDEO_OPTION,
+                        video_dir=self.config.VIDEO_DIR,
+                        images=observations_per_episode,
+                        episode_id=episode_id,
+                        scene_id=scene_id,
+                        agent_seed=agent_seed,
+                        checkpoint_idx=0,
+                        metrics=per_ep_metrics,
+                        tb_writer=writer,
+                    )
+            except StopIteration:
+                break
+
+        logger.info(f"Given {num_episodes} episodes to generate videos")
+        logger.info(f"Generated videos of {count_episodes_visualized} episodes")
 
         # destroy the logger
         utils_logging.close_logger(logger)
 
-    def generate_map(
+    def generate_maps(
         self,
-        episode_id: str,
-        scene_id: str,
+        episode_ids: List[str],
+        scene_ids: List[str],
         agent_seed: int,
         map_height: int,
         *args,
         **kwargs,
-    ) -> np.ndarray:
+    ) -> Dict[str, np.ndarray]:
         # create a logger
         logger = utils_logging.setup_logger(__name__)
 
-        # reset episode iterator
-        self.env.reset_episode_iterator()
+        # precondition checks
+        assert len(episode_ids) == len(scene_ids)
+        
+        num_episodes = len(episode_ids)
+        count_episodes_visualized = 0
 
-        # iterate to the given episode
-        observations_per_action = None
-        info_per_action = None
-        observations_per_action = self.env.iter_to_episode(episode_id, scene_id, logger)
-
-        # instantiate an agent
+        # create agent config
         agent_config = get_default_config()
         agent_config.INPUT_TYPE = self.input_type
         agent_config.MODEL_PATH = self.model_path
         agent_config.RANDOM_SEED = agent_seed
-        self.agent = PPOAgent(agent_config)
-        self.agent.reset()
 
-        # act until the episode is over
-        while not self.env._env.episode_over:
-            action = self.agent.act(observations_per_action)
-            (observations_per_action, _, _, info_per_action) = self.env.step(action)
+        # reset episode iterator
+        self.env.reset_episode_iterator()
 
-        # draw the map
-        top_down_map = maps.colorize_draw_agent_and_fit_to_height(
-            info_per_action["top_down_map"],
-            map_height,
-        )
+        # visualize episodes in the given lists
+        dict_of_maps: Dict[str, np.ndarray] = {}
+        while count_episodes_visualized < num_episodes:
+            try:
+                observations_per_action = self.env.reset()
+                info_per_action = None
+
+                # get episode and scene id
+                current_episode = self.env._env.current_episode
+                episode_id = str(current_episode.episode_id)
+                scene_id = current_episode.scene_id
+                if (episode_id, scene_id) in zip(episode_ids, scene_ids):
+                    # if the current episode is in the visualization list,
+                    # we evaluate it
+                    count_episodes_visualized += 1
+
+                    # instantiate an agent
+                    self.agent = PPOAgent(agent_config)
+                    self.agent.reset()
+
+                    # act until the episode is over
+                    while not self.env._env.episode_over:
+                        action = self.agent.act(observations_per_action)
+                        (observations_per_action, _, _, info_per_action) = self.env.step(action)
+                    
+                    # draw and append the map
+                    top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+                        info_per_action["top_down_map"],
+                        map_height,
+                    )
+                    dict_of_maps[f"{episode_id},{scene_id}"] = top_down_map
+            except StopIteration:
+                break
+
+        logger.info(f"Given {num_episodes} episodes to generate maps")
+        logger.info(f"Generated maps of {count_episodes_visualized} episodes")
 
         # destroy the logger
         utils_logging.close_logger(logger)
 
-        return top_down_map
+        return dict_of_maps

@@ -364,9 +364,10 @@ class HabitatEnvNode:
             a ROS DepthImage message if using discrete agent
         """
         if self.use_continuous_agent:
-            # NOTE: according to Bruce, depth image should be multiplied
-            # to 10 to get measurements in meters. Not sure why
-            depth_img_in_m = np.squeeze(depth_img, axis=2) * 10.0
+            # depth reading should be denormalized, so we get
+            # readings in meters
+            assert self.config.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH is False
+            depth_img_in_m = np.squeeze(depth_img, axis=2)
             depth_msg = CvBridge().cv2_to_imgmsg(
                     depth_img_in_m.astype(np.float32), encoding="passthrough"
                 )

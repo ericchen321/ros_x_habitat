@@ -29,42 +29,5 @@ class TestHabitatEvaluatorContinuousCase(unittest.TestCase):
         assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.793321) < 1e-5
 
 
-    def test_generate_video_continuous(self):
-        os.makedirs(
-            name="videos/test_habitat_evaluator_continuous/",
-            exist_ok=True)
-        
-        try:
-            os.remove(
-                "videos/test_habitat_evaluator_continuous/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.03-success=1.00-spl=0.68.mp4"
-            )
-        except FileNotFoundError:
-            pass
-
-        self.evaluator_continuous.generate_video(
-            episode_id="49",
-            scene_id="data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
-            agent_seed=7,
-        )
-        assert os.path.isfile(
-            "videos/test_habitat_evaluator_continuous/episode=49-scene=van-gogh-room.glb-seed=7-ckpt=0-distance_to_goal=0.14-success=1.00-spl=0.79.mp4"
-        )
-
-    def test_generate_map_continuous(self):
-        os.makedirs(
-            name="habitat_maps/test_habitat_evaluator_continuous/",
-            exist_ok=True)
-
-        # for now we only check if the code runs
-        top_down_map = self.evaluator_continuous.generate_map(
-            episode_id="49",
-            scene_id="data/scene_datasets/habitat-test-scenes/van-gogh-room.glb",
-            agent_seed=7,
-            map_height=400,
-        )
-        map_img = Image.fromarray(top_down_map, "RGB")
-        map_img.save("habitat_maps/test_habitat_evaluator_continuous/test_generate_map_continuous.png")
-
-
 if __name__ == "__main__":
     unittest.main()

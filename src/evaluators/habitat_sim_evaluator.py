@@ -107,37 +107,44 @@ class HabitatSimEvaluator(Evaluator):
             }
         return new_dict_of_metrics
 
-    def generate_video(
-        self, episode_id: str, scene_id: str, agent_seed: int = 7, *args, **kwargs
+    def generate_videos(
+        self,
+        episode_ids: List[str],
+        scene_ids: List[str],
+        agent_seed: int = 7,
+        *args,
+        **kwargs
     ) -> None:
         r"""
-        Evaluate the episode of given episode ID and scene ID, and save the video to <video_dir>/.
+        Evaluate the episode of given episode ID's and scene ID's, and save their videos
+        to <video_dir>/.
 
-        :param episode_id: ID of the episode
-        :param scene_id: ID of the scene
+        :param episode_ids: List of episode ID's
+        :param scene_id: List of scene ID's
         :param agent_seed: seed for initializing agent
         """
         raise NotImplementedError
 
-    def generate_map(
+    def generate_maps(
         self,
-        episode_id: str,
-        scene_id: str,
+        episode_ids: List[str],
+        scene_ids: List[str],
         agent_seed: int,
         map_height: int,
         *args,
         **kwargs,
-    ) -> np.ndarray:
+    ) -> Dict[str, np.ndarray]:
         r"""
-        Evaluate the episode of given episode ID and scene ID, with agent initialized by the
-        given seed. Return the top-down map.
+        Evaluate the episode of given episode ID's and scene ID's, with agent initialized
+        by the given seed. Return the top-down maps from each episode.
 
-        :param episode_id: ID of the episode
-        :param scene_id: ID of the scene
+        :param episode_ids: List of episode ID's
+        :param scene_id: List of scene ID's
         :param agent_seed: seed for initializing agent
         :param map_height: desired height of the map
 
-        :returns: Top-down map with initial/goal position, shortest path and actual path.
+        :returns: Dictionary of Top-down maps with initial/goal position, shortest path and
+            actual path.
         """
         raise NotImplementedError
 
