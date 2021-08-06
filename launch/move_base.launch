@@ -3,6 +3,11 @@
 <launch>
 
    <arg name="map_path" default="$(find ros_x_habitat)/maps/mymap.yaml"/>
+   <arg name="map_file_path" default="$(find ros_x_habitat)"/>
+   <arg name="map_file_base_name" default="mymap.yaml"/>
+   <arg name="trajectory_source_frame_name" default="/base_frame"/>
+   <arg name="trajectory_update_rate" default="4"/>
+   <arg name="trajectory_publish_rate" default="0.25"/>
 
    <master auto="start"/>
 
@@ -56,13 +61,6 @@
    </node>
 
    <node pkg="rosservice" type="rosservice" name="global_loc" args="call --wait /global_localization"/>
-
-
-   <arg name="trajectory_source_frame_name" default="/base_frame"/>
-   <arg name="trajectory_update_rate" default="4"/>
-   <arg name="trajectory_publish_rate" default="0.25"/>
-   <arg name="map_file_path" default="$(find ros_x_habitat)"/>
-   <arg name="map_file_base_name" default="mymap.yaml"/>
 
 
    <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="hector_trajectory_server" output="screen">
