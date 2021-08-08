@@ -22,10 +22,7 @@ from ros_x_habitat.srv import ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int16
-from src.constants.constants import (
-    AgentResetCommands,
-    PACKAGE_NAME,
-    ServiceNames)
+from src.constants.constants import AgentResetCommands, PACKAGE_NAME, ServiceNames
 import time
 from src.utils import utils_logging
 
@@ -117,11 +114,19 @@ class HabitatAgentNode:
         self.logger = utils_logging.setup_logger(self.node_name)
 
         # establish agent reset service server
-        self.reset_service = rospy.Service(f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.RESET_AGENT}", ResetAgent, self.reset_agent)
+        self.reset_service = rospy.Service(
+            f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.RESET_AGENT}",
+            ResetAgent,
+            self.reset_agent,
+        )
 
         # establish agent time service server
-        self.agent_time_service = rospy.Service(f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.GET_AGENT_TIME}", GetAgentTime, self.get_agent_time)
-        
+        self.agent_time_service = rospy.Service(
+            f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.GET_AGENT_TIME}",
+            GetAgentTime,
+            self.get_agent_time,
+        )
+
         # publish to command topics
         if self.output_velocities:
             self.pub = rospy.Publisher("cmd_vel", Twist, queue_size=self.pub_queue_size)
@@ -196,7 +201,7 @@ class HabitatAgentNode:
                 self.shutdown = True
                 self.shutdown_cv.notify()
                 return True
-    
+
     def get_agent_time(self, request):
         r"""
         ROS service handler which returns the average time for the agent
@@ -312,7 +317,10 @@ class HabitatAgentNode:
         with self.lock:
             if self.output_velocities:
                 self.count_frames += 1
-                if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
+                if (
+                    self.count_frames
+                    == (self.sensor_pub_rate * self.control_period) - 1
+                ):
                     self.count_frames = 0
                     self.action = self.agent.act(observations)
                     self.count_steps += 1
@@ -342,7 +350,10 @@ class HabitatAgentNode:
         with self.lock:
             if self.output_velocities:
                 self.count_frames += 1
-                if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
+                if (
+                    self.count_frames
+                    == (self.sensor_pub_rate * self.control_period) - 1
+                ):
                     self.count_frames = 0
                     self.action = self.agent.act(observations)
                     self.count_steps += 1
@@ -374,7 +385,10 @@ class HabitatAgentNode:
         with self.lock:
             if self.output_velocities:
                 self.count_frames += 1
-                if self.count_frames == (self.sensor_pub_rate * self.control_period) - 1:
+                if (
+                    self.count_frames
+                    == (self.sensor_pub_rate * self.control_period) - 1
+                ):
                     self.count_frames = 0
                     self.action = self.agent.act(observations)
                     self.count_steps += 1
@@ -404,6 +418,7 @@ class HabitatAgentNode:
             while self.shutdown is False:
                 self.shutdown_cv.wait()
             rospy.signal_shutdown("received request to shut down")
+
 
 def main():
     # parse input arguments

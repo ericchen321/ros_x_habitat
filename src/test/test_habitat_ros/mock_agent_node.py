@@ -21,10 +21,7 @@ from ros_x_habitat.srv import ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Int16
-from src.constants.constants import (
-    AgentResetCommands,
-    PACKAGE_NAME,
-    ServiceNames)
+from src.constants.constants import AgentResetCommands, PACKAGE_NAME, ServiceNames
 from src.test.data.data import TestHabitatROSData
 from src.utils import utils_logging
 
@@ -42,7 +39,7 @@ class MockHabitatAgentNode:
         output_velocities: bool = False,
         control_period: float = 1.0,
         sensor_pub_rate: float = 5.0,
-        use_habitat_physics_sim: bool = False
+        use_habitat_physics_sim: bool = False,
     ):
         # precondition checks
         if output_velocities:
@@ -58,7 +55,7 @@ class MockHabitatAgentNode:
         self.output_velocities = output_velocities
 
         self.sensor_pub_rate = float(sensor_pub_rate)
-        
+
         if self.output_velocities:
             self.control_period = control_period
 
@@ -85,10 +82,18 @@ class MockHabitatAgentNode:
         self.logger = utils_logging.setup_logger(self.node_name)
 
         # establish agent reset service server
-        self.reset_service = rospy.Service(f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.RESET_AGENT}", ResetAgent, self.reset_agent)
+        self.reset_service = rospy.Service(
+            f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.RESET_AGENT}",
+            ResetAgent,
+            self.reset_agent,
+        )
 
         # establish agent time service server
-        self.agent_time_service = rospy.Service(f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.GET_AGENT_TIME}", GetAgentTime, self.get_agent_time)
+        self.agent_time_service = rospy.Service(
+            f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.GET_AGENT_TIME}",
+            GetAgentTime,
+            self.get_agent_time,
+        )
 
         # publish to command topics
         if self.output_velocities:
@@ -135,7 +140,7 @@ class MockHabitatAgentNode:
                 self.shutdown = True
                 self.shutdown_cv.notify()
                 return True
-    
+
     def get_agent_time(self, request):
         r"""
         ROS service handler which returns the time that the agent takes
@@ -259,56 +264,84 @@ class MockHabitatAgentNode:
                 # using Habitat sim
                 if self.use_habitat_physics_sim:
                     # check sensor observations' correctness - continuous case
-                    assert self.observations_count < TestHabitatROSData.test_acts_and_obs_continuous_num_obs
+                    assert (
+                        self.observations_count
+                        < TestHabitatROSData.test_acts_and_obs_continuous_num_obs
+                    )
                     assert (
                         np.linalg.norm(
-                            observations["rgb"] - TestHabitatROSData.test_acts_and_obs_continuous_obs_rgb[self.observations_count]
+                            observations["rgb"]
+                            - TestHabitatROSData.test_acts_and_obs_continuous_obs_rgb[
+                                self.observations_count
+                            ]
                         )
                         < 1e-5
                     ), f"RGB reading at step {self.observations_count} does not match"
                     assert (
                         np.linalg.norm(
                             observations["depth"]
-                            - TestHabitatROSData.test_acts_and_obs_continuous_obs_depth[self.observations_count]
+                            - TestHabitatROSData.test_acts_and_obs_continuous_obs_depth[
+                                self.observations_count
+                            ]
                         )
                         < 1e-5
                     ), f"Depth reading at step {self.observations_count} does not match"
                     assert (
                         np.linalg.norm(
                             observations["pointgoal_with_gps_compass"]
-                            - TestHabitatROSData.test_acts_and_obs_continuous_obs_ptgoal_with_comp[self.observations_count]
+                            - TestHabitatROSData.test_acts_and_obs_continuous_obs_ptgoal_with_comp[
+                                self.observations_count
+                            ]
                         )
                         < 1e-5
                     ), f"Pointgoal + GPS/Compass reading at step {self.observations_count} does not match"
                     # produce the saved continuous action at this step
-                    action = {"action": TestHabitatROSData.test_acts_and_obs_continuous_acts[self.observations_count]}
-                
+                    action = {
+                        "action": TestHabitatROSData.test_acts_and_obs_continuous_acts[
+                            self.observations_count
+                        ]
+                    }
+
                 else:
                     # check sensor observations' correctness - discrete case
-                    assert self.observations_count < TestHabitatROSData.test_acts_and_obs_discrete_num_obs
+                    assert (
+                        self.observations_count
+                        < TestHabitatROSData.test_acts_and_obs_discrete_num_obs
+                    )
                     assert (
                         np.linalg.norm(
-                            observations["rgb"] - TestHabitatROSData.test_acts_and_obs_discrete_obs_rgb[self.observations_count]
+                            observations["rgb"]
+                            - TestHabitatROSData.test_acts_and_obs_discrete_obs_rgb[
+                                self.observations_count
+                            ]
                         )
                         < 1e-5
                     ), f"RGB reading at step {self.observations_count} does not match"
                     assert (
                         np.linalg.norm(
                             observations["depth"]
-                            - TestHabitatROSData.test_acts_and_obs_discrete_obs_depth[self.observations_count]
+                            - TestHabitatROSData.test_acts_and_obs_discrete_obs_depth[
+                                self.observations_count
+                            ]
                         )
                         < 1e-5
                     ), f"Depth reading at step {self.observations_count} does not match"
                     assert (
                         np.linalg.norm(
                             observations["pointgoal_with_gps_compass"]
-                            - TestHabitatROSData.test_acts_and_obs_discrete_obs_ptgoal_with_comp[self.observations_count]
+                            - TestHabitatROSData.test_acts_and_obs_discrete_obs_ptgoal_with_comp[
+                                self.observations_count
+                            ]
                         )
                         < 1e-5
                     ), f"Pointgoal + GPS/Compass reading at step {self.observations_count} does not match"
                     # produce the saved discrete action at this step
-                    action = {"action": TestHabitatROSData.test_acts_and_obs_discrete_acts[self.observations_count]}
-            
+                    action = {
+                        "action": TestHabitatROSData.test_acts_and_obs_discrete_acts[
+                            self.observations_count
+                        ]
+                    }
+
                 # publish a discrete action
                 action_msg = self.action_to_msg(action)
                 self.pub.publish(action_msg)
@@ -320,6 +353,7 @@ class MockHabitatAgentNode:
             while self.shutdown is False:
                 self.shutdown_cv.wait()
             rospy.signal_shutdown("received request to shut down")
+
 
 def main():
     # parse input arguments
@@ -344,7 +378,7 @@ def main():
         output_velocities=args.output_velocities,
         control_period=args.control_period,
         sensor_pub_rate=args.sensor_pub_rate,
-        use_habitat_physics_sim=args.use_habitat_physics_sim
+        use_habitat_physics_sim=args.use_habitat_physics_sim,
     )
 
     mock_agent_node.spin_until_shutdown()

@@ -9,10 +9,7 @@ import rostest
 
 from mock_env_node import MockHabitatEnvNode
 from ros_x_habitat.srv import ResetAgent, GetAgentTime
-from src.constants.constants import (
-    AgentResetCommands,
-    PACKAGE_NAME,
-    ServiceNames)
+from src.constants.constants import AgentResetCommands, PACKAGE_NAME, ServiceNames
 from src.test.data.data import TestHabitatROSData
 
 
@@ -29,10 +26,16 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
         self.agent_node_under_test_name = "agent_node_under_test"
 
         # set up agent reset service client
-        self.reset_agent = rospy.ServiceProxy(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}", ResetAgent)
+        self.reset_agent = rospy.ServiceProxy(
+            f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}",
+            ResetAgent,
+        )
 
         # set up agent time service client
-        self.get_agent_time = rospy.ServiceProxy(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.GET_AGENT_TIME}", GetAgentTime)
+        self.get_agent_time = rospy.ServiceProxy(
+            f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.GET_AGENT_TIME}",
+            GetAgentTime,
+        )
 
     def tearDown(self):
         pass
@@ -46,11 +49,13 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
 
         # init mock env node
         mock_env_node = MockHabitatEnvNode(
-            node_name="mock_env_node",
-            enable_physics_sim=False)
+            node_name="mock_env_node", enable_physics_sim=False
+        )
 
         # reset the agent
-        rospy.wait_for_service(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}")
+        rospy.wait_for_service(
+            f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}"
+        )
         try:
             resp = self.reset_agent(int(AgentResetCommands.RESET), 7)
             assert resp.done
@@ -68,20 +73,28 @@ class HabitatROSAgentNodeDiscreteCase(unittest.TestCase):
                 TestHabitatROSData.test_acts_and_obs_discrete_obs_depth[i],
                 TestHabitatROSData.test_acts_and_obs_discrete_obs_ptgoal_with_comp[i],
             )
-            mock_env_node.check_command(TestHabitatROSData.test_acts_and_obs_discrete_acts[i])
+            mock_env_node.check_command(
+                TestHabitatROSData.test_acts_and_obs_discrete_acts[i]
+            )
             r.sleep()
 
         # check the agent time service server
-        rospy.wait_for_service(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.GET_AGENT_TIME}")
+        rospy.wait_for_service(
+            f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.GET_AGENT_TIME}"
+        )
         try:
             agent_time_resp = self.get_agent_time()
             # check if agent time is in a reasonable range
-            assert agent_time_resp.agent_time >= 0.0 and agent_time_resp.agent_time <= 1.0
+            assert (
+                agent_time_resp.agent_time >= 0.0 and agent_time_resp.agent_time <= 1.0
+            )
         except rospy.ServiceException:
             raise rospy.ServiceException
-        
+
         # shut down the agent
-        rospy.wait_for_service(f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}")
+        rospy.wait_for_service(
+            f"{PACKAGE_NAME}/{self.agent_node_under_test_name}/{ServiceNames.RESET_AGENT}"
+        )
         try:
             resp = self.reset_agent(int(AgentResetCommands.SHUTDOWN), 0)
             assert resp.done
