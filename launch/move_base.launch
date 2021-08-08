@@ -2,9 +2,9 @@
 
 <launch>
 
-   <arg name="map_path" default="$(find ros_x_habitat)/maps/mymap.yaml"/>
+   <arg name="map_path" default="$(find ros_x_habitat)/maps/test_map.yaml"/>
    <arg name="map_file_path" default="$(find ros_x_habitat)"/>
-   <arg name="map_file_base_name" default="mymap.yaml"/>
+   <arg name="map_file_base_name" default="test_map.yaml"/>
    <arg name="trajectory_source_frame_name" default="/base_frame"/>
    <arg name="trajectory_update_rate" default="4"/>
    <arg name="trajectory_publish_rate" default="0.25"/>

@@ -10,7 +10,7 @@
 
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find hector_slam_launch)/rviz_cfg/mapping_demo.rviz"/>
 
-  <include file="$(find ros_x_habitat)/launch/mapping_default.launch"/>
+  <include file="hector_mapping_default.launch"/>
 
   <!-- Use RGBD synchronization -->
   <!-- Here is a general example using a standalone nodelet,
