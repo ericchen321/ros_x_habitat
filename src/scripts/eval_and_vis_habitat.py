@@ -100,16 +100,12 @@ def main():
         )
 
         # extract top-down-maps
-        maps_per_seed = evaluator.extract_metrics(
-            metrics_and_maps,
-            ["top_down_map"]
-        )
+        maps_per_seed = evaluator.extract_metrics(metrics_and_maps, ["top_down_map"])
         maps.append(maps_per_seed)
 
         # extract other metrics
         metrics_per_seed = evaluator.extract_metrics(
-            metrics_and_maps,
-            [metric_name for metric_name in NumericalMetrics]
+            metrics_and_maps, [metric_name for metric_name in NumericalMetrics]
         )
         metrics_list.append(metrics_per_seed)
 
@@ -135,7 +131,7 @@ def main():
     # make top-down maps for each episode
     if args.make_maps:
         # create map dir
-        os.makedirs(name = f"{args.map_dir}", exist_ok=True)
+        os.makedirs(name=f"{args.map_dir}", exist_ok=True)
 
         if len(maps) > 0:
             for episode_identifier, _ in maps[0].items():
@@ -151,9 +147,10 @@ def main():
                     episode_identifier.split(",")[1],
                     seeds,
                     maps_per_episode,
-                    args.map_dir)
+                    args.map_dir,
+                )
     logger.info("Generated top-down maps")
-    
+
     # make box-and-whisker plots of metrics vs. seed
     if args.make_plots:
         # create plot dir

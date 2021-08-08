@@ -47,13 +47,12 @@ class JoyHabitatRoamer:
         self.env_process = Popen(env_node_args)
 
         # set up roam service client
-        self.roam_service_name = f"{PACKAGE_NAME}/{self.hab_env_node_name}/{ServiceNames.ROAM}"
+        self.roam_service_name = (
+            f"{PACKAGE_NAME}/{self.hab_env_node_name}/{ServiceNames.ROAM}"
+        )
         self.roam = rospy.ServiceProxy(self.roam_service_name, Roam)
 
-    def roam_until_shutdown(
-        self,
-        episode_id_last: str="-1",
-        scene_id_last: str=""):
+    def roam_until_shutdown(self, episode_id_last: str = "-1", scene_id_last: str = ""):
         r"""
         Roam in a specified scene until shutdown signalled.
         :param episode_id_last: last episode's ID before the one to roam in.

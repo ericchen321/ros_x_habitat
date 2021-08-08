@@ -75,7 +75,7 @@ def main():
         )
     elif "SIMULATOR" in exp_config:
         logger.info("Instantiating discrete simulator")
-        evaluator = HabitatROSEvaluator( 
+        evaluator = HabitatROSEvaluator(
             config_paths=args.task_config,
             input_type=args.input_type,
             model_path=args.model_path,

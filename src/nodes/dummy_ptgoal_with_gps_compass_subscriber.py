@@ -2,9 +2,11 @@
 import rospy
 from ros_x_habitat.msg import PointGoalWithGPSCompass
 
+
 def callback(data):
-    #rospy.loginfo(f"dist_to_goal: {data.distance_to_goal}, angle_to_goal: {data.angle_to_goal}")
+    # rospy.loginfo(f"dist_to_goal: {data.distance_to_goal}, angle_to_goal: {data.angle_to_goal}")
     pass
+
 
 def listener():
     # In ROS, nodes are uniquely named. If two nodes with the same
@@ -19,5 +21,5 @@ def listener():
     rospy.spin()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     listener()

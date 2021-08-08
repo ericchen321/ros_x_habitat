@@ -6,10 +6,7 @@ import rospy
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
-from ros_x_habitat.srv import (
-    EvalEpisode,
-    ResetAgent,
-    GetAgentTime)
+from ros_x_habitat.srv import EvalEpisode, ResetAgent, GetAgentTime
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import Header, Int16
@@ -18,7 +15,8 @@ from src.constants.constants import (
     NumericalMetrics,
     EvalEpisodeSpecialIDs,
     PACKAGE_NAME,
-    ServiceNames)
+    ServiceNames,
+)
 from src.test.data.data import TestHabitatROSData
 from src.utils import utils_logging
 
@@ -29,7 +27,7 @@ class MockHabitatEnvNode:
         node_name: str,
         enable_physics_sim: bool = False,
         use_continuous_agent: bool = False,
-        pub_rate: float = 5.0
+        pub_rate: float = 5.0,
     ):
         r"""
         A simple node to mock the Habitat environment node. Publishes pre-recorded
@@ -98,7 +96,9 @@ class MockHabitatEnvNode:
 
         # mock eval_episode service server
         self.eval_service = rospy.Service(
-            f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.EVAL_EPISODE}", EvalEpisode, self.eval_episode
+            f"{PACKAGE_NAME}/{self.node_name}/{ServiceNames.EVAL_EPISODE}",
+            EvalEpisode,
+            self.eval_episode,
         )
         self.episode_counter_lock = Lock()
         with self.episode_counter_lock:
@@ -129,7 +129,7 @@ class MockHabitatEnvNode:
             NumericalMetrics.SPL: 0.0,
             NumericalMetrics.NUM_STEPS: 0,
             NumericalMetrics.SIM_TIME: 0.0,
-            NumericalMetrics.RESET_TIME: 0.0
+            NumericalMetrics.RESET_TIME: 0.0,
         }
         if request.episode_id_last == EvalEpisodeSpecialIDs.REQUEST_SHUTDOWN:
             # if shutdown request, enable reset and return immediately
@@ -140,8 +140,14 @@ class MockHabitatEnvNode:
             with self.episode_counter_lock:
                 # check if the evaluator requests correct episode and scene id
                 if self.episode_counter == 0:
-                    assert request.episode_id_last == TestHabitatROSData.test_evaluator_episode_id_request
-                    assert request.scene_id_last == TestHabitatROSData.test_evaluator_scene_id
+                    assert (
+                        request.episode_id_last
+                        == TestHabitatROSData.test_evaluator_episode_id_request
+                    )
+                    assert (
+                        request.scene_id_last
+                        == TestHabitatROSData.test_evaluator_scene_id
+                    )
 
                 if self.episode_counter == 0:
                     # respond with the test episode's metrics
@@ -239,6 +245,7 @@ class MockHabitatEnvNode:
                 self.new_action_published = True
                 self.action_cv.notify()
 
+
 def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
@@ -255,12 +262,12 @@ def main():
         node_name="mock_env_node",
         enable_physics_sim=args.enable_physics_sim,
         use_continuous_agent=args.use_continuous_agent,
-        pub_rate=args.sensor_pub_rate
+        pub_rate=args.sensor_pub_rate,
     )
 
     with mock_env_node.shutdown_cv:
         while mock_env_node.shutdown is False:
-            mock_env_node.shutdown_cv.wait()    
+            mock_env_node.shutdown_cv.wait()
 
 
 if __name__ == "__main__":

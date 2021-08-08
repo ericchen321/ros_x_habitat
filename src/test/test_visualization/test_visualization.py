@@ -20,10 +20,10 @@ class TestVisualization(unittest.TestCase):
                 "sample_b": sample_b,
                 "sample_c": sample_c,
                 "sample_d": sample_d,
-                "sample_e": sample_e
+                "sample_e": sample_e,
             }
             metrics_list.append(dict_of_metrics)
-        
+
         plot_dir = "metric_plots/test_generate_box_plots/"
         os.makedirs(name=plot_dir, exist_ok=True)
         # we eye-ball check the generated plot for now

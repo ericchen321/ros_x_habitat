@@ -6,7 +6,9 @@ class TestHabitatROSData:
     # for test_habiat_ros_<agent/env>_node_discrete
     test_acts_and_obs_discrete_task_config = "configs/pointnav_rgbd_val.yaml"
     test_acts_and_obs_discrete_episode_id = "49"
-    test_acts_and_obs_discrete_scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
+    test_acts_and_obs_discrete_scene_id = (
+        "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
+    )
     test_acts_and_obs_discrete_num_obs = 47
     test_acts_and_obs_discrete_obs_rgb = []
     test_acts_and_obs_discrete_obs_depth = []
@@ -37,7 +39,9 @@ class TestHabitatROSData:
     # for test_habiat_ros_<agent/env>_node_continuous
     test_acts_and_obs_continuous_task_config = "configs/pointnav_rgbd_with_physics.yaml"
     test_acts_and_obs_continuous_episode_id = "49"
-    test_acts_and_obs_continuous_scene_id = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
+    test_acts_and_obs_continuous_scene_id = (
+        "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
+    )
     test_acts_and_obs_continuous_num_obs = 33
     test_acts_and_obs_continuous_obs_rgb = []
     test_acts_and_obs_continuous_obs_depth = []

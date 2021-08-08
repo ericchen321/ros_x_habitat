@@ -25,7 +25,10 @@ class TestHabitatEvaluatorContinuousCase(unittest.TestCase):
             agent_seed=7,
         )
         avg_metrics = self.evaluator_continuous.compute_avg_metrics(metrics_list)
-        assert np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.140662) < 1e-5
+        assert (
+            np.linalg.norm(avg_metrics[NumericalMetrics.DISTANCE_TO_GOAL] - 0.140662)
+            < 1e-5
+        )
         assert np.linalg.norm(avg_metrics[NumericalMetrics.SPL] - 0.793321) < 1e-5
 
 
