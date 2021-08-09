@@ -1,0 +1,2 @@
+episode_id,scene_id,distance_to_goal_1,success_1,spl_1,num_steps_1,distance_to_goal_2,success_2,spl_2,num_steps_2
+1,data/scene_datasets/mp3d/2t7WUuJeko7/2t7WUuJeko7.glb,0.21339160203933716,0.0,0.0,33.0,0.08460258692502975,1.0,0.9399125299014519,32.0
