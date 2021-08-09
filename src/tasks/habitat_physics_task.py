@@ -88,14 +88,14 @@ class PhysicsNavigationTask(EmbodiedTask):
                 )
                 # step through all frames in the control period
                 total_steps = round(control_period * 1.0 / time_step)
-                
+
                 for frame in range(0, total_steps):
                     observations = self._sim.step_physics(agent_object, time_step)
                     # if collision occurred, quit the loop immediately
                     # NOTE: this is not working yet
                     # if self._sim.previous_step_collided:
                     #    break
-                
+
         observations.update(
             self.sensor_suite.get_observations(
                 observations=observations,

@@ -9,8 +9,8 @@ pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
 
 def callback(data):
     # to speed up
-    vel_linear_scale_factor = 4.0
-    vel_angular_scale_factor = 4.0
+    vel_linear_scale_factor = 2.0
+    vel_angular_scale_factor = 2.0
 
     # negative sign in vel_z because agent eyes look at negative z axis
     vel_max = 0.3  # m/s

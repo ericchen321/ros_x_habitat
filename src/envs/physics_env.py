@@ -90,12 +90,14 @@ class PhysicsEnv(Env):
         ), "Cannot call step before calling reset"
         # NOTE: we relax the episode-is-not-over condition due
         # to the roam mode
-        #assert (
+        # assert (
         #    self._episode_over is False
-        #), "Episode over, call reset before calling step"
+        # ), "Episode over, call reset before calling step"
 
         # Support simpler interface as well
-        if action is not None and (isinstance(action, str) or isinstance(action, (int, np.integer))):
+        if action is not None and (
+            isinstance(action, str) or isinstance(action, (int, np.integer))
+        ):
             action = {"action": action}
 
         # Step with physics
@@ -134,7 +136,7 @@ class PhysicsEnv(Env):
             self._current_episode._shortest_path_cache = None
 
         self._current_episode = next(self._episode_iterator)
-        
+
         # remove all objects in the scene, but keep their scene nodes
         obj_handles = self._sim.get_rigid_object_manager().get_object_handles()
         for obj_handle in obj_handles:
@@ -176,7 +178,9 @@ class PhysicsEnv(Env):
 
         return observations
 
-    def set_agent_velocities(self, linear_vel: np.ndarray, angular_vel: np.ndarray) -> None:
+    def set_agent_velocities(
+        self, linear_vel: np.ndarray, angular_vel: np.ndarray
+    ) -> None:
         r"""
         Set linear and angular velocity for the agent in the environment.
         Can only be called when physics is turned on.
