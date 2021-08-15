@@ -107,6 +107,50 @@ class HabitatSimEvaluator(Evaluator):
             }
         return new_dict_of_metrics
 
+    @classmethod
+    def compute_pairwise_diff_of_metrics(
+        cls,
+        dict_of_metrics_baseline: Dict[str, Dict[str, float]],
+        dict_of_metrics_compared: Dict[str, Dict[str, float]],
+        metric_names: List[str],
+        compute_percentage: bool
+    ) -> Dict[str, Dict[str, float]]:
+        r"""
+        Compute pairwise difference in metrics between `dict_of_metrics_baseline`
+        and `dict_of_metrics_compared`. Require each metric being a scalar value.
+        :param dict_of_metrics_baseline: metrics collected under the baseline setting
+        :param dict_of_metrics_compared: metrics collected under the setting of our
+            interest
+        :param metric_names: names of the metrics to compute differences
+        :param compute_percentage: if compute the difference in percentage or not
+        :return a dictionary of per-episode metrics, but each metric's value is the
+            (percentage) pair-wise difference
+        """
+        # precondition check
+        assert len(dict_of_metrics_baseline) == len(dict_of_metrics_compared)
+        
+        pairwise_diff_dict_of_metrics = {}
+        for episode_identifier, episode_metrics_baseline in dict_of_metrics_baseline.items():
+            # iterate over episodes
+            episode_metrics_compared = dict_of_metrics_compared[episode_identifier]
+            pairwise_diff_dict_of_metrics[episode_identifier] = {}
+            for metric_name in metric_names:
+                # compute difference per metric
+                if compute_percentage:
+                    if np.linalg.norm(episode_metrics_baseline[metric_name] - 0.0) < 1e-5:
+                        # handle divide-by-zero - register invalid % change
+                        metric_diff = float("nan")
+                    else:
+                        metric_diff = ((episode_metrics_compared[metric_name]
+                            - episode_metrics_baseline[metric_name]) /
+                                episode_metrics_baseline[metric_name]) * 100.0
+                else:
+                    metric_diff = (episode_metrics_compared[metric_name]
+                        - episode_metrics_baseline[metric_name])
+                pairwise_diff_dict_of_metrics[episode_identifier][metric_name] = metric_diff
+        
+        return pairwise_diff_dict_of_metrics
+
     def generate_videos(
         self,
         episode_ids: List[str],
