@@ -8,97 +8,6 @@ import glob
 import numpy as np
 
 
-def extract_log_filepaths(
-    log_dir_1: str,
-    log_dir_2: str
-) -> Tuple[List[str], List[str]]:
-    r"""
-    Return paths to per-episode log files in each of the two directories,
-    respectively.
-    :param log_dir_1: first directory to get per-episode log files
-    :param log_dir_2: second directory to get per-episode log files
-    :return: a tuple of two lists; each list contains paths to per-episode
-        log files from each directory
-    """
-    log_filepaths_1 = []
-    log_filepaths_2 = []
-    for log_dir in [log_dir_1, log_dir_2]:
-        for log_filepath in glob.glob(f"{log_dir}/*.log"):
-            if log_dir == log_dir_1:
-                log_filepaths_1.append(log_filepath)
-            else:
-                log_filepaths_2.append(log_filepath)
-    return (log_filepaths_1, log_filepaths_2)
-
-def get_metric_name_appended_by_suffix(
-    metric_name: str,
-    suffix: str
-) -> str:
-    r"""
-    Return String <metric_name><suffix>.
-    :param metric_name: name of a metric
-    :param suffix: suffix to append
-    :return: the metric name appended by the suffix 
-    """
-    return f"{metric_name}{suffix}"
-
-def get_metric_name_without_suffix(
-    metric_name: str,
-    suffix: str
-) -> str:
-    r"""
-    Return the metric name with the suffix removed.
-    :param metric_name: name of a metric
-    :param suffix: suffix to append
-    :return: the metric name with the suffix removed
-    """
-    return metric_name.rstrip(suffix)
-
-def get_metric_names_1_and_2(
-    metric_names: str
-) -> Tuple[List[str], List[str]]:
-    r"""
-    Return two list of metric names. Each metric in the list has its name
-    appended by "_1" or "_2".
-    :param metric_names: names of (original) metrics
-    :return: two list of metric names
-    """
-    metric_names_1 = []
-    metric_names_2 = []
-    for suffix in ["_1", "_2"]:
-        for metric_name in metric_names:
-            if suffix == "_1":
-                metric_names_1.append(get_metric_name_appended_by_suffix(metric_name, suffix))
-            else:
-                metric_names_2.append(get_metric_name_appended_by_suffix(metric_name, suffix))
-    return metric_names_1, metric_names_2
-
-def extract_metrics_from_each(
-    metric_names: List[str],
-    log_filepaths_1: List[str],
-    log_filepaths_2: List[str]
-) -> Tuple[Dict[str, Dict], Dict[str, Dict]]:
-    r"""
-    Create a dictionary of metrics for each given list of paths to log files.
-    :param metric_names: list of metric names to extract
-    :param log_filepath_1: list of paths to the first set of log files
-    :param log_filepath_2: list of paths to the second set of log files
-    :return: a tuple of two dictionaries of metrics
-    """
-    dict_of_metrics_1 = {}
-    dict_of_metrics_2 = {}
-    for log_filepaths in [log_filepaths_1, log_filepaths_2]:
-        for log_filepath in log_filepaths:
-            episode_id, scene_id, per_episode_metrics = utils_files.extract_metrics_from_log_file(
-                log_filepath=log_filepath,
-                metric_names=metric_names
-            )
-            if log_filepaths == log_filepaths_1:
-                dict_of_metrics_1[f"{episode_id},{scene_id}"] = per_episode_metrics
-            else:
-                dict_of_metrics_2[f"{episode_id},{scene_id}"] = per_episode_metrics
-    return dict_of_metrics_1, dict_of_metrics_2
-
 def get_episodes_success_in_1_fail_in_2(
     dict_of_metrics_1: Dict[str, Dict],
     dict_of_metrics_2: Dict[str, Dict],
@@ -227,10 +136,10 @@ def zip_metrics_1_and_2(
                 dict_of_metrics_merged[episode_identifier][field_name] = episode_identifier.split(",")[1]
             else:
                 if "_1" in field_name:
-                    metric_name = get_metric_name_without_suffix(field_name, "_1")
+                    metric_name = utils_files.get_metric_name_without_suffix(field_name, "_1")
                     dict_of_metrics_merged[episode_identifier][field_name] = episode_metrics_1[metric_name]
                 elif "_2" in field_name:
-                    metric_name = get_metric_name_without_suffix(field_name, "_2")
+                    metric_name = utils_files.get_metric_name_without_suffix(field_name, "_2")
                     episode_metrics_2 = dict_of_metrics_2[episode_identifier]
                     dict_of_metrics_merged[episode_identifier][field_name] = episode_metrics_2[metric_name]
     return dict_of_metrics_merged
@@ -286,9 +195,8 @@ def main():
     logger.info(f"{args.log_dir}/{episode_filename}")
 
     # get log file paths
-    log_filepaths_1, log_filepaths_2 = extract_log_filepaths(
-        log_dir_1=args.log_dir_1,
-        log_dir_2=args.log_dir_2
+    list_of_log_filepaths = utils_files.extract_log_filepaths(
+        list_of_log_dirs = [args.log_dir_1, args.log_dir_2]
     )
     
     # set up metric names to extract
@@ -298,14 +206,19 @@ def main():
         NumericalMetrics.SPL,
         NumericalMetrics.NUM_STEPS
     ]
-    metric_names_1, metric_names_2 = get_metric_names_1_and_2(metric_names)
+    list_of_metric_names = utils_files.get_metric_names_with_suffices(metric_names, ["_1", "_2"])
+    metric_names_1 = list_of_metric_names[0]
+    metric_names_2 = list_of_metric_names[1]
+
+    # get metrics
+    list_of_dict_of_metrics = utils_files.extract_metrics_from_each(
+        metric_names=metric_names,
+        list_of_log_filepaths=list_of_log_filepaths
+    )
 
     # find episodes of interest
-    dict_of_metrics_1, dict_of_metrics_2 = extract_metrics_from_each(
-        metric_names=metric_names,
-        log_filepaths_1=log_filepaths_1,
-        log_filepaths_2=log_filepaths_2,
-    )
+    dict_of_metrics_1 = list_of_dict_of_metrics[0]
+    dict_of_metrics_2 = list_of_dict_of_metrics[1]
     if args.mode == "find_cases_success_in_1_fail_in_2":
         dict_of_metrics_subset_1, dict_of_metrics_subset_2 = get_episodes_success_in_1_fail_in_2(
             dict_of_metrics_1=dict_of_metrics_1,

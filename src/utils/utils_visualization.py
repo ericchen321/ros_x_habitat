@@ -19,6 +19,7 @@ import pandas as pd
 import seaborn as sns
 from habitat.utils.visualizations import maps
 from PIL import Image
+from src.constants.constants import NumericalMetrics
 
 cv2 = try_cv2_import()
 
@@ -125,7 +126,6 @@ def generate_video(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
 
-
 def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
     """
     Paste top-down-maps from agent initialized with the given seeds to a grid
@@ -159,8 +159,6 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
     )
     plt.close(fig)
 
-
-
 def colorize_and_fit_to_height(
     top_down_map_raw: np.ndarray, output_height: int
 ):
@@ -191,7 +189,6 @@ def colorize_and_fit_to_height(
 
     return top_down_map
 
-
 def save_blank_map(
     episode_id: str,
     scene_id: str,
@@ -208,15 +205,14 @@ def save_blank_map(
     map_img = Image.fromarray(blank_map, "RGB")
     map_img.save(f"{map_dir}/blank_map-episode={episode_id}-scene={os.path.basename(scene_id)}.pgm")
 
-
-def generate_box_plots(
+def visualize_variability_due_to_seed_with_box_plots(
     metrics_list: List[Dict[str, Dict[str, float]]],
     seeds: List[int],
     plot_dir: str,
 ):
     r"""
     Generate box plots from metrics and seeds. Requires same metrics collected
-    from all seeds. Save the plots to plot_dir/<metric_name>-<n>_seeds.png,
+    from all seeds. Save the plots to <plot_dir>/<metric_name>-<n>_seeds.png,
     where <metric_name> is for eg. "spl", <n> is the number of seeds.
     Args:
         metrics_list: list of metrics collected from experiment run with the
@@ -278,4 +274,233 @@ def generate_box_plots(
         sns.stripplot(x="seed", y=metric_name, data=df, color=".25", size=2, ax=ax)
         fig.subplots_adjust(bottom=0.15)
         fig.savefig(f"{plot_dir}/{metric_name}-{num_seeds}_seeds.png")
+        plt.close(fig)
+
+def visualize_metrics_across_configs_with_box_plots(
+    metrics_list: List[Dict[str, Dict[str, float]]],
+    config_names: List[str],
+    plot_dir: str,
+):
+    r"""
+    Generate box plots from metrics and experiment configurations. Requires same
+    metrics collected across all configs. Save the plots to
+    <plot_dir>/<metric_name>.png, where <metric_name> is for eg. "spl".
+    Args:
+        metrics_list: list of metrics collected from experiment run with the
+            given seeds.
+        config_names: names of experiment configurations. Should be in the same
+            order as metrics_list.
+        plot_dir: directory to save the box plot.
+    """
+    # check if we have metrics from all configs
+    num_configs = len(config_names)
+    assert len(metrics_list) == num_configs
+
+    # return if no data
+    if num_configs == 0:
+        return
+    num_samples_per_config = len(metrics_list[0])
+    if num_samples_per_config == 0:
+        return
+
+    # check if all configs have the same number of data points
+    #for i in range(num_configs):
+    #    assert  len(metrics_list[i]) == num_samples_per_config
+
+    # extract metric names
+    metric_names = []
+    for _, episode_metrics in metrics_list[0].items():
+        for metric_name, _ in episode_metrics.items():
+            metric_names.append(metric_name)
+        break
+
+    # build dataframe
+    data = {}
+    total_num_samples = num_samples_per_config * num_configs
+    data["config"] = np.ndarray((total_num_samples,), dtype=object)
+    for metric_name in metric_names:
+        data[metric_name] = np.ndarray((total_num_samples,))
+    # populate each array
+    total_sample_count = 0
+    for config_index in range(num_configs):
+        for _, episode_metrics in metrics_list[config_index].items():
+            # register a new sample
+            data["config"][total_sample_count] = config_names[config_index]
+            for metric_name in metric_names:
+                data[metric_name][total_sample_count] = episode_metrics[metric_name]
+            total_sample_count += 1
+    df = pd.DataFrame(data)
+
+    # drop invalid samples
+    # code adapted from piRSquared's work on
+    # https://stackoverflow.com/questions/45745085/python-pandas-how-to-remove-nan-and-inf-values
+    df = df[~df.isin([np.nan, np.inf, -np.inf]).any(1)]
+
+    # create box-and-strip plot for each metric
+    for metric_name in metric_names:
+        fig = plt.figure(figsize=(12.8, 9.6))
+        ax = fig.add_subplot(111)
+        sns.boxplot(x="config", y=metric_name, data=df, ax=ax)
+        sns.stripplot(x="config", y=metric_name, data=df, color=".25", size=2, ax=ax)
+        fig.savefig(f"{plot_dir}/{metric_name}.png")
+        plt.close(fig)
+
+def visualize_success_across_configs_with_pie_charts(
+    metrics_list: List[Dict[str, Dict[str, float]]],
+    config_names: List[str],
+    plot_dir: str,
+):
+    r"""
+    Generate pie charts to show success counts across experiment configurations. Require
+    the success metric collected across all configs. Save the plot to <plot_dir>/success.png.
+    Args:
+        metrics_list: list of metrics collected from experiment run with the
+            given seeds.
+        config_names: names of experiment configurations. Should be in the same
+            order as metrics_list.
+        plot_dir: directory to save the pie chart.
+    """  
+    # check if we have metrics from all configs
+    num_configs = len(config_names)
+    assert len(metrics_list) == num_configs
+
+    # return if no data
+    if num_configs == 0:
+        return
+    num_samples_per_config = len(metrics_list[0])
+    if num_samples_per_config == 0:
+        return
+
+    # check if all configs have the same number of data points
+    #for i in range(num_configs):
+    #    assert  len(metrics_list[i]) == num_samples_per_config
+    
+    # code adapted from examples on
+    # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.pie.html    
+    success_counts = []
+    for config_index in range(0, num_configs):
+        # count success in this config
+        dict_of_metrics = metrics_list[config_index]
+        count = 0
+        for _, per_episode_metrics in dict_of_metrics.items():
+            count += per_episode_metrics[NumericalMetrics.SPL]
+        success_counts.append(count)
+    dict_of_success_counts = {}
+    for config_index in range(0, num_configs):
+        dict_of_success_counts[
+            config_names[config_index]] = [success_counts[config_index],
+                num_samples_per_config - success_counts[config_index]]
+    df = pd.DataFrame(dict_of_success_counts, index=['Success', 'Fail'])
+    plot = df.plot.pie(
+        subplots=True,
+        legend=None,
+        figsize=(12.8, 9.6),
+        layout=(2,int(num_configs/2)),
+        autopct='%1.1f%%')
+    fig = plot[0][0].get_figure()
+    fig.savefig(f"{plot_dir}/success.png")
+    plt.close(fig)
+
+def visualize_running_times_with_bar_plots(
+    running_times: List[float],
+    config_names: List[str],
+    plot_dir: str
+):
+    r"""
+    Visualize running times from multiple experiments as bar charts. Save the
+    plot to <plot_dir>/running_time_across_configs.png.
+    :param running_times: running times from a sequence of experiments.
+    :param config_names: names of experiment configs, should be in same order
+        as `running_times`
+    :param plot_dir: directory to save the plot
+    """
+    # precondition check
+    assert len(running_times) == len(config_names)
+    
+    fig = plt.figure(figsize=(12.8, 9.6))
+    data = {}
+    data["config"] = config_names
+    data["running_time"] = running_times
+    df = pd.DataFrame(data)
+    ax = sns.barplot(x="config", y="running_time", data=df)
+    # add bar labels;
+    # solution from https://stackoverflow.com/questions/43214978/seaborn-barplot-displaying-values
+    # TODO: upgrade matplotlib to 3.4.0
+    #ax.bar_label(ax.containers[0])
+    fig.savefig(f"{plot_dir}/running_time_across_configs.png")
+    plt.close(fig)
+
+def visualize_pairwise_percentage_diff_of_metrics(
+    pairwise_diff_dict_of_metrics: Dict[str, Dict[str, float]],
+    config_names : List[str],
+    diff_in_percentage: bool,
+    plot_dir: str
+):
+    r"""
+    Visualize pair-wise difference in metrics across multiple configs. Save
+    the plot to plot_dir/<metric_name>-pairwise_diff.png, where <metric_name>
+    is for eg. "spl".
+    :param pairwise_diff_dict_of_metrics: pair-wise difference in metrics between
+        two experiment configs.
+    :param config_names: list of names of two experiment configs
+    :param diff_in_percentage: if the pair-wise difference is computed as percentage
+        or not
+    :param plot_dir: directory to save the plots
+    """
+    # precondition check
+    num_configs = len(config_names)
+    assert num_configs == 2
+
+    # return if no data
+    if num_configs == 0:
+        return
+    num_samples = len(pairwise_diff_dict_of_metrics)
+    if num_samples == 0:
+        return
+
+    # extract metric names
+    metric_names = []
+    for _, episode_metrics in pairwise_diff_dict_of_metrics.items():
+        for metric_name, _ in episode_metrics.items():
+            metric_names.append(metric_name)
+        break
+
+    # build dataframe
+    data = {}
+    data["compared configs"] = np.ndarray((num_samples,), dtype=object)
+    for metric_name in metric_names:
+        if diff_in_percentage:
+            data[f"{metric_name} difference (%)"] = np.ndarray((num_samples,))
+        else:
+            data[f"{metric_name} difference"] = np.ndarray((num_samples,))
+    # populate each array
+    total_sample_count = 0
+    for _, episode_metrics in pairwise_diff_dict_of_metrics.items():
+        # register a new sample
+        data["compared configs"][total_sample_count] = f"configs: {config_names[1]} vs {config_names[0]}"
+        for metric_name in metric_names:
+            if diff_in_percentage:
+                data[f"{metric_name} difference (%)"][total_sample_count] = episode_metrics[metric_name]
+            else:
+                data[f"{metric_name} difference"][total_sample_count] = episode_metrics[metric_name]
+        total_sample_count += 1
+    df = pd.DataFrame(data)
+
+    # drop invalid samples
+    # code adapted from piRSquared's work on
+    # https://stackoverflow.com/questions/45745085/python-pandas-how-to-remove-nan-and-inf-values
+    df = df[~df.isin([np.nan, np.inf, -np.inf]).any(1)]
+
+    # create box-and-strip plot for each metric
+    for metric_name in metric_names:
+        fig = plt.figure(figsize=(12.8, 9.6))
+        ax = fig.add_subplot(111)
+        if diff_in_percentage:
+            sns.boxplot(x="compared configs", y=f"{metric_name} difference (%)", data=df, ax=ax)
+            sns.stripplot(x="compared configs", y=f"{metric_name} difference (%)", data=df, color=".25", size=2, ax=ax)
+            fig.savefig(f"{plot_dir}/{metric_name}-{config_names[1]}_vs_{config_names[0]}_%.png")
+        else:
+            sns.boxplot(x="compared configs", y=f"{metric_name} difference", data=df, ax=ax)
+            sns.stripplot(x="compared configs", y=f"{metric_name} difference", data=df, color=".25", size=2, ax=ax)
+            fig.savefig(f"{plot_dir}/{metric_name}-{config_names[1]}_vs_{config_names[0]}.png")
         plt.close(fig)

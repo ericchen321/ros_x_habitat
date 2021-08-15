@@ -157,7 +157,7 @@ def main():
         os.makedirs(name=f"{args.plot_dir}", exist_ok=True)
 
         # create box plots of metrics vs seeds
-        utils_visualization.generate_box_plots(metrics_list, seeds, args.plot_dir)
+        utils_visualization.visualize_variability_due_to_seed_with_box_plots(metrics_list, seeds, args.plot_dir)
     logger.info("Generated metric plots")
 
     utils_logging.close_logger(logger)

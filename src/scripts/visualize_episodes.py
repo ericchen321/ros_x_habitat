@@ -20,6 +20,7 @@ def main():
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
     parser.add_argument("--episodes-to-visualize-file-path", default="", type=str)
+    parser.add_argument("--episodes-to-visualize-file-has-header", default=False, action="store_true")
     parser.add_argument("--seed-file-path", type=str, default="")
     parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--make-maps", default=False, action="store_true")
@@ -40,7 +41,9 @@ def main():
         seeds = [exp_config.SEED]
 
     # get episode ID's and scene ID's of episodes to visualize
-    episode_ids, scene_ids = utils_files.load_episode_identifiers(args.episodes_to_visualize_file_path)
+    episode_ids, scene_ids = utils_files.load_episode_identifiers(
+        episodes_to_visualize_file_path=args.episodes_to_visualize_file_path,
+        has_header=args.episodes_to_visualize_file_has_header)
 
     # instantiate a discrete/continuous evaluator
     evaluator = None
