@@ -22,6 +22,7 @@ __pycache__/
 # Log files
 logs/
 *.log
+episodes/
 
 # Package files
 *.jar
