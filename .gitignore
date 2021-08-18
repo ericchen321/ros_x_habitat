@@ -75,3 +75,6 @@ data/
 
 # build files
 build/
+
+# py-spy profiles
+pyspy_profiles/
