@@ -109,12 +109,6 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 t_sim_elapsed = 0.0
                 t_agent_elapsed = 0.0
 
-                # initialize a new episode
-
-                # ------------ log agent time start ------------
-                t_agent_start = time.clock()
-                # ----------------------------------------------
-
                 # instantiate an agent
                 agent_config = get_default_config()
                 agent_config.INPUT_TYPE = self.input_type
@@ -122,11 +116,6 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 agent_config.RANDOM_SEED = agent_seed
                 self.agent = PPOAgent(agent_config)
                 self.agent.reset()
-
-                # ------------ log agent time end ------------
-                t_agent_end = time.clock()
-                t_agent_elapsed += t_agent_end - t_agent_start
-                # --------------------------------------------
 
                 # ------------ log reset time start ------------
                 t_reset_start = time.clock()
@@ -175,12 +164,13 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     (observations_per_action, _, _, info_per_action) = self.env.step(
                         action
                     )
-                    count_steps += 1
 
                     # ------------  log sim time end  ------------
                     t_sim_end = time.clock()
                     t_sim_elapsed += t_sim_end - t_sim_start
                     # --------------------------------------------
+
+                    count_steps += 1
 
                 # episode ended
                 # collect metrics

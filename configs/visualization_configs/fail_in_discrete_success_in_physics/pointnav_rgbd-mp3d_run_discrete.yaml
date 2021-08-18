@@ -1,0 +1,38 @@
+ENVIRONMENT:
+  MAX_EPISODE_STEPS: 500
+  ITERATOR_OPTIONS:
+    SHUFFLE: False
+    GROUP_BY_SCENE: True
+    CYCLE: False
+SIMULATOR:
+  AGENT_0:
+    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+  HABITAT_SIM_V0:
+    GPU_DEVICE_ID: 0
+  RGB_SENSOR:
+    WIDTH: 256
+    HEIGHT: 256
+  DEPTH_SENSOR:
+    WIDTH: 256
+    HEIGHT: 256
+TASK:
+  TYPE: Nav-v0
+  SUCCESS_DISTANCE: 0.2
+
+  SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
+  POINTGOAL_WITH_GPS_COMPASS_SENSOR:
+    GOAL_FORMAT: "POLAR"
+    DIMENSIONALITY: 2
+  GOAL_SENSOR_UUID: pointgoal_with_gps_compass
+
+  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
+  SUCCESS:
+    SUCCESS_DISTANCE: 0.2
+    
+DATASET:
+  TYPE: PointNav-v1
+  SPLIT: test
+  DATA_PATH: data/datasets/pointnav/mp3d/v1/{split}/{split}.json.gz
+
+VIDEO_OPTION: ["disk"]
+VIDEO_DIR: "videos/compare_metrics_-vs+_physics/fail_in_discrete_success_in_physics/in_discrete/"
