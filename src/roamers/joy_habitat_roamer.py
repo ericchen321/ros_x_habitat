@@ -19,6 +19,7 @@ class JoyHabitatRoamer:
         hab_env_node_path: str,
         hab_env_config_path: str,
         hab_env_node_name: str,
+        video_frame_period: int,
     ):
         r"""
         :param launch_file_path: path to the launch file which launches the
@@ -26,7 +27,8 @@ class JoyHabitatRoamer:
         :param hab_env_node_path: path to the Habitat env node file
         :param hab_env_config_path: path to the Habitat env config file
         :param hab_env_node_name: name given to the Habitat env node
-        :param
+        :param video_frame_period: period at which to record a frame; measured in
+            steps per frame
         """
         # create a node
         rospy.init_node("joy_habitat_roamer", anonymous=True)
@@ -52,6 +54,9 @@ class JoyHabitatRoamer:
         )
         self.roam = rospy.ServiceProxy(self.roam_service_name, Roam)
 
+        # register frame period
+        self.video_frame_period = video_frame_period
+
     def roam_until_shutdown(self, episode_id_last: str = "-1", scene_id_last: str = ""):
         r"""
         Roam in a specified scene until shutdown signalled.
@@ -63,7 +68,7 @@ class JoyHabitatRoamer:
         try:
             rospy.wait_for_service(self.roam_service_name)
             try:
-                resp = self.roam(episode_id_last, scene_id_last)
+                resp = self.roam(episode_id_last, scene_id_last, True, self.video_frame_period)
                 assert resp.ack
             except rospy.ServiceException:
                 rospy.logerr("Failed to initiate the roam service!")
