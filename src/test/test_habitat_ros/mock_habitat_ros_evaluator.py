@@ -83,7 +83,7 @@ class MockHabitatROSEvaluator(HabitatSimEvaluator):
                     resp = self.eval_episode(episode_id_last, scene_id_last)
                 else:
                     # evaluate the next episode
-                    self.logger.info("requesting to evaluate the next episode!!!!!!!")
+                    self.logger.info("requesting to evaluate the next episode!")
                     resp = self.eval_episode(EvalEpisodeSpecialIDs.REQUEST_NEXT, "")
 
                 if resp.episode_id == EvalEpisodeSpecialIDs.RESPONSE_NO_MORE_EPISODES:

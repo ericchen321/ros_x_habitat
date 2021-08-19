@@ -1,4 +1,6 @@
 string episode_id_last
 string scene_id_last
+bool make_video
+int32 video_frame_period
 ---
 bool ack

@@ -25,6 +25,12 @@ from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 import time
 from src.utils import utils_logging
+from src.utils.utils_visualization import (
+    generate_video,
+    observations_to_image_for_roam)
+from src.measures.top_down_map_for_roam import (
+    TopDownMapForRoam,
+    add_top_down_map_for_roam_to_config)
 
 
 class HabitatEnvNode:
@@ -61,12 +67,17 @@ class HabitatEnvNode:
         self.node_name = node_name
         rospy.init_node(self.node_name)
 
-        # initialize Habitat environment
+        rospy.on_shutdown(self.on_exit_generate_video)
+
+        # set up environment config
         self.config = get_config(config_paths)
-        # embed top-down map and heading sensor in config
+        # embed top-down map in config
         self.config.defrost()
         self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
         self.config.freeze()
+        add_top_down_map_for_roam_to_config(self.config)
+        
+        # instantiate environment
         self.enable_physics_sim = enable_physics_sim
         self.use_continuous_agent = use_continuous_agent
         # overwrite env config if physics enabled
@@ -126,6 +137,11 @@ class HabitatEnvNode:
             self.t_reset_elapsed = None
             self.t_sim_elapsed = None
 
+        # video production variables
+        self.make_video = False
+        self.observations_per_episode = []
+        self.video_frame_counter = 0
+        self.video_frame_period = 1 # NOTE: frame rate defined as x steps/frame
 
         # set up logger
         self.logger = utils_logging.setup_logger(self.node_name)
@@ -361,6 +377,10 @@ class HabitatEnvNode:
         # if not shutting down, enable reset and evaluation
         self._enable_reset(request=request, enable_roam=True)
 
+        # set video production flag
+        self.make_video = request.make_video
+        self.video_frame_period = request.video_frame_period
+
         # enable evaluation
         self._enable_evaluation()
 
@@ -492,18 +512,30 @@ class HabitatEnvNode:
         if self.use_continuous_agent:
             with self.command_cv:
                 self.env.set_agent_velocities(self.linear_vel, self.angular_vel)
-            (self.observations, _, _, _) = self.env.step()
+            (self.observations, _, _, info) = self.env.step()
         else:
             # NOTE: Here we call HabitatEvalRLEnv.step() which dispatches
             # to Env.step() or PhysicsEnv.step_physics() depending on
             # whether physics has been enabled
-            (self.observations, _, _, _) = self.env.step(self.action)
+            (self.observations, _, _, info) = self.env.step(self.action)
 
         # ------------  log sim time end  ------------
         t_sim_end = time.clock()
         with self.timing_lock:
             self.t_sim_elapsed += t_sim_end - t_sim_start
         # --------------------------------------------
+
+        # if making video, generate frames from actions
+        if self.make_video:
+            self.video_frame_counter += 1
+            if self.video_frame_counter == self.video_frame_period - 1:
+                # NOTE: for now we only consider the case where we make videos
+                # in the roam mode, for a continuous agent
+                out_im_per_action = observations_to_image_for_roam(
+                    self.observations, info, self.config.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH
+                )
+                self.observations_per_episode.append(out_im_per_action)
+                self.video_frame_counter = 0
 
         with self.command_cv:
             self.count_steps += 1
@@ -591,7 +623,7 @@ class HabitatEnvNode:
                 # reset the env
                 self.reset()
                 with self.shutdown_lock:
-                    # if shutdown signalled, exit
+                    # if shutdown service called, exit
                     if self.shutdown:
                         rospy.signal_shutdown("received request to shut down")
                         break
@@ -611,6 +643,24 @@ class HabitatEnvNode:
                     self.env.reset_episode_iterator()
                     self.enable_eval = False
                     self.enable_eval_cv.notify()
+
+    def on_exit_generate_video(self):
+        r"""
+        Make video of the current episode, if video production is turned
+        on.
+        """
+        if self.make_video:
+            generate_video(
+                video_option=self.config.VIDEO_OPTION,
+                video_dir=self.config.VIDEO_DIR,
+                images=self.observations_per_episode,
+                episode_id="fake_episode_id",
+                scene_id="fake_scene_id",
+                agent_seed=0,
+                checkpoint_idx=0,
+                metrics={},
+                tb_writer=None,
+            )
 
 def main():
     # parse input arguments

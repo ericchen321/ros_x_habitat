@@ -20,6 +20,7 @@ import seaborn as sns
 from habitat.utils.visualizations import maps
 from PIL import Image
 from src.constants.constants import NumericalMetrics
+from habitat.utils.visualizations.utils import draw_collision
 
 cv2 = try_cv2_import()
 
@@ -400,6 +401,67 @@ def visualize_success_across_configs_with_pie_charts(
     fig = plot[0][0].get_figure()
     fig.savefig(f"{plot_dir}/success.png")
     plt.close(fig)
+
+def observations_to_image_for_roam(
+    observation: Dict,
+    info: Dict,
+    max_depth: float,
+    ) -> np.ndarray:
+    r"""Generate image of single frame from observation and info
+    returned from a single environment step(). Modified upon
+    habitat.utils.visualizations.observations_to_image().
+
+    Args:
+        observation: observation returned from an environment step().
+        info: info returned from an environment step().
+        max_depth: max depth reading of the depth sensor.
+
+    Returns:
+        generated image of a single frame.
+    """
+    egocentric_view_l: List[np.ndarray] = []
+    if "rgb" in observation:
+        rgb = observation["rgb"]
+        if not isinstance(rgb, np.ndarray):
+            rgb = rgb.cpu().numpy()
+
+        egocentric_view_l.append(rgb)
+
+    # draw depth map if observation has depth info
+    if "depth" in observation:
+        depth_map = observation["depth"].squeeze() * (255.0 / max_depth)
+        if not isinstance(depth_map, np.ndarray):
+            depth_map = depth_map.cpu().numpy()
+
+        depth_map = depth_map.astype(np.uint8)
+        depth_map = np.stack([depth_map for _ in range(3)], axis=2)
+        egocentric_view_l.append(depth_map)
+
+    # add image goal if observation has image_goal info
+    if "imagegoal" in observation:
+        rgb = observation["imagegoal"]
+        if not isinstance(rgb, np.ndarray):
+            rgb = rgb.cpu().numpy()
+
+        egocentric_view_l.append(rgb)
+
+    assert (
+        len(egocentric_view_l) > 0
+    ), "Expected at least one visual sensor enabled."
+    egocentric_view = np.concatenate(egocentric_view_l, axis=1)
+
+    # draw collision
+    if "collisions" in info and info["collisions"]["is_collision"]:
+        egocentric_view = draw_collision(egocentric_view)
+
+    frame = egocentric_view
+
+    if "top_down_map_for_roam" in info:
+        top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+            info["top_down_map_for_roam"], egocentric_view.shape[0]
+        )
+        frame = np.concatenate((egocentric_view, top_down_map), axis=1)
+    return frame
 
 def visualize_running_times_with_bar_plots(
     running_times: List[float],
