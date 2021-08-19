@@ -529,8 +529,10 @@ class HabitatEnvNode:
         if self.make_video:
             self.video_frame_counter += 1
             if self.video_frame_counter == self.video_frame_period - 1:
+                # NOTE: for now we only consider the case where we make videos
+                # in the roam mode, for a continuous agent
                 out_im_per_action = observations_to_image_for_roam(
-                    self.observations, info
+                    self.observations, info, self.config.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH
                 )
                 self.observations_per_episode.append(out_im_per_action)
                 self.video_frame_counter = 0

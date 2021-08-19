@@ -402,7 +402,11 @@ def visualize_success_across_configs_with_pie_charts(
     fig.savefig(f"{plot_dir}/success.png")
     plt.close(fig)
 
-def observations_to_image_for_roam(observation: Dict, info: Dict) -> np.ndarray:
+def observations_to_image_for_roam(
+    observation: Dict,
+    info: Dict,
+    max_depth: float,
+    ) -> np.ndarray:
     r"""Generate image of single frame from observation and info
     returned from a single environment step(). Modified upon
     habitat.utils.visualizations.observations_to_image().
@@ -410,6 +414,7 @@ def observations_to_image_for_roam(observation: Dict, info: Dict) -> np.ndarray:
     Args:
         observation: observation returned from an environment step().
         info: info returned from an environment step().
+        max_depth: max depth reading of the depth sensor.
 
     Returns:
         generated image of a single frame.
@@ -424,7 +429,7 @@ def observations_to_image_for_roam(observation: Dict, info: Dict) -> np.ndarray:
 
     # draw depth map if observation has depth info
     if "depth" in observation:
-        depth_map = observation["depth"].squeeze() * 255.0
+        depth_map = observation["depth"].squeeze() * (255.0 / max_depth)
         if not isinstance(depth_map, np.ndarray):
             depth_map = depth_map.cpu().numpy()
 
