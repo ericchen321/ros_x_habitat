@@ -89,12 +89,16 @@ class PhysicsNavigationTask(EmbodiedTask):
                 # step through all frames in the control period
                 total_steps = round(control_period * 1.0 / time_step)
 
+                #TODO: log previous position/angle
                 for frame in range(0, total_steps):
                     observations = self._sim.step_physics(agent_object, time_step)
                     # if collision occurred, quit the loop immediately
                     # NOTE: this is not working yet
                     # if self._sim.previous_step_collided:
                     #    break
+                #TODO: log after position/angle
+                #NOTE: to get angle between quarternions, use angle_between_quaternions()
+                # from geometry_utils in habitat
 
         observations.update(
             self.sensor_suite.get_observations(
