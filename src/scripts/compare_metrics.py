@@ -29,12 +29,15 @@ def get_episodes_success_in_1_fail_in_2(
     # find episodes that satisfy the criteria
     for episode_identifier, episode_metrics_1 in dict_of_metrics_1.items():
         episode_metrics_2 = dict_of_metrics_2[episode_identifier]
-        if (np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 1.0) < 1e-5 and
-                np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 0.0) < 1e-5):
+        if (
+            np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 1.0) < 1e-5
+            and np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 0.0) < 1e-5
+        ):
             dict_of_metrics_1_subset[episode_identifier] = episode_metrics_1
             dict_of_metrics_2_subset[episode_identifier] = episode_metrics_2
 
     return dict_of_metrics_1_subset, dict_of_metrics_2_subset
+
 
 def get_episodes_success_in_both_but_metrics_differ_by_a_lot(
     dict_of_metrics_1: Dict[str, Dict],
@@ -60,14 +63,20 @@ def get_episodes_success_in_both_but_metrics_differ_by_a_lot(
         # NOTE: criteria:
         # 1) Both are successes
         # 2.1) Exp 2 SPL < 50% Exp 1 SPL OR 2.2) Exp 2 SPL > 150% Exp 1 SPL
-        if (np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 1.0) < 1e-5 and
-                np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 1.0) < 1e-5):
-            spl_ratio = episode_metrics_2[NumericalMetrics.SPL] / episode_metrics_1[NumericalMetrics.SPL]
+        if (
+            np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 1.0) < 1e-5
+            and np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 1.0) < 1e-5
+        ):
+            spl_ratio = (
+                episode_metrics_2[NumericalMetrics.SPL]
+                / episode_metrics_1[NumericalMetrics.SPL]
+            )
             if spl_ratio < 0.5 or spl_ratio > 1.5:
                 dict_of_metrics_1_subset[episode_identifier] = episode_metrics_1
                 dict_of_metrics_2_subset[episode_identifier] = episode_metrics_2
 
     return dict_of_metrics_1_subset, dict_of_metrics_2_subset
+
 
 def get_episodes_fail_in_1_success_in_2(
     dict_of_metrics_1: Dict[str, Dict],
@@ -90,8 +99,10 @@ def get_episodes_fail_in_1_success_in_2(
     # find episodes that satisfy the criteria
     for episode_identifier, episode_metrics_1 in dict_of_metrics_1.items():
         episode_metrics_2 = dict_of_metrics_2[episode_identifier]
-        if (np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 1.0) < 1e-5 and
-                np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 0.0) < 1e-5):
+        if (
+            np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 1.0) < 1e-5
+            and np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 0.0) < 1e-5
+        ):
             dict_of_metrics_1_subset[episode_identifier] = episode_metrics_1
             dict_of_metrics_2_subset[episode_identifier] = episode_metrics_2
 
@@ -118,12 +129,15 @@ def get_episodes_fail_in_both(
     # find episodes that satisfy the criteria
     for episode_identifier, episode_metrics_1 in dict_of_metrics_1.items():
         episode_metrics_2 = dict_of_metrics_2[episode_identifier]
-        if (np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 0.0) < 1e-5 and
-                np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 0.0) < 1e-5):
+        if (
+            np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 0.0) < 1e-5
+            and np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 0.0) < 1e-5
+        ):
             dict_of_metrics_1_subset[episode_identifier] = episode_metrics_1
             dict_of_metrics_2_subset[episode_identifier] = episode_metrics_2
 
     return dict_of_metrics_1_subset, dict_of_metrics_2_subset
+
 
 def zip_metrics_1_and_2(
     fieldnames: List[str],
@@ -151,39 +165,44 @@ def zip_metrics_1_and_2(
         dict_of_metrics_merged[episode_identifier] = {}
         for field_name in fieldnames:
             if field_name == "episode_id":
-                dict_of_metrics_merged[episode_identifier][field_name] = episode_identifier.split(",")[0]
+                dict_of_metrics_merged[episode_identifier][
+                    field_name
+                ] = episode_identifier.split(",")[0]
             elif field_name == "scene_id":
-                dict_of_metrics_merged[episode_identifier][field_name] = episode_identifier.split(",")[1]
+                dict_of_metrics_merged[episode_identifier][
+                    field_name
+                ] = episode_identifier.split(",")[1]
             else:
                 if "_1" in field_name:
-                    metric_name = utils_files.get_metric_name_without_suffix(field_name, "_1")
-                    dict_of_metrics_merged[episode_identifier][field_name] = episode_metrics_1[metric_name]
+                    metric_name = utils_files.get_metric_name_without_suffix(
+                        field_name, "_1"
+                    )
+                    dict_of_metrics_merged[episode_identifier][
+                        field_name
+                    ] = episode_metrics_1[metric_name]
                 elif "_2" in field_name:
-                    metric_name = utils_files.get_metric_name_without_suffix(field_name, "_2")
+                    metric_name = utils_files.get_metric_name_without_suffix(
+                        field_name, "_2"
+                    )
                     episode_metrics_2 = dict_of_metrics_2[episode_identifier]
-                    dict_of_metrics_merged[episode_identifier][field_name] = episode_metrics_2[metric_name]
+                    dict_of_metrics_merged[episode_identifier][
+                        field_name
+                    ] = episode_metrics_2[metric_name]
     return dict_of_metrics_merged
 
 
 def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--log-dir-1", type=str, default=""
-    )
-    parser.add_argument(
-        "--log-dir-2", type=str, default=""
-    )
-    parser.add_argument(
-        "--log-dir", type=str, default="logs/compare_results/"
-    )
-    parser.add_argument(
-        "--episode-dir", type=str, default="episodes/"
-    )
+    parser.add_argument("--log-dir-1", type=str, default="")
+    parser.add_argument("--log-dir-2", type=str, default="")
+    parser.add_argument("--log-dir", type=str, default="logs/compare_results/")
+    parser.add_argument("--episode-dir", type=str, default="episodes/")
     parser.add_argument(
         "--mode",
         default="find_cases_success_in_1_fail_in_2",
-        choices=["find_cases_success_in_1_fail_in_2",
+        choices=[
+            "find_cases_success_in_1_fail_in_2",
             "find_cases_success_in_both_but_metrics_differ_by_a_lot",
             "find_cases_fail_in_1_success_in_2",
             "find_cases_fail_in_both"],
@@ -203,10 +222,7 @@ def main():
     episode_filename = f"compare={os.path.basename(log_dir_1_no_trailing_slash)}-vs-{os.path.basename(log_dir_2_no_trailing_slash)}=mode={args.mode}.csv"
 
     # create logger and log comparison settings
-    logger = utils_logging.setup_logger(
-        __name__,
-        f"{args.log_dir}/{log_filename}"
-    )
+    logger = utils_logging.setup_logger(__name__, f"{args.log_dir}/{log_filename}")
     logger.info("Compared directories:")
     logger.info(args.log_dir_1)
     logger.info(args.log_dir_2)
@@ -217,41 +233,51 @@ def main():
 
     # get log file paths
     list_of_log_filepaths = utils_files.extract_log_filepaths(
-        list_of_log_dirs = [args.log_dir_1, args.log_dir_2]
+        list_of_log_dirs=[args.log_dir_1, args.log_dir_2]
     )
-    
+
     # set up metric names to extract
     metric_names = [
         NumericalMetrics.DISTANCE_TO_GOAL,
         NumericalMetrics.SUCCESS,
         NumericalMetrics.SPL,
-        NumericalMetrics.NUM_STEPS
+        NumericalMetrics.NUM_STEPS,
     ]
-    list_of_metric_names = utils_files.get_metric_names_with_suffices(metric_names, ["_1", "_2"])
+    list_of_metric_names = utils_files.get_metric_names_with_suffices(
+        metric_names, ["_1", "_2"]
+    )
     metric_names_1 = list_of_metric_names[0]
     metric_names_2 = list_of_metric_names[1]
 
     # get metrics
     list_of_dict_of_metrics = utils_files.extract_metrics_from_each(
-        metric_names=metric_names,
-        list_of_log_filepaths=list_of_log_filepaths
+        metric_names=metric_names, list_of_log_filepaths=list_of_log_filepaths
     )
 
     # find episodes of interest
     dict_of_metrics_1 = list_of_dict_of_metrics[0]
     dict_of_metrics_2 = list_of_dict_of_metrics[1]
     if args.mode == "find_cases_success_in_1_fail_in_2":
-        dict_of_metrics_subset_1, dict_of_metrics_subset_2 = get_episodes_success_in_1_fail_in_2(
+        (
+            dict_of_metrics_subset_1,
+            dict_of_metrics_subset_2,
+        ) = get_episodes_success_in_1_fail_in_2(
             dict_of_metrics_1=dict_of_metrics_1,
             dict_of_metrics_2=dict_of_metrics_2,
         )
     elif args.mode == "find_cases_success_in_both_but_metrics_differ_by_a_lot":
-        dict_of_metrics_subset_1, dict_of_metrics_subset_2 = get_episodes_success_in_both_but_metrics_differ_by_a_lot(
+        (
+            dict_of_metrics_subset_1,
+            dict_of_metrics_subset_2,
+        ) = get_episodes_success_in_both_but_metrics_differ_by_a_lot(
             dict_of_metrics_1=dict_of_metrics_1,
             dict_of_metrics_2=dict_of_metrics_2,
         )
     elif args.mode == "find_cases_fail_in_1_success_in_2":
-        dict_of_metrics_subset_1, dict_of_metrics_subset_2 = get_episodes_fail_in_1_success_in_2(
+        (
+            dict_of_metrics_subset_1,
+            dict_of_metrics_subset_2,
+        ) = get_episodes_fail_in_1_success_in_2(
             dict_of_metrics_1=dict_of_metrics_1,
             dict_of_metrics_2=dict_of_metrics_2,
         )
@@ -269,15 +295,15 @@ def main():
     )
 
     # write the episodes of interest to the .csv file
-    with open(f"{args.episode_dir}/{episode_filename}", 'w', newline='') as csv_file:
+    with open(f"{args.episode_dir}/{episode_filename}", "w", newline="") as csv_file:
         csv_writer = csv.DictWriter(
             csv_file,
-            fieldnames=(["episode_id", "scene_id"] + metric_names_1 + metric_names_2)
+            fieldnames=(["episode_id", "scene_id"] + metric_names_1 + metric_names_2),
         )
         csv_writer.writeheader()
         for _, id_and_metrics in dict_of_metrics_1_and_2.items():
             csv_writer.writerow(id_and_metrics)
-    
+
     utils_logging.close_logger(logger)
 
 

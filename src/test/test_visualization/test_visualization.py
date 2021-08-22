@@ -1,6 +1,8 @@
 import unittest
 from src.utils.utils_files import load_seeds_from_file
-from src.utils.utils_visualization import visualize_variability_due_to_seed_with_box_plots
+from src.utils.utils_visualization import (
+    visualize_variability_due_to_seed_with_box_plots,
+)
 from src.constants.constants import NumericalMetrics
 import os
 
