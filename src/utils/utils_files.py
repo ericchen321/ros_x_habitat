@@ -18,9 +18,9 @@ def load_seeds_from_file(seed_file_path):
             seeds.append(int(line[0]))
     return seeds
 
+
 def load_episode_identifiers(
-    episodes_to_visualize_file_path: str,
-    has_header: bool
+    episodes_to_visualize_file_path: str, has_header: bool
 ) -> Tuple[List[str], List[str]]:
     r"""
     Load episode identifiers from the given file. Each episode must be specified
@@ -47,6 +47,7 @@ def load_episode_identifiers(
 
     return episode_ids, scene_ids
 
+
 def extract_metrics_from_log_file(log_filepath, metric_names):
     r"""
     Create a dictionary of metrics for the episode logged in `log_filepath`.
@@ -60,7 +61,7 @@ def extract_metrics_from_log_file(log_filepath, metric_names):
     """
     log_file = open(log_filepath, "r")
     log_file_lines = log_file.readlines()
-    
+
     # get episode ID
     episode_id_line = log_file_lines[0]
     episode_id = str(episode_id_line.split(": ")[1]).rstrip("\n")
@@ -78,14 +79,15 @@ def extract_metrics_from_log_file(log_filepath, metric_names):
         NumericalMetrics.NUM_STEPS: 5,
         NumericalMetrics.SIM_TIME: 6,
         NumericalMetrics.RESET_TIME: 7,
-        NumericalMetrics.AGENT_TIME: 8
+        NumericalMetrics.AGENT_TIME: 8,
     }
     for metric_name in metric_names:
         metric_line = log_file_lines[metric_line_nums[metric_name]]
         metric_val = float(metric_line.split(",")[2])
         per_ep_metrics[metric_name] = metric_val
-    
+
     return (episode_id, scene_id, per_ep_metrics)
+
 
 def extract_log_filepaths(
     list_of_log_dirs: List[str],
@@ -105,22 +107,18 @@ def extract_log_filepaths(
         list_of_log_filepaths.append(log_filepaths)
     return list_of_log_filepaths
 
-def get_metric_name_appended_by_suffix(
-    metric_name: str,
-    suffix: str
-) -> str:
+
+def get_metric_name_appended_by_suffix(metric_name: str, suffix: str) -> str:
     r"""
     Return String <metric_name><suffix>.
     :param metric_name: name of a metric
     :param suffix: suffix to append
-    :return: the metric name appended by the suffix 
+    :return: the metric name appended by the suffix
     """
     return f"{metric_name}{suffix}"
 
-def get_metric_name_without_suffix(
-    metric_name: str,
-    suffix: str
-) -> str:
+
+def get_metric_name_without_suffix(metric_name: str, suffix: str) -> str:
     r"""
     Return the metric name with the suffix removed.
     :param metric_name: name of a metric
@@ -129,9 +127,9 @@ def get_metric_name_without_suffix(
     """
     return metric_name.rstrip(suffix)
 
+
 def get_metric_names_with_suffices(
-    metric_names: List[str],
-    suffices: List[str]
+    metric_names: List[str], suffices: List[str]
 ) -> List[List[str]]:
     r"""
     Return list of metric names followed by each suffix.
@@ -144,9 +142,12 @@ def get_metric_names_with_suffices(
     for suffix in suffices:
         metric_name_list = []
         for metric_name in metric_names:
-            metric_name_list.append(get_metric_name_appended_by_suffix(metric_name, suffix))
+            metric_name_list.append(
+                get_metric_name_appended_by_suffix(metric_name, suffix)
+            )
         list_of_metric_name_lists.append(metric_name_list)
     return list_of_metric_name_lists
+
 
 def extract_metrics_from_each(
     metric_names: List[str],
@@ -164,12 +165,12 @@ def extract_metrics_from_each(
         dict_of_metrics = {}
         for log_filepath in log_filepaths:
             episode_id, scene_id, per_episode_metrics = extract_metrics_from_log_file(
-                log_filepath=log_filepath,
-                metric_names=metric_names
+                log_filepath=log_filepath, metric_names=metric_names
             )
             dict_of_metrics[f"{episode_id},{scene_id}"] = per_episode_metrics
         list_of_dict_of_metrics.append(dict_of_metrics)
     return list_of_dict_of_metrics
+
 
 def extract_experiment_running_time_from_log_file(log_filepath):
     r"""
@@ -178,7 +179,7 @@ def extract_experiment_running_time_from_log_file(log_filepath):
     :return: experiment running time in hours
     """
     # read the log file
-    with open(log_filepath, 'r') as log_file:
+    with open(log_filepath, "r") as log_file:
         lines = log_file.readlines()
         start_time_line = lines[0]
         end_time_line = lines[1]
@@ -188,8 +189,8 @@ def extract_experiment_running_time_from_log_file(log_filepath):
     end_time_string = end_time_line.split(",")[0]
 
     # convert to datetime objects
-    start_time = datetime.strptime(start_time_string, '%Y-%m-%d %H:%M:%S')
-    end_time = datetime.strptime(end_time_string, '%Y-%m-%d %H:%M:%S')
+    start_time = datetime.strptime(start_time_string, "%Y-%m-%d %H:%M:%S")
+    end_time = datetime.strptime(end_time_string, "%Y-%m-%d %H:%M:%S")
 
     elapsed_seconds = (end_time - start_time).total_seconds()
-    return float(elapsed_seconds)/3600.0
+    return float(elapsed_seconds) / 3600.0

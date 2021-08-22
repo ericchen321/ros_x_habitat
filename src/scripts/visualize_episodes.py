@@ -20,7 +20,9 @@ def main():
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )
     parser.add_argument("--episodes-to-visualize-file-path", default="", type=str)
-    parser.add_argument("--episodes-to-visualize-file-has-header", default=False, action="store_true")
+    parser.add_argument(
+        "--episodes-to-visualize-file-has-header", default=False, action="store_true"
+    )
     parser.add_argument("--seed-file-path", type=str, default="")
     parser.add_argument("--make-videos", default=False, action="store_true")
     parser.add_argument("--make-maps", default=False, action="store_true")
@@ -43,7 +45,8 @@ def main():
     # get episode ID's and scene ID's of episodes to visualize
     episode_ids, scene_ids = utils_files.load_episode_identifiers(
         episodes_to_visualize_file_path=args.episodes_to_visualize_file_path,
-        has_header=args.episodes_to_visualize_file_has_header)
+        has_header=args.episodes_to_visualize_file_has_header,
+    )
 
     # instantiate a discrete/continuous evaluator
     evaluator = None
@@ -82,20 +85,26 @@ def main():
         maps: Dict[str, List[np.ndarray]] = {}
         for episode_id, scene_id in zip(episode_ids, scene_ids):
             maps[f"{episode_id},{scene_id}"] = []
-        
+
         for seed in seeds:
-            maps_one_seed = evaluator.generate_maps(episode_ids, scene_ids, seed, args.map_height)
+            maps_one_seed = evaluator.generate_maps(
+                episode_ids, scene_ids, seed, args.map_height
+            )
             # add map from each episode to maps
             for episode_id, scene_id in zip(episode_ids, scene_ids):
-                maps[f"{episode_id},{scene_id}"].append(maps_one_seed[f"{episode_id},{scene_id}"])
-        
+                maps[f"{episode_id},{scene_id}"].append(
+                    maps_one_seed[f"{episode_id},{scene_id}"]
+                )
+
         # make grid of maps for each episode
         for episode_id, scene_id in zip(episode_ids, scene_ids):
-            utils_visualization.generate_grid_of_maps(episode_id,
+            utils_visualization.generate_grid_of_maps(
+                episode_id,
                 scene_id,
                 seeds,
                 maps[f"{episode_id},{scene_id}"],
-                args.map_dir)
+                args.map_dir,
+            )
 
     # visualize blank top-down maps
     if args.make_blank_maps:
@@ -110,7 +119,8 @@ def main():
                 episode_id,
                 scene_id,
                 blank_maps[f"{episode_id},{scene_id}"],
-                args.map_dir)
+                args.map_dir,
+            )
 
 
 if __name__ == "__main__":

@@ -9,28 +9,24 @@ from geometry_msgs.msg import Twist
 from habitat.config.default import get_config
 from habitat.core.simulator import Observations
 from ros_x_habitat.msg import PointGoalWithGPSCompass, DepthImage
-from ros_x_habitat.srv import (
-    EvalEpisode,
-    ResetAgent,
-    GetAgentTime,
-    Roam)
+from ros_x_habitat.srv import EvalEpisode, ResetAgent, GetAgentTime, Roam
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header, Int16
 from src.constants.constants import (
     EvalEpisodeSpecialIDs,
     NumericalMetrics,
     PACKAGE_NAME,
-    ServiceNames)
+    ServiceNames,
+)
 from src.envs.habitat_eval_rlenv import HabitatEvalRLEnv
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 import time
 from src.utils import utils_logging
-from src.utils.utils_visualization import (
-    generate_video,
-    observations_to_image_for_roam)
+from src.utils.utils_visualization import generate_video, observations_to_image_for_roam
 from src.measures.top_down_map_for_roam import (
     TopDownMapForRoam,
-    add_top_down_map_for_roam_to_config)
+    add_top_down_map_for_roam_to_config,
+)
 
 
 class HabitatEnvNode:
@@ -76,7 +72,7 @@ class HabitatEnvNode:
         self.config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
         self.config.freeze()
         add_top_down_map_for_roam_to_config(self.config)
-        
+
         # instantiate environment
         self.enable_physics_sim = enable_physics_sim
         self.use_continuous_agent = use_continuous_agent
@@ -141,14 +137,16 @@ class HabitatEnvNode:
         self.make_video = False
         self.observations_per_episode = []
         self.video_frame_counter = 0
-        self.video_frame_period = 1 # NOTE: frame rate defined as x steps/frame
+        self.video_frame_period = 1  # NOTE: frame rate defined as x steps/frame
 
         # set up logger
         self.logger = utils_logging.setup_logger(self.node_name)
 
         # establish evaluation service server
         self.eval_service = rospy.Service(
-            f"{PACKAGE_NAME}/{node_name}/{ServiceNames.EVAL_EPISODE}", EvalEpisode, self.eval_episode
+            f"{PACKAGE_NAME}/{node_name}/{ServiceNames.EVAL_EPISODE}",
+            EvalEpisode,
+            self.eval_episode,
         )
 
         # establish roam service server
@@ -269,7 +267,7 @@ class HabitatEnvNode:
             t_reset_end = time.clock()
             with self.timing_lock:
                 self.t_reset_elapsed += t_reset_end - t_reset_start
-            # -------------------------------------------- 
+            # --------------------------------------------
 
             # initialize step counter
             with self.command_cv:
@@ -303,7 +301,7 @@ class HabitatEnvNode:
             assert self.enable_eval is False
             self.enable_eval = True
             self.enable_eval_cv.notify()
-    
+
     def eval_episode(self, request):
         r"""
         ROS service handler which evaluates one episode and returns evaluation
@@ -322,7 +320,7 @@ class HabitatEnvNode:
             NumericalMetrics.SPL: 0.0,
             NumericalMetrics.NUM_STEPS: 0,
             NumericalMetrics.SIM_TIME: 0.0,
-            NumericalMetrics.RESET_TIME: 0.0
+            NumericalMetrics.RESET_TIME: 0.0,
         }
 
         if str(request.episode_id_last) == EvalEpisodeSpecialIDs.REQUEST_SHUTDOWN:
@@ -353,13 +351,22 @@ class HabitatEnvNode:
                     }
                     metrics = self.env._env.get_metrics()
                     metrics_dic = {
-                        k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
+                        k: metrics[k]
+                        for k in [
+                            NumericalMetrics.DISTANCE_TO_GOAL,
+                            NumericalMetrics.SUCCESS,
+                            NumericalMetrics.SPL,
+                        ]
                     }
                     with self.timing_lock:
                         with self.command_cv:
                             metrics_dic[NumericalMetrics.NUM_STEPS] = self.count_steps
-                            metrics_dic[NumericalMetrics.SIM_TIME] = self.t_sim_elapsed / self.count_steps
-                            metrics_dic[NumericalMetrics.RESET_TIME] = self.t_reset_elapsed
+                            metrics_dic[NumericalMetrics.SIM_TIME] = (
+                                self.t_sim_elapsed / self.count_steps
+                            )
+                            metrics_dic[
+                                NumericalMetrics.RESET_TIME
+                            ] = self.t_reset_elapsed
                     resp.update(metrics_dic)
                 else:
                     # no episode is evaluated. Toggle the flag so the env node
@@ -399,8 +406,8 @@ class HabitatEnvNode:
             assert self.config.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH is False
             depth_img_in_m = np.squeeze(depth_img, axis=2)
             depth_msg = CvBridge().cv2_to_imgmsg(
-                    depth_img_in_m.astype(np.float32), encoding="passthrough"
-                )
+                depth_img_in_m.astype(np.float32), encoding="passthrough"
+            )
         else:
             depth_msg = DepthImage()
             depth_msg.height, depth_msg.width, _ = depth_img.shape
@@ -463,7 +470,9 @@ class HabitatEnvNode:
                         self.make_depth_camera_info_msg(
                             observations_ros["depth"].header,
                             observations_ros["depth"].height,
-                            observations_ros["depth"].width))
+                            observations_ros["depth"].width,
+                        )
+                    )
             elif sensor_uuid == "pointgoal_with_gps_compass":
                 self.pub_pointgoal_with_gps_compass.publish(
                     observations_ros["pointgoal_with_gps_compass"]
@@ -503,7 +512,7 @@ class HabitatEnvNode:
                 while self.new_command_published is False:
                     self.command_cv.wait()
                 self.new_command_published = False
-            
+
         # enact the action / velocities
         # ------------ log sim time start ------------
         t_sim_start = time.clock()
@@ -532,7 +541,9 @@ class HabitatEnvNode:
                 # NOTE: for now we only consider the case where we make videos
                 # in the roam mode, for a continuous agent
                 out_im_per_action = observations_to_image_for_roam(
-                    self.observations, info, self.config.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH
+                    self.observations,
+                    info,
+                    self.config.SIMULATOR.DEPTH_SENSOR.MAX_DEPTH,
                 )
                 self.observations_per_episode.append(out_im_per_action)
                 self.video_frame_counter = 0
@@ -599,9 +610,9 @@ class HabitatEnvNode:
             if self.use_continuous_agent:
                 # set linear + angular velocity
                 self.linear_vel = np.array(
-                    [(1.0 * cmd_msg.linear.y), 0.0, (-1.0 * cmd_msg.linear.x)])
-                self.angular_vel = np.array(
-                    [0.0, cmd_msg.angular.z, 0.0])
+                    [(1.0 * cmd_msg.linear.y), 0.0, (-1.0 * cmd_msg.linear.x)]
+                )
+                self.angular_vel = np.array([0.0, cmd_msg.angular.z, 0.0])
             else:
                 # get the action
                 self.action = cmd_msg.data
@@ -662,12 +673,11 @@ class HabitatEnvNode:
                 tb_writer=None,
             )
 
+
 def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--node-name", type=str, default="env_node"
-    )
+    parser.add_argument("--node-name", type=str, default="env_node")
     parser.add_argument(
         "--task-config", type=str, default="configs/pointnav_d_orignal.yaml"
     )

@@ -127,6 +127,7 @@ def generate_video(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
 
+
 def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
     """
     Paste top-down-maps from agent initialized with the given seeds to a grid
@@ -154,15 +155,14 @@ def generate_grid_of_maps(episode_id, scene_id, seeds, maps, map_dir):
         # iterating over the grid to return the axes
         ax.set_title(f"Seed={seed}", fontdict=None, loc="center", color="k")
         ax.imshow(im)
-        
+
     fig.savefig(
         f"{map_dir}/episode={episode_id}-scene={os.path.basename(scene_id)}.png"
     )
     plt.close(fig)
 
-def colorize_and_fit_to_height(
-    top_down_map_raw: np.ndarray, output_height: int
-):
+
+def colorize_and_fit_to_height(top_down_map_raw: np.ndarray, output_height: int):
     r"""Given the output of the TopDownMap measure, colorizes the map,
     and fits to a desired output height. Modified on the basis of
     maps.colorize_draw_agent_and_fit_to_height from habitat-lab
@@ -170,9 +170,7 @@ def colorize_and_fit_to_height(
     :param top_down_map_raw: raw top-down map
     :param output_height: The desired output height
     """
-    top_down_map = maps.colorize_topdown_map(
-        top_down_map_raw, None
-    )
+    top_down_map = maps.colorize_topdown_map(top_down_map_raw, None)
 
     if top_down_map.shape[0] > top_down_map.shape[1]:
         top_down_map = np.rot90(top_down_map, 1)
@@ -190,12 +188,8 @@ def colorize_and_fit_to_height(
 
     return top_down_map
 
-def save_blank_map(
-    episode_id: str,
-    scene_id: str,
-    blank_map: np.ndarray,
-    map_dir: str
-):
+
+def save_blank_map(episode_id: str, scene_id: str, blank_map: np.ndarray, map_dir: str):
     r"""
     Save the given blank map in .pgm format in <map_dir>/
     :param episode_id: episode ID
@@ -204,7 +198,10 @@ def save_blank_map(
     :param map_dir: directory to save the map
     """
     map_img = Image.fromarray(blank_map, "RGB")
-    map_img.save(f"{map_dir}/blank_map-episode={episode_id}-scene={os.path.basename(scene_id)}.pgm")
+    map_img.save(
+        f"{map_dir}/blank_map-episode={episode_id}-scene={os.path.basename(scene_id)}.pgm"
+    )
+
 
 def visualize_variability_due_to_seed_with_box_plots(
     metrics_list: List[Dict[str, Dict[str, float]]],
@@ -234,7 +231,7 @@ def visualize_variability_due_to_seed_with_box_plots(
         return
 
     # check if all seeds have the same number of data points
-    #for i in range(num_seeds):
+    # for i in range(num_seeds):
     #    assert  len(metrics_list[i]) == num_samples_per_seed
 
     # extract metric names
@@ -260,7 +257,7 @@ def visualize_variability_due_to_seed_with_box_plots(
                 data[metric_name][total_sample_count] = episode_metrics[metric_name]
             total_sample_count += 1
     df = pd.DataFrame(data)
-    
+
     # drop invalid samples
     # code adapted from piRSquared's work on
     # https://stackoverflow.com/questions/45745085/python-pandas-how-to-remove-nan-and-inf-values
@@ -270,12 +267,13 @@ def visualize_variability_due_to_seed_with_box_plots(
     for metric_name in metric_names:
         fig = plt.figure(figsize=(12.8, 9.6))
         ax = fig.add_subplot(111)
-        ax.set_xticklabels(ax.get_xticklabels(),rotation=90) 
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
         sns.boxplot(x="seed", y=metric_name, data=df, ax=ax)
         sns.stripplot(x="seed", y=metric_name, data=df, color=".25", size=2, ax=ax)
         fig.subplots_adjust(bottom=0.15)
         fig.savefig(f"{plot_dir}/{metric_name}-{num_seeds}_seeds.png")
         plt.close(fig)
+
 
 def visualize_metrics_across_configs_with_box_plots(
     metrics_list: List[Dict[str, Dict[str, float]]],
@@ -305,7 +303,7 @@ def visualize_metrics_across_configs_with_box_plots(
         return
 
     # check if all configs have the same number of data points
-    #for i in range(num_configs):
+    # for i in range(num_configs):
     #    assert  len(metrics_list[i]) == num_samples_per_config
 
     # extract metric names
@@ -346,6 +344,7 @@ def visualize_metrics_across_configs_with_box_plots(
         fig.savefig(f"{plot_dir}/{metric_name}.png")
         plt.close(fig)
 
+
 def visualize_success_across_configs_with_pie_charts(
     metrics_list: List[Dict[str, Dict[str, float]]],
     config_names: List[str],
@@ -360,7 +359,7 @@ def visualize_success_across_configs_with_pie_charts(
         config_names: names of experiment configurations. Should be in the same
             order as metrics_list.
         plot_dir: directory to save the pie chart.
-    """  
+    """
     # check if we have metrics from all configs
     num_configs = len(config_names)
     assert len(metrics_list) == num_configs
@@ -373,11 +372,11 @@ def visualize_success_across_configs_with_pie_charts(
         return
 
     # check if all configs have the same number of data points
-    #for i in range(num_configs):
+    # for i in range(num_configs):
     #    assert  len(metrics_list[i]) == num_samples_per_config
-    
+
     # code adapted from examples on
-    # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.pie.html    
+    # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.pie.html
     success_counts = []
     for config_index in range(0, num_configs):
         # count success in this config
@@ -388,25 +387,28 @@ def visualize_success_across_configs_with_pie_charts(
         success_counts.append(count)
     dict_of_success_counts = {}
     for config_index in range(0, num_configs):
-        dict_of_success_counts[
-            config_names[config_index]] = [success_counts[config_index],
-                num_samples_per_config - success_counts[config_index]]
-    df = pd.DataFrame(dict_of_success_counts, index=['Success', 'Fail'])
+        dict_of_success_counts[config_names[config_index]] = [
+            success_counts[config_index],
+            num_samples_per_config - success_counts[config_index],
+        ]
+    df = pd.DataFrame(dict_of_success_counts, index=["Success", "Fail"])
     plot = df.plot.pie(
         subplots=True,
         legend=None,
         figsize=(12.8, 9.6),
-        layout=(2,int(num_configs/2)),
-        autopct='%1.1f%%')
+        layout=(2, int(num_configs / 2)),
+        autopct="%1.1f%%",
+    )
     fig = plot[0][0].get_figure()
     fig.savefig(f"{plot_dir}/success.png")
     plt.close(fig)
+
 
 def observations_to_image_for_roam(
     observation: Dict,
     info: Dict,
     max_depth: float,
-    ) -> np.ndarray:
+) -> np.ndarray:
     r"""Generate image of single frame from observation and info
     returned from a single environment step(). Modified upon
     habitat.utils.visualizations.observations_to_image().
@@ -445,9 +447,7 @@ def observations_to_image_for_roam(
 
         egocentric_view_l.append(rgb)
 
-    assert (
-        len(egocentric_view_l) > 0
-    ), "Expected at least one visual sensor enabled."
+    assert len(egocentric_view_l) > 0, "Expected at least one visual sensor enabled."
     egocentric_view = np.concatenate(egocentric_view_l, axis=1)
 
     # draw collision
@@ -463,10 +463,9 @@ def observations_to_image_for_roam(
         frame = np.concatenate((egocentric_view, top_down_map), axis=1)
     return frame
 
+
 def visualize_running_times_with_bar_plots(
-    running_times: List[float],
-    config_names: List[str],
-    plot_dir: str
+    running_times: List[float], config_names: List[str], plot_dir: str
 ):
     r"""
     Visualize running times from multiple experiments as bar charts. Save the
@@ -478,7 +477,7 @@ def visualize_running_times_with_bar_plots(
     """
     # precondition check
     assert len(running_times) == len(config_names)
-    
+
     fig = plt.figure(figsize=(12.8, 9.6))
     data = {}
     data["config"] = config_names
@@ -488,15 +487,16 @@ def visualize_running_times_with_bar_plots(
     # add bar labels;
     # solution from https://stackoverflow.com/questions/43214978/seaborn-barplot-displaying-values
     # TODO: upgrade matplotlib to 3.4.0
-    #ax.bar_label(ax.containers[0])
+    # ax.bar_label(ax.containers[0])
     fig.savefig(f"{plot_dir}/running_time_across_configs.png")
     plt.close(fig)
 
+
 def visualize_pairwise_percentage_diff_of_metrics(
     pairwise_diff_dict_of_metrics: Dict[str, Dict[str, float]],
-    config_names : List[str],
+    config_names: List[str],
     diff_in_percentage: bool,
-    plot_dir: str
+    plot_dir: str,
 ):
     r"""
     Visualize pair-wise difference in metrics across multiple configs. Save
@@ -539,12 +539,18 @@ def visualize_pairwise_percentage_diff_of_metrics(
     total_sample_count = 0
     for _, episode_metrics in pairwise_diff_dict_of_metrics.items():
         # register a new sample
-        data["compared configs"][total_sample_count] = f"configs: {config_names[1]} vs {config_names[0]}"
+        data["compared configs"][
+            total_sample_count
+        ] = f"configs: {config_names[1]} vs {config_names[0]}"
         for metric_name in metric_names:
             if diff_in_percentage:
-                data[f"{metric_name} difference (%)"][total_sample_count] = episode_metrics[metric_name]
+                data[f"{metric_name} difference (%)"][
+                    total_sample_count
+                ] = episode_metrics[metric_name]
             else:
-                data[f"{metric_name} difference"][total_sample_count] = episode_metrics[metric_name]
+                data[f"{metric_name} difference"][total_sample_count] = episode_metrics[
+                    metric_name
+                ]
         total_sample_count += 1
     df = pd.DataFrame(data)
 
@@ -558,11 +564,33 @@ def visualize_pairwise_percentage_diff_of_metrics(
         fig = plt.figure(figsize=(12.8, 9.6))
         ax = fig.add_subplot(111)
         if diff_in_percentage:
-            sns.boxplot(x="compared configs", y=f"{metric_name} difference (%)", data=df, ax=ax)
-            sns.stripplot(x="compared configs", y=f"{metric_name} difference (%)", data=df, color=".25", size=2, ax=ax)
-            fig.savefig(f"{plot_dir}/{metric_name}-{config_names[1]}_vs_{config_names[0]}_%.png")
+            sns.boxplot(
+                x="compared configs", y=f"{metric_name} difference (%)", data=df, ax=ax
+            )
+            sns.stripplot(
+                x="compared configs",
+                y=f"{metric_name} difference (%)",
+                data=df,
+                color=".25",
+                size=2,
+                ax=ax,
+            )
+            fig.savefig(
+                f"{plot_dir}/{metric_name}-{config_names[1]}_vs_{config_names[0]}_%.png"
+            )
         else:
-            sns.boxplot(x="compared configs", y=f"{metric_name} difference", data=df, ax=ax)
-            sns.stripplot(x="compared configs", y=f"{metric_name} difference", data=df, color=".25", size=2, ax=ax)
-            fig.savefig(f"{plot_dir}/{metric_name}-{config_names[1]}_vs_{config_names[0]}.png")
+            sns.boxplot(
+                x="compared configs", y=f"{metric_name} difference", data=df, ax=ax
+            )
+            sns.stripplot(
+                x="compared configs",
+                y=f"{metric_name} difference",
+                data=df,
+                color=".25",
+                size=2,
+                ax=ax,
+            )
+            fig.savefig(
+                f"{plot_dir}/{metric_name}-{config_names[1]}_vs_{config_names[0]}.png"
+            )
         plt.close(fig)

@@ -6,8 +6,12 @@ def main():
     # parse input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--launch-file-path", default="launch/teleop.launch", type=str)
-    parser.add_argument("--hab-env-node-path", default="src/nodes/habitat_env_node.py", type=str)
-    parser.add_argument("--hab-env-config-path", default="configs/pointnav_rgbd_roam.yaml", type=str)
+    parser.add_argument(
+        "--hab-env-node-path", default="src/nodes/habitat_env_node.py", type=str
+    )
+    parser.add_argument(
+        "--hab-env-config-path", default="configs/pointnav_rgbd_roam.yaml", type=str
+    )
     parser.add_argument("--hab-env-node-name", default="roamer_env_node", type=str)
     parser.add_argument("--episode-id", type=str, default="-1")
     parser.add_argument(
@@ -28,7 +32,7 @@ def main():
         hab_env_node_path=args.hab_env_node_path,
         hab_env_config_path=args.hab_env_config_path,
         hab_env_node_name=args.hab_env_node_name,
-        video_frame_period=args.video_frame_period
+        video_frame_period=args.video_frame_period,
     )
 
     # get to the specified episode

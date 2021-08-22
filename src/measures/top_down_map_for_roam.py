@@ -7,24 +7,21 @@ from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
-from habitat.core.simulator import (
-    AgentState,
-    ShortestPathPoint
-)
+from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.utils import try_cv2_import
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
-from habitat.tasks.nav.nav import (NavigationEpisode,
-    MAP_THICKNESS_SCALAR)
+from habitat.tasks.nav.nav import NavigationEpisode, MAP_THICKNESS_SCALAR
 
 try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 except ImportError:
     pass
 cv2 = try_cv2_import()
+
 
 def add_top_down_map_for_roam_to_config(config):
     r"""
@@ -39,13 +36,12 @@ def add_top_down_map_for_roam_to_config(config):
     config.TASK.TOP_DOWN_MAP_FOR_ROAM.TYPE = "TopDownMapForRoam"
     config.freeze()
 
+
 @registry.register_measure
 class TopDownMapForRoam(Measure):
     r"""Top Down Map measure"""
 
-    def __init__(
-        self, sim: "HabitatSim", config: Config, *args: Any, **kwargs: Any
-    ):
+    def __init__(self, sim: "HabitatSim", config: Config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._config = config
         self._grid_delta = config.MAP_PADDING
@@ -115,9 +111,7 @@ class TopDownMapForRoam(Measure):
             for goal in episode.goals:
                 if self._is_on_same_floor(goal.position[1]):
                     try:
-                        self._draw_point(
-                            goal.position, maps.MAP_TARGET_POINT_INDICATOR
-                        )
+                        self._draw_point(goal.position, maps.MAP_TARGET_POINT_INDICATOR)
                     except AttributeError:
                         pass
 
@@ -127,16 +121,12 @@ class TopDownMapForRoam(Measure):
                 try:
                     sem_scene = self._sim.semantic_annotations()
                     object_id = goal.object_id
-                    assert int(
-                        sem_scene.objects[object_id].id.split("_")[-1]
-                    ) == int(
+                    assert int(sem_scene.objects[object_id].id.split("_")[-1]) == int(
                         goal.object_id
                     ), f"Object_id doesn't correspond to id in semantic scene objects dictionary for episode: {episode}"
 
                     center = sem_scene.objects[object_id].aabb.center
-                    x_len, _, z_len = (
-                        sem_scene.objects[object_id].aabb.sizes / 2.0
-                    )
+                    x_len, _, z_len = sem_scene.objects[object_id].aabb.sizes / 2.0
                     # Nodes to draw rectangle
                     corners = [
                         center + np.array([x, 0, z])
@@ -173,15 +163,11 @@ class TopDownMapForRoam(Measure):
         self, episode: NavigationEpisode, agent_position: AgentState
     ):
         if self._config.DRAW_SHORTEST_PATH:
-            _shortest_path_points = (
-                self._sim.get_straight_shortest_path_points(
-                    agent_position, episode.goals[0].position
-                )
+            _shortest_path_points = self._sim.get_straight_shortest_path_points(
+                agent_position, episode.goals[0].position
             )
             self._shortest_path_points = [
-                maps.to_grid(
-                    p[2], p[0], self._top_down_map.shape[0:2], sim=self._sim
-                )
+                maps.to_grid(p[2], p[0], self._top_down_map.shape[0:2], sim=self._sim)
                 for p in _shortest_path_points
             ]
             maps.draw_path(
@@ -191,9 +177,7 @@ class TopDownMapForRoam(Measure):
                 self.line_thickness,
             )
 
-    def _is_on_same_floor(
-        self, height, ref_floor_height=None, ceiling_height=2.0
-    ):
+    def _is_on_same_floor(self, height, ref_floor_height=None, ceiling_height=2.0):
         if ref_floor_height is None:
             ref_floor_height = self._sim.get_agent(0).state.position[1]
         return ref_floor_height < height < ref_floor_height + ceiling_height
@@ -221,9 +205,7 @@ class TopDownMapForRoam(Measure):
         self._draw_shortest_path(episode, agent_position)
 
         if self._config.DRAW_SOURCE:
-            self._draw_point(
-                episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
-            )
+            self._draw_point(episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR)
 
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         self._step_count += 1
@@ -259,12 +241,12 @@ class TopDownMapForRoam(Measure):
             sim=self._sim,
         )
         # bound a_x, a_y to map region
-        if a_x<0:
+        if a_x < 0:
             a_x = 0
         elif a_x >= self._top_down_map.shape[0]:
             a_x = self._top_down_map.shape[0] - 1
-        
-        if a_y<0:
+
+        if a_y < 0:
             a_y = 0
         elif a_y >= self._top_down_map.shape[1]:
             a_y = self._top_down_map.shape[1] - 1
@@ -296,7 +278,5 @@ class TopDownMapForRoam(Measure):
                 self.get_polar_angle(),
                 fov=self._config.FOG_OF_WAR.FOV,
                 max_line_len=self._config.FOG_OF_WAR.VISIBILITY_DIST
-                / maps.calculate_meters_per_pixel(
-                    self._map_resolution, sim=self._sim
-                ),
+                / maps.calculate_meters_per_pixel(self._map_resolution, sim=self._sim),
             )
