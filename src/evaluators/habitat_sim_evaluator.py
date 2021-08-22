@@ -83,7 +83,7 @@ class HabitatSimEvaluator(Evaluator):
                 for metric_name, metric_val in metrics.items():
                     agg_metrics[metric_name] += metric_val
                 count_episodes += 1
-        avg_metrics = {k: v/count_episodes for k, v in agg_metrics.items()}
+        avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
         return avg_metrics
 
     @classmethod
@@ -103,7 +103,8 @@ class HabitatSimEvaluator(Evaluator):
         new_dict_of_metrics = {}
         for episode_identifier, episode_metrics in dict_of_metrics.items():
             new_dict_of_metrics[episode_identifier] = {
-                metric_name: episode_metrics[metric_name] for metric_name in metric_names
+                metric_name: episode_metrics[metric_name]
+                for metric_name in metric_names
             }
         return new_dict_of_metrics
 
@@ -113,7 +114,7 @@ class HabitatSimEvaluator(Evaluator):
         dict_of_metrics_baseline: Dict[str, Dict[str, float]],
         dict_of_metrics_compared: Dict[str, Dict[str, float]],
         metric_names: List[str],
-        compute_percentage: bool
+        compute_percentage: bool,
     ) -> Dict[str, Dict[str, float]]:
         r"""
         Compute pairwise difference in metrics between `dict_of_metrics_baseline`
@@ -128,27 +129,41 @@ class HabitatSimEvaluator(Evaluator):
         """
         # precondition check
         assert len(dict_of_metrics_baseline) == len(dict_of_metrics_compared)
-        
+
         pairwise_diff_dict_of_metrics = {}
-        for episode_identifier, episode_metrics_baseline in dict_of_metrics_baseline.items():
+        for (
+            episode_identifier,
+            episode_metrics_baseline,
+        ) in dict_of_metrics_baseline.items():
             # iterate over episodes
             episode_metrics_compared = dict_of_metrics_compared[episode_identifier]
             pairwise_diff_dict_of_metrics[episode_identifier] = {}
             for metric_name in metric_names:
                 # compute difference per metric
                 if compute_percentage:
-                    if np.linalg.norm(episode_metrics_baseline[metric_name] - 0.0) < 1e-5:
+                    if (
+                        np.linalg.norm(episode_metrics_baseline[metric_name] - 0.0)
+                        < 1e-5
+                    ):
                         # handle divide-by-zero - register invalid % change
                         metric_diff = float("nan")
                     else:
-                        metric_diff = ((episode_metrics_compared[metric_name]
-                            - episode_metrics_baseline[metric_name]) /
-                                episode_metrics_baseline[metric_name]) * 100.0
+                        metric_diff = (
+                            (
+                                episode_metrics_compared[metric_name]
+                                - episode_metrics_baseline[metric_name]
+                            )
+                            / episode_metrics_baseline[metric_name]
+                        ) * 100.0
                 else:
-                    metric_diff = (episode_metrics_compared[metric_name]
-                        - episode_metrics_baseline[metric_name])
-                pairwise_diff_dict_of_metrics[episode_identifier][metric_name] = metric_diff
-        
+                    metric_diff = (
+                        episode_metrics_compared[metric_name]
+                        - episode_metrics_baseline[metric_name]
+                    )
+                pairwise_diff_dict_of_metrics[episode_identifier][
+                    metric_name
+                ] = metric_diff
+
         return pairwise_diff_dict_of_metrics
 
     def generate_videos(
@@ -157,7 +172,7 @@ class HabitatSimEvaluator(Evaluator):
         scene_ids: List[str],
         agent_seed: int = 7,
         *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         r"""
         Evaluate the episode of given episode ID's and scene ID's, and save their videos

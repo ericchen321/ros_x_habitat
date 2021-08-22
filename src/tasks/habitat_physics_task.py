@@ -19,6 +19,8 @@ from habitat.tasks.nav.nav import (
     TurnRightAction,
     StopAction,
 )
+import pandas as pd
+import os
 from habitat.utils.geometry_utils import angle_between_quaternions
 
 
@@ -34,6 +36,7 @@ class PhysicsNavigationTask(EmbodiedTask):
         self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
+        self.df = pd.DataFrame(columns=["action", "desired_value", "actual_value"])
 
     def reset(self, episode: Episode):
         observations = self._sim.reset()
@@ -89,16 +92,55 @@ class PhysicsNavigationTask(EmbodiedTask):
                 # step through all frames in the control period
                 total_steps = round(control_period * 1.0 / time_step)
 
-                #TODO: log previous position/angle
+                # save previous position/rotation
+                # comment out when not collecting actuation error data
+                current_position = self._sim.get_agent_state().position
+                current_rotation = self._sim.get_agent_state().rotation
                 for frame in range(0, total_steps):
                     observations = self._sim.step_physics(agent_object, time_step)
                     # if collision occurred, quit the loop immediately
                     # NOTE: this is not working yet
                     # if self._sim.previous_step_collided:
                     #    break
-                #TODO: log after position/angle
-                #NOTE: to get angle between quarternions, use angle_between_quaternions()
+                # log position/rotation after stepping
+                # NOTE: to get angle between quarternions, use angle_between_quaternions()
                 # from geometry_utils in habitat
+                # comment out when not collecting actuation error data
+                new_position = self._sim.get_agent_state().position
+                new_rotation = self._sim.get_agent_state().rotation
+                displacement = np.linalg.norm(new_position - current_position)
+                angle_diff = angle_between_quaternions(new_rotation, current_rotation)
+                if isinstance(action, TurnLeftAction):
+                    self.df.append(
+                        {
+                            "action": "TurnLeft",
+                            "desired_value": 10.0,
+                            "actual_value": angle_diff,
+                        }
+                    )
+                elif isinstance(action, TurnRightAction):
+                    self.df.append(
+                        {
+                            "action": "TurnRight",
+                            "desired_value": 10.0,
+                            "actual_value": angle_diff,
+                        }
+                    )
+                elif isinstance(action, MoveForwardAction):
+                    self.df.append(
+                        {
+                            "action": "MoveForward",
+                            "desired_value": 0.25,
+                            "actual_value": displacement,
+                        }
+                    )
+                else:
+                    pass
+                df_name = episode.scene_id + "_" + episode.episode_id + "_actuation.csv"
+                if os.path.exists(df_name):
+                    self.df.to_csv(df_name, mode="a", header=False)
+                else:
+                    self.df.to_csv(df_name, index=False)
 
         observations.update(
             self.sensor_suite.get_observations(

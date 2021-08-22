@@ -4,17 +4,15 @@ from subprocess import Popen
 from typing import List, Tuple, Dict
 import numpy as np
 import rospy
-from ros_x_habitat.srv import (
-    EvalEpisode,
-    ResetAgent,
-    GetAgentTime)
+from ros_x_habitat.srv import EvalEpisode, ResetAgent, GetAgentTime
 from src.constants.constants import NumericalMetrics
 from src.evaluators.habitat_sim_evaluator import HabitatSimEvaluator
 from src.constants.constants import (
     AgentResetCommands,
     EvalEpisodeSpecialIDs,
     PACKAGE_NAME,
-    ServiceNames)
+    ServiceNames,
+)
 from src.utils import utils_logging
 
 
@@ -36,7 +34,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         do_not_start_nodes: bool = False,
     ) -> None:
         r"""..
-        
+
         :param config_paths: file to be used for creating the environment
         :param input_type: agent's input type, options: "rgb", "rgbd",
             "depth", "blind"
@@ -54,7 +52,8 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
             config_paths=config_paths,
             input_type=input_type,
             model_path=model_path,
-            enable_physics=enable_physics)
+            enable_physics=enable_physics,
+        )
 
         # check if agent input type is valid
         assert input_type in ["rgb", "rgbd", "depth", "blind"]
@@ -62,7 +61,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         self.node_name = node_name
         self.env_node_name = env_node_name
         self.agent_node_name = agent_node_name
-        
+
         # parse args for agent node
         agent_node_args = shlex.split(
             f"python src/nodes/habitat_agent_node.py --node-name {self.agent_node_name} --input-type {input_type} --model-path {model_path} --sensor-pub-rate {sensor_pub_rate}"
@@ -91,20 +90,36 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
 
         # resolve service names
         if self.do_not_start_nodes:
-            self.eval_episode_service_name = f"{PACKAGE_NAME}/mock_env_node/{ServiceNames.EVAL_EPISODE}"
-            self.reset_agent_service_name = f"{PACKAGE_NAME}/mock_agent_node/{ServiceNames.RESET_AGENT}"
-            self.get_agent_time_service_name = f"{PACKAGE_NAME}/mock_agent_node/{ServiceNames.GET_AGENT_TIME}"
+            self.eval_episode_service_name = (
+                f"{PACKAGE_NAME}/mock_env_node/{ServiceNames.EVAL_EPISODE}"
+            )
+            self.reset_agent_service_name = (
+                f"{PACKAGE_NAME}/mock_agent_node/{ServiceNames.RESET_AGENT}"
+            )
+            self.get_agent_time_service_name = (
+                f"{PACKAGE_NAME}/mock_agent_node/{ServiceNames.GET_AGENT_TIME}"
+            )
         else:
-            self.eval_episode_service_name = f"{PACKAGE_NAME}/{self.env_node_name}/{ServiceNames.EVAL_EPISODE}"
-            self.reset_agent_service_name = f"{PACKAGE_NAME}/{self.agent_node_name}/{ServiceNames.RESET_AGENT}"
-            self.get_agent_time_service_name = f"{PACKAGE_NAME}/{self.agent_node_name}/{ServiceNames.GET_AGENT_TIME}"
+            self.eval_episode_service_name = (
+                f"{PACKAGE_NAME}/{self.env_node_name}/{ServiceNames.EVAL_EPISODE}"
+            )
+            self.reset_agent_service_name = (
+                f"{PACKAGE_NAME}/{self.agent_node_name}/{ServiceNames.RESET_AGENT}"
+            )
+            self.get_agent_time_service_name = (
+                f"{PACKAGE_NAME}/{self.agent_node_name}/{ServiceNames.GET_AGENT_TIME}"
+            )
 
         # set up eval episode service client
-        self.eval_episode = rospy.ServiceProxy(self.eval_episode_service_name, EvalEpisode)
+        self.eval_episode = rospy.ServiceProxy(
+            self.eval_episode_service_name, EvalEpisode
+        )
         # set up agent reset service client
         self.reset_agent = rospy.ServiceProxy(self.reset_agent_service_name, ResetAgent)
         # establish agent time service client
-        self.get_agent_time = rospy.ServiceProxy(self.get_agent_time_service_name, GetAgentTime)
+        self.get_agent_time = rospy.ServiceProxy(
+            self.get_agent_time_service_name, GetAgentTime
+        )
 
     def evaluate(
         self,
@@ -130,7 +145,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                 assert resp.done
             except rospy.ServiceException:
                 logger.info("Failed to reset agent!")
-            
+
             # evaluate one episode and get metrics from the env node
             rospy.wait_for_service(self.eval_episode_service_name)
             resp = None
@@ -158,16 +173,20 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
                     NumericalMetrics.SPL: resp.spl,
                     NumericalMetrics.NUM_STEPS: resp.num_steps,
                     NumericalMetrics.SIM_TIME: resp.sim_time,
-                    NumericalMetrics.RESET_TIME: resp.reset_time
+                    NumericalMetrics.RESET_TIME: resp.reset_time,
                 }
 
                 # get the agent time of this episode
                 rospy.wait_for_service(self.get_agent_time_service_name)
                 try:
                     agent_time_resp = self.get_agent_time()
-                    per_episode_metrics[NumericalMetrics.AGENT_TIME] = agent_time_resp.agent_time
+                    per_episode_metrics[
+                        NumericalMetrics.AGENT_TIME
+                    ] = agent_time_resp.agent_time
                 except rospy.ServiceException:
-                    logger.info(f"Failed to get agent time at episode={resp.episode_id}, scene={resp.scene_id}")
+                    logger.info(
+                        f"Failed to get agent time at episode={resp.episode_id}, scene={resp.scene_id}"
+                    )
                     raise rospy.ServiceException
 
                 # set up per-episode logger
@@ -221,7 +240,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         except rospy.ServiceException:
             print("Failed to shut down agent!")
             raise rospy.ServiceException
-    
+
     def evaluate_and_get_maps(
         self,
         episode_id_last: str = "-1",
@@ -240,7 +259,7 @@ class HabitatROSEvaluator(HabitatSimEvaluator):
         scene_ids: List[str],
         agent_seed: int = 7,
         *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         # TODO: we may need to implement it for Habitat agent + Gazebo or ROS planner + Habitat Sim
         raise NotImplementedError

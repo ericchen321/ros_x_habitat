@@ -15,7 +15,8 @@ from src.utils import utils_logging
 from src.utils.utils_visualization import (
     TensorboardWriter,
     generate_video,
-    colorize_and_fit_to_height)
+    colorize_and_fit_to_height,
+)
 
 
 def get_default_config():
@@ -176,19 +177,27 @@ class HabitatEvaluator(HabitatSimEvaluator):
                 # collect metrics
                 per_episode_metrics = self.env._env.get_metrics()
                 per_episode_metrics[NumericalMetrics.NUM_STEPS] = count_steps
-                per_episode_metrics[NumericalMetrics.SIM_TIME] = t_sim_elapsed / count_steps
+                per_episode_metrics[NumericalMetrics.SIM_TIME] = (
+                    t_sim_elapsed / count_steps
+                )
                 per_episode_metrics[NumericalMetrics.RESET_TIME] = t_reset_elapsed
-                per_episode_metrics[NumericalMetrics.AGENT_TIME] = t_agent_elapsed / count_steps
+                per_episode_metrics[NumericalMetrics.AGENT_TIME] = (
+                    t_agent_elapsed / count_steps
+                )
                 # colorize the map and replace "top_down_map" metric with it
-                per_episode_metrics["top_down_map"] = maps.colorize_draw_agent_and_fit_to_height(
+                per_episode_metrics[
+                    "top_down_map"
+                ] = maps.colorize_draw_agent_and_fit_to_height(
                     info_per_action["top_down_map"],
                     map_height,
                 )
-                
+
                 # print numerical metrics of this episode
                 for metric_name in NumericalMetrics:
-                    logger_per_episode.info(f"{metric_name},{per_episode_metrics[metric_name]}")
-                
+                    logger_per_episode.info(
+                        f"{metric_name},{per_episode_metrics[metric_name]}"
+                    )
+
                 # add to the metrics list
                 dict_of_metrics[f"{episode_id},{scene_id}"] = per_episode_metrics
 
@@ -227,11 +236,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
         **kwargs,
     ):
         dict_of_metrics = self.evaluate_and_get_maps(
-            episode_id_last,
-            scene_id_last,
-            log_dir,
-            agent_seed,
-            200
+            episode_id_last, scene_id_last, log_dir, agent_seed, 200
         )
         return dict_of_metrics
 
@@ -241,14 +246,14 @@ class HabitatEvaluator(HabitatSimEvaluator):
         scene_ids: List[str],
         agent_seed: int = 7,
         *args,
-        **kwargs
+        **kwargs,
     ) -> None:
         # create a logger
         logger = utils_logging.setup_logger(__name__)
 
         # precondition checks
         assert len(episode_ids) == len(scene_ids)
-        
+
         num_episodes = len(episode_ids)
         count_episodes_visualized = 0
 
@@ -296,16 +301,26 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     # act until the episode is over
                     while not self.env._env.episode_over:
                         action = self.agent.act(observations_per_action)
-                        (observations_per_action, _, _, info_per_action) = self.env.step(action)
+                        (
+                            observations_per_action,
+                            _,
+                            _,
+                            info_per_action,
+                        ) = self.env.step(action)
                         out_im_per_action = observations_to_image(
                             observations_per_action, info_per_action
                         )
                         observations_per_episode.append(out_im_per_action)
-                    
+
                     # get metrics for video generation
                     metrics = self.env._env.get_metrics()
                     per_ep_metrics = {
-                        k: metrics[k] for k in [NumericalMetrics.DISTANCE_TO_GOAL, NumericalMetrics.SUCCESS, NumericalMetrics.SPL]
+                        k: metrics[k]
+                        for k in [
+                            NumericalMetrics.DISTANCE_TO_GOAL,
+                            NumericalMetrics.SUCCESS,
+                            NumericalMetrics.SPL,
+                        ]
                     }
 
                     # generate video and tensorboard visualization
@@ -343,7 +358,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
 
         # precondition checks
         assert len(episode_ids) == len(scene_ids)
-        
+
         num_episodes = len(episode_ids)
         count_episodes_visualized = 0
 
@@ -379,8 +394,13 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     # act until the episode is over
                     while not self.env._env.episode_over:
                         action = self.agent.act(observations_per_action)
-                        (observations_per_action, _, _, info_per_action) = self.env.step(action)
-                    
+                        (
+                            observations_per_action,
+                            _,
+                            _,
+                            info_per_action,
+                        ) = self.env.step(action)
+
                     # draw and append the map
                     top_down_map = maps.colorize_draw_agent_and_fit_to_height(
                         info_per_action["top_down_map"],
@@ -411,7 +431,7 @@ class HabitatEvaluator(HabitatSimEvaluator):
 
         # precondition checks
         assert len(episode_ids) == len(scene_ids)
-        
+
         num_episodes = len(episode_ids)
         count_episodes_visualized = 0
 
@@ -437,15 +457,19 @@ class HabitatEvaluator(HabitatSimEvaluator):
                     top_down_map_raw = maps.get_topdown_map_from_sim(
                         sim=self.env._env._sim,
                         map_resolution=self.env._env._config.TASK.TOP_DOWN_MAP.MAP_RESOLUTION,
-                        draw_border=self.env._env._config.TASK.TOP_DOWN_MAP.DRAW_BORDER
+                        draw_border=self.env._env._config.TASK.TOP_DOWN_MAP.DRAW_BORDER,
                     )
-                    top_down_map = colorize_and_fit_to_height(top_down_map_raw, map_height)
+                    top_down_map = colorize_and_fit_to_height(
+                        top_down_map_raw, map_height
+                    )
                     dict_of_maps[f"{episode_id},{scene_id}"] = top_down_map
             except StopIteration:
                 break
 
         logger.info(f"Given {num_episodes} episodes to generate blank top-down maps")
-        logger.info(f"Generated blank top-down maps of {count_episodes_visualized} episodes")
+        logger.info(
+            f"Generated blank top-down maps of {count_episodes_visualized} episodes"
+        )
 
         # destroy the logger
         utils_logging.close_logger(logger)
