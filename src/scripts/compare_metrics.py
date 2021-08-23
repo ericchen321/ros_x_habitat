@@ -83,16 +83,8 @@ def get_episodes_fail_in_1_success_in_2(
     dict_of_metrics_2: Dict[str, Dict],
 ) -> Tuple[Dict[str, Dict], Dict[str, Dict]]:
     r"""
-    Extract episodes that are registered as a faile case in `dict_of_metrics_1`,
+    Extract episodes that are registered as a fail case in `dict_of_metrics_1`,
     but as a success in `dict_of_metrics_2`.
-    :param dict_of_metrics_1: dictionary of metrics from experiment 1
-    :param dict_of_metrics_2: dictionary of metrics from experiment 2
-    :return: a tuple of two dictionaries of metrics, each having only episodes that
-        satisfy the criterion above
-    """
-    r"""
-    Extract episodes that are registered as a success in `dict_of_metrics_1` but
-    as a fail case in `dict_of_metrics_2`.
     :param dict_of_metrics_1: dictionary of metrics from experiment 1
     :param dict_of_metrics_2: dictionary of metrics from experiment 2
     :return: a tuple of two dictionaries of metrics, each having only episodes that
@@ -109,6 +101,36 @@ def get_episodes_fail_in_1_success_in_2(
         episode_metrics_2 = dict_of_metrics_2[episode_identifier]
         if (
             np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 1.0) < 1e-5
+            and np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 0.0) < 1e-5
+        ):
+            dict_of_metrics_1_subset[episode_identifier] = episode_metrics_1
+            dict_of_metrics_2_subset[episode_identifier] = episode_metrics_2
+
+    return dict_of_metrics_1_subset, dict_of_metrics_2_subset
+
+def get_episodes_fail_in_both(
+    dict_of_metrics_1: Dict[str, Dict],
+    dict_of_metrics_2: Dict[str, Dict],
+) -> Tuple[Dict[str, Dict], Dict[str, Dict]]:
+    r"""
+    Extract episodes that are registered as a fail case in both `dict_of_metrics_1`,
+    and `dict_of_metrics_2`.
+    :param dict_of_metrics_1: dictionary of metrics from experiment 1
+    :param dict_of_metrics_2: dictionary of metrics from experiment 2
+    :return: a tuple of two dictionaries of metrics, each having only episodes that
+        satisfy the criterion above
+    """
+    # precondition check
+    assert len(dict_of_metrics_1) == len(dict_of_metrics_2)
+
+    dict_of_metrics_1_subset = {}
+    dict_of_metrics_2_subset = {}
+
+    # find episodes that satisfy the criteria
+    for episode_identifier, episode_metrics_1 in dict_of_metrics_1.items():
+        episode_metrics_2 = dict_of_metrics_2[episode_identifier]
+        if (
+            np.linalg.norm(episode_metrics_2[NumericalMetrics.SUCCESS] - 0.0) < 1e-5
             and np.linalg.norm(episode_metrics_1[NumericalMetrics.SUCCESS] - 0.0) < 1e-5
         ):
             dict_of_metrics_1_subset[episode_identifier] = episode_metrics_1
@@ -183,7 +205,7 @@ def main():
             "find_cases_success_in_1_fail_in_2",
             "find_cases_success_in_both_but_metrics_differ_by_a_lot",
             "find_cases_fail_in_1_success_in_2",
-        ],
+            "find_cases_fail_in_both"],
     )
     args = parser.parse_args()
 
@@ -259,7 +281,12 @@ def main():
             dict_of_metrics_1=dict_of_metrics_1,
             dict_of_metrics_2=dict_of_metrics_2,
         )
-
+    elif args.mode == "find_cases_fail_in_both":
+        dict_of_metrics_subset_1, dict_of_metrics_subset_2 = get_episodes_fail_in_both(
+            dict_of_metrics_1=dict_of_metrics_1,
+            dict_of_metrics_2=dict_of_metrics_2,
+        )
+    
     # merge metrics from experiment 1 and 2
     dict_of_metrics_1_and_2 = zip_metrics_1_and_2(
         fieldnames=(["episode_id", "scene_id"] + metric_names_1 + metric_names_2),

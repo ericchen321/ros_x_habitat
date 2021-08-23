@@ -78,3 +78,6 @@ build/
 
 # py-spy profiles
 pyspy_profiles/
+
+# Gazebo worlds
+worlds/
