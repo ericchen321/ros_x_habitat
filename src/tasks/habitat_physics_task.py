@@ -150,12 +150,8 @@ class PhysicsNavigationTask(EmbodiedTask):
                     + "_actuation.csv"
                 )
                 if not self.df.empty:
-                    if os.path.exists(df_name):
-                        print("Updating csv: " + df_name)
-                        self.df.to_csv(df_name, mode="a", header=False, index=False)
-                    else:
-                        print("Creating csv: " + df_name)
-                        self.df.to_csv(df_name, index=False)
+                    print("Updating csv: " + df_name)
+                    self.df.to_csv(df_name, index=False)
 
         observations.update(
             self.sensor_suite.get_observations(
