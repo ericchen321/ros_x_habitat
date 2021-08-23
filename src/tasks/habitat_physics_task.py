@@ -38,6 +38,7 @@ class PhysicsNavigationTask(EmbodiedTask):
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
         self.df = pd.DataFrame(columns=["action", "desired_value", "actual_value"])
+        self.df_name = None
 
     def reset(self, episode: Episode):
         observations = self._sim.reset()
@@ -95,6 +96,17 @@ class PhysicsNavigationTask(EmbodiedTask):
 
                 # save previous position/rotation
                 # comment out when not collecting actuation error data
+                current_df_name = (
+                    "actuation_data/"
+                    + str(episode.scene_id).split("/")[-1]
+                    + "_"
+                    + str(episode.episode_id)
+                    + "_actuation.csv"
+                )
+                if self.df_name != current_df_name:
+                    self.df = self.df.iloc[0:0]
+                    self.df_name = current_df_name
+
                 current_position = self._sim.get_agent_state().position
                 current_rotation = self._sim.get_agent_state().rotation
                 for frame in range(0, total_steps):
@@ -142,16 +154,10 @@ class PhysicsNavigationTask(EmbodiedTask):
                     )
                 else:
                     pass
-                df_name = (
-                    "actuation_data/"
-                    + str(episode.scene_id).split("/")[-1]
-                    + "_"
-                    + str(episode.episode_id)
-                    + "_actuation.csv"
-                )
+
                 if not self.df.empty:
-                    print("Updating csv: " + df_name)
-                    self.df.to_csv(df_name, index=False)
+                    print("Updating csv: " + self.df_name)
+                    self.df.to_csv(self.df_name, index=False)
 
         observations.update(
             self.sensor_suite.get_observations(
