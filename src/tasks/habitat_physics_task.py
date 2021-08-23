@@ -20,6 +20,7 @@ from habitat.tasks.nav.nav import (
     StopAction,
 )
 import pandas as pd
+import math
 import os
 from habitat.utils.geometry_utils import angle_between_quaternions
 
@@ -109,38 +110,52 @@ class PhysicsNavigationTask(EmbodiedTask):
                 new_position = self._sim.get_agent_state().position
                 new_rotation = self._sim.get_agent_state().rotation
                 displacement = np.linalg.norm(new_position - current_position)
-                angle_diff = angle_between_quaternions(new_rotation, current_rotation)
-                if isinstance(action, TurnLeftAction):
-                    self.df.append(
+                angle_diff = math.degrees(
+                    angle_between_quaternions(new_rotation, current_rotation)
+                )
+                if isinstance(task_action, TurnLeftAction):
+                    self.df = self.df.append(
                         {
                             "action": "TurnLeft",
                             "desired_value": 10.0,
                             "actual_value": angle_diff,
-                        }
+                        },
+                        ignore_index=True,
                     )
-                elif isinstance(action, TurnRightAction):
-                    self.df.append(
+                elif isinstance(task_action, TurnRightAction):
+                    self.df = self.df.append(
                         {
                             "action": "TurnRight",
                             "desired_value": 10.0,
                             "actual_value": angle_diff,
-                        }
+                        },
+                        ignore_index=True,
                     )
-                elif isinstance(action, MoveForwardAction):
-                    self.df.append(
+                elif isinstance(task_action, MoveForwardAction):
+                    self.df = self.df.append(
                         {
                             "action": "MoveForward",
                             "desired_value": 0.25,
                             "actual_value": displacement,
-                        }
+                        },
+                        ignore_index=True,
                     )
                 else:
                     pass
-                df_name = episode.scene_id + "_" + episode.episode_id + "_actuation.csv"
-                if os.path.exists(df_name):
-                    self.df.to_csv(df_name, mode="a", header=False)
-                else:
-                    self.df.to_csv(df_name, index=False)
+                df_name = (
+                    "actuation_data/"
+                    + str(episode.scene_id).split("/")[-1]
+                    + "_"
+                    + str(episode.episode_id)
+                    + "_actuation.csv"
+                )
+                if not self.df.empty:
+                    if os.path.exists(df_name):
+                        print("Updating csv: " + df_name)
+                        self.df.to_csv(df_name, mode="a", header=False, index=False)
+                    else:
+                        print("Creating csv: " + df_name)
+                        self.df.to_csv(df_name, index=False)
 
         observations.update(
             self.sensor_suite.get_observations(

@@ -26,7 +26,7 @@ def main():
         type=str,
         default="data/scene_datasets/habitat-test-scenes/skokloster-castle.glb",
     )
-    parser.add_argument("--seed-file-path", type=str, default="seed=7.csv")
+    parser.add_argument("--seed-file-path", type=str, default="seeds/seed=7.csv")
     parser.add_argument("--log-dir", type=str, default="logs/")
     parser.add_argument("--make-maps", default=False, action="store_true")
     parser.add_argument("--map-dir", type=str, default="habitat_maps/")

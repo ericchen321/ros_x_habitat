@@ -78,6 +78,8 @@ build/
 
 # py-spy profiles
 pyspy_profiles/
+/actuation_data/
+
 
 # Gazebo worlds
 worlds/
