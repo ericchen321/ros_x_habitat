@@ -186,7 +186,9 @@ class HabitatEnvNode:
                 )
         if "POINTGOAL_WITH_GPS_COMPASS_SENSOR" in self.config.TASK.SENSORS:
             self.pub_pointgoal_with_gps_compass = rospy.Publisher(
-                "pointgoal_with_gps_compass", PointGoalWithGPSCompass, queue_size=10
+                "pointgoal_with_gps_compass",
+                PointGoalWithGPSCompass,
+                queue_size=self.pub_queue_size
             )
 
         # subscribe from command topics
