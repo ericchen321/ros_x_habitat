@@ -50,18 +50,12 @@ class HabitatAgentNode:
         self,
         node_name: str,
         agent_config: Config,
-        output_velocities: bool = False,
-        control_period: float = 1.0,
         sensor_pub_rate: float = 5.0,
     ):
         r"""
         Instantiates a node incapsulating a Habitat agent.
         :param node_name: name of the node
         :param agent_config: agent configuration
-        :param output_velocities: if True, the node publishes velocities
-            to `cmd_vel/`; otherwise publishes commands to `action`
-        :param control_period: time in seconds for the agent to complete
-            an action; only used when output_velocities is True
         :sensor_pub_rate: the rate at which Gazebo (or some other ROS-based
             sim) publishes sensor observations
         """
@@ -70,33 +64,19 @@ class HabitatAgentNode:
         rospy.init_node(self.node_name)
 
         self.agent_config = agent_config
-        self.output_velocities = output_velocities
         self.sensor_pub_rate = float(sensor_pub_rate)
-
-        # control_period defined for continuous mode
-        if self.output_velocities:
-            self.control_period = control_period
 
         # agent publish and subscribe queue size
         # TODO: make them configurable by constructor argument
         self.sub_queue_size = 10
         self.pub_queue_size = 10
 
-        # lock guarding access to self.action, self.count_frames,
-        # self.count_steps, self.agent and self.t_agent_elapsed
-        # NOTE: self.count_steps count the number of discrete steps;
-        # self.count_frames count the number of frames from a ROS-based
-        # sim
+        # lock guarding access to self.action, self.count_steps,
+        # self.agent and self.t_agent_elapsed
         self.lock = Lock()
         with self.lock:
             # the last action produced from the agent
             self.action = None
-
-            # count the number of frames received from Habitat simulator;
-            # reset to 0 every time an action is completed
-            # not applicable in discrete mode
-            if self.output_velocities:
-                self.count_frames = 0
 
             # declare an agent instance
             self.agent = PPOAgent(agent_config)
@@ -128,10 +108,7 @@ class HabitatAgentNode:
         )
 
         # publish to command topics
-        if self.output_velocities:
-            self.pub = rospy.Publisher("cmd_vel", Twist, queue_size=self.pub_queue_size)
-        else:
-            self.pub = rospy.Publisher("action", Int16, queue_size=self.pub_queue_size)
+        self.pub = rospy.Publisher("action", Int16, queue_size=self.pub_queue_size)
 
         # subscribe to sensor topics
         if (
@@ -187,7 +164,6 @@ class HabitatAgentNode:
             # doesn't work and the agent retains memory from previous
             # episodes
             with self.lock:
-                self.count_frames = 0
                 self.count_steps = 0
                 self.t_agent_elapsed = 0.0
                 self.action = None
@@ -268,34 +244,13 @@ class HabitatAgentNode:
     def action_to_msg(self, action: Dict[str, int]):
         r"""
         Converts action produced by Habitat agent to a ROS message.
-        :param action: Action produced by Habitat agent.
-        :returns: A ROS message of action or velocity command.
+        :param action: Discrete action produced by Habitat agent.
+        :returns: A ROS message of action command.
         """
         action_id = action["action"]
         msg = ...  # type: Union[Twist, Int16]
-
-        if self.output_velocities:
-            # produce velocity message
-            msg = Twist()
-            msg.linear.x = 0
-            msg.linear.y = 0
-            msg.linear.z = 0
-            msg.angular.x = 0
-            msg.angular.y = 0
-            msg.angular.z = 0
-            # Convert to Twist message in continuous mode
-            if action_id == _DefaultHabitatSimActions.STOP:
-                pass
-            elif action_id == _DefaultHabitatSimActions.MOVE_FORWARD:
-                msg.linear.z = 0.25 / self.control_period
-            elif action_id == _DefaultHabitatSimActions.TURN_LEFT:
-                msg.angular.y = radians(10.0) / self.control_period
-            elif action_id == _DefaultHabitatSimActions.TURN_RIGHT:
-                msg.angular.y = radians(-10.0) / self.control_period
-        else:
-            # produce action message
-            msg = Int16()
-            msg.data = action_id
+        msg = Int16()
+        msg.data = action_id
 
         return msg
 
@@ -315,22 +270,11 @@ class HabitatAgentNode:
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
         with self.lock:
-            if self.output_velocities:
-                self.count_frames += 1
-                if (
-                    self.count_frames
-                    == (self.sensor_pub_rate * self.control_period) - 1
-                ):
-                    self.count_frames = 0
-                    self.action = self.agent.act(observations)
-                    self.count_steps += 1
-                    vel_msg = self.action_to_msg(self.action)
-                    self.pub.publish(vel_msg)
-            else:
-                self.action = self.agent.act(observations)
-                self.count_steps += 1
-                action_msg = self.action_to_msg(self.action)
-                self.pub.publish(action_msg)
+            # TODO: implement time logging for rgb callback
+            self.action = self.agent.act(observations)
+            self.count_steps += 1
+            action_msg = self.action_to_msg(self.action)
+            self.pub.publish(action_msg)
 
     def callback_depth(self, depth_msg, pointgoal_with_gps_compass_msg):
         r"""
@@ -348,22 +292,11 @@ class HabitatAgentNode:
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
         with self.lock:
-            if self.output_velocities:
-                self.count_frames += 1
-                if (
-                    self.count_frames
-                    == (self.sensor_pub_rate * self.control_period) - 1
-                ):
-                    self.count_frames = 0
-                    self.action = self.agent.act(observations)
-                    self.count_steps += 1
-                    vel_msg = self.action_to_msg(self.action)
-                    self.pub.publish(vel_msg)
-            else:
-                self.action = self.agent.act(observations)
-                self.count_steps += 1
-                action_msg = self.action_to_msg(self.action)
-                self.pub.publish(action_msg)
+            # TODO: implement time logging for depth callback
+            self.action = self.agent.act(observations)
+            self.count_steps += 1
+            action_msg = self.action_to_msg(self.action)
+            self.pub.publish(action_msg)
 
     def callback_rgbd(self, rgb_msg, depth_msg, pointgoal_with_gps_compass_msg):
         r"""
@@ -383,31 +316,19 @@ class HabitatAgentNode:
         # produce an action/velocity once the last action has completed
         # and publish to relevant topics
         with self.lock:
-            if self.output_velocities:
-                self.count_frames += 1
-                if (
-                    self.count_frames
-                    == (self.sensor_pub_rate * self.control_period) - 1
-                ):
-                    self.count_frames = 0
-                    self.action = self.agent.act(observations)
-                    self.count_steps += 1
-                    vel_msg = self.action_to_msg(self.action)
-                    self.pub.publish(vel_msg)
-            else:
-                # ------------ log agent time start ------------
-                t_agent_start = time.clock()
-                # ----------------------------------------------
+            # ------------ log agent time start ------------
+            t_agent_start = time.clock()
+            # ----------------------------------------------
 
-                self.action = self.agent.act(observations)
+            self.action = self.agent.act(observations)
 
-                # ------------ log agent time end ------------
-                t_agent_end = time.clock()
-                self.t_agent_elapsed += t_agent_end - t_agent_start
-                self.count_steps += 1
+            # ------------ log agent time end ------------
+            t_agent_end = time.clock()
+            self.t_agent_elapsed += t_agent_end - t_agent_start
+            self.count_steps += 1
 
-                action_msg = self.action_to_msg(self.action)
-                self.pub.publish(action_msg)
+            action_msg = self.action_to_msg(self.action)
+            self.pub.publish(action_msg)
 
     def spin_until_shutdown(self):
         r"""
@@ -430,12 +351,6 @@ def main():
         choices=["blind", "rgb", "depth", "rgbd"],
     )
     parser.add_argument("--model-path", default="", type=str)
-    parser.add_argument("--output-velocities", default=False, action="store_true")
-    parser.add_argument(
-        "--control-period",
-        type=float,
-        default=1.0,
-    )
     parser.add_argument(
         "--sensor-pub-rate",
         type=float,
@@ -450,8 +365,6 @@ def main():
     agent_node = HabitatAgentNode(
         node_name=args.node_name,
         agent_config=agent_config,
-        output_velocities=args.output_velocities,
-        control_period=args.control_period,
         sensor_pub_rate=args.sensor_pub_rate,
     )
 
