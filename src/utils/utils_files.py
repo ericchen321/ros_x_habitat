@@ -89,6 +89,19 @@ def extract_metrics_from_log_file(log_filepath, metric_names):
     return (episode_id, scene_id, per_ep_metrics)
 
 
+def extract_seed_dir_paths(
+    log_dir: str
+) -> List[str]:
+    r"""
+    Extract seed directory paths.
+    :param log_dir: path to directory containing all seeds
+    """
+    log_dirs_all_seeds = []
+    for log_dir_per_seed in glob.glob(f"{log_dir}/*/"):
+        log_dirs_all_seeds.append(log_dir_per_seed)
+    return log_dirs_all_seeds
+
+
 def extract_log_filepaths(
     list_of_log_dirs: List[str],
 ) -> List[List[str]]:
