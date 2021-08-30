@@ -12,11 +12,12 @@ from PIL import Image as PILImage
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Header, Int16
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Point
 import quaternion
 from habitat.utils.geometry_utils import quaternion_rotate_vector
 from habitat.tasks.utils import cartesian_to_polar
 from tf.transformations import euler_from_quaternion, rotation_matrix
+from visualization_msgs.msg import Marker, MarkerArray
 from threading import Lock
 from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
 from src.utils import utils_logging
@@ -72,15 +73,21 @@ class GazeboHabitatAgentBridge:
         # register control period
         self.control_period = control_period
 
+        # set max number of steps for navigation
+        # TODO: make them configurable by constructor argument
+        self.max_steps = 500
+
         # last_action_completed controls when to publish the next set
         # of observations
         self.last_action_lock = Lock()
         with self.last_action_lock:
+            self.count_steps = 0
             self.last_action_completed = True
 
         # current pose of the agent
         self.curr_pose_lock = Lock()
         with self.curr_pose_lock:
+            self.prev_pos = None # NOTE: self.prev_pos is for visualization only
             self.curr_pos = None
             self.curr_rotation = None
 
@@ -141,7 +148,99 @@ class GazeboHabitatAgentBridge:
         # publish to Gazebo-facing velocity command topic
         self.pub_vel = rospy.Publisher("cmd_vel", Twist, queue_size=self.pub_queue_size)
 
+        # publish initial/goal position for visualization
+        self.pub_init_and_goal_pos = rospy.Publisher(
+            "visualization_marker_array",
+            MarkerArray,
+            queue_size=self.pub_queue_size
+        )
+        self.marker_array_lock = Lock()
+        with self.marker_array_lock:
+            self.marker_array = MarkerArray()
+
         self.logger.info("gazebo-habitat-agent bridge initialized")
+    
+    def pos_to_point(self, pos):
+        r"""
+        Produce a ROS point from a position.
+        :param pos: position as a (3, ) numpy array.
+        :return a ROS point.
+        """
+        point = Point()
+        point.x = pos[0]
+        point.y = pos[1]
+        point.z = pos[2]
+        return point
+    
+    def add_pos_to_marker_array(self, pos_type, pos_0, pos_1=None, rot=None):
+        r"""
+        Add position(s) to the marker array for visualization.
+        Require:
+            1) self.marker_array_lock not being held by the calling
+                thread
+            2) the lock guarding `pos_0` and `pos_1` being held by the
+                calling thread
+            3) self.last_action_lock is being held by the calling thread
+        :param pos_type: can only be one of the following:
+            1) "curr" - path from previous to current position of the agent
+            2) "init" - inital position of the agent
+            3) "goal" - final goal position
+        :param pos_0: position to add marker to
+        :param pos_1: second position for drawing line segment; Only used if
+            `pos_type` is "curr"
+        :param rot: orientation of the marker
+        """
+        # precondition checks
+        assert pos_type in ["curr", "init", "goal"]
+        if pos_type == "curr":
+            pos_1 is not None
+
+        # code adapted from
+        # https://answers.ros.org/question/11135/plotting-a-markerarray-of-spheres-with-rviz/
+        pos_marker = Marker()
+        pos_marker.id = self.count_steps
+        pos_marker.header.frame_id = "odom"
+        pos_marker.action = pos_marker.ADD
+        
+        if pos_type == "curr":
+            pos_marker.type = pos_marker.LINE_STRIP
+            point_0 = self.pos_to_point(pos_0)
+            point_1 = self.pos_to_point(pos_1)
+            pos_marker.points.append(point_0)
+            pos_marker.points.append(point_1)
+            pos_marker.scale.x = 0.05
+            pos_marker.color.a = 1.0
+            pos_marker.color.g = 1.0
+        elif pos_type == "init":
+            pos_marker.type = pos_marker.SPHERE
+            pos_marker.pose.position.x = pos_0[0]
+            pos_marker.pose.position.y = pos_0[1]
+            pos_marker.pose.position.z = pos_0[2]
+            pos_marker.scale.x = 0.4
+            pos_marker.scale.y = 0.4
+            pos_marker.scale.z = 0.4
+            pos_marker.color.a = 1.0
+            pos_marker.color.b = 1.0
+        elif pos_type == "goal":
+            pos_marker.type = pos_marker.SPHERE
+            pos_marker.pose.position.x = pos_0[0]
+            pos_marker.pose.position.y = pos_0[1]
+            pos_marker.pose.position.z = pos_0[2]
+            pos_marker.scale.x = 0.4
+            pos_marker.scale.y = 0.4
+            pos_marker.scale.z = 0.4
+            pos_marker.color.a = 1.0
+            pos_marker.color.r = 1.0
+        
+        with self.marker_array_lock:
+            self.marker_array.markers.append(pos_marker)
+
+    def publish_marker_array(self):
+        r"""
+        Publish the marker array.
+        """
+        with self.marker_array_lock:
+            self.pub_init_and_goal_pos.publish(self.marker_array)
     
     def compute_pointgoal(self):
         r"""
@@ -208,8 +307,7 @@ class GazeboHabitatAgentBridge:
         #    (dim, dim),
         #    interpolation = cv2.INTER_AREA
         #)
-        depth_img_in_meters = depth_img_original / 1000.0
-        depth_img_resized = cv2.resize(depth_img_in_meters,
+        depth_img_resized = cv2.resize(depth_img_original,
             (dim, dim),
             interpolation = cv2.INTER_AREA
         )
@@ -239,8 +337,10 @@ class GazeboHabitatAgentBridge:
                     self.last_action_completed
                     and self.pointgoal_set
                     and not self.pointgoal_reached
+                    and not (self.count_steps >= self.max_steps)
                 ):
-                    # if last action is done, publish a new set of observations
+                    # publish a new set of observations if last action's done,
+                    # pointgoal's set and navigation not completed yet
                     # get a header object and assign time
                     h = Header()
                     h.stamp = rospy.Time.now()
@@ -257,6 +357,7 @@ class GazeboHabitatAgentBridge:
                     depth_msg_for_hab.header = h
                     # compute current GPS+Compass info
                     with self.curr_pose_lock:
+                        self.prev_pos = self.curr_pos
                         self.curr_pos = np.array(
                             [odom_msg.pose.pose.position.x,
                                 odom_msg.pose.pose.position.y,
@@ -280,6 +381,43 @@ class GazeboHabitatAgentBridge:
                     self.pub_pointgoal_with_gps_compass.publish(ptgoal_gps_msg)
                     # block further sensor callbacks
                     self.last_action_completed = False
+
+                    # add the current position to the marker array for
+                    # visualization
+                    with self.curr_pose_lock:
+                        if self.count_steps == 0:
+                            self.logger.info(f"initial agent position: {self.curr_pos}")
+                            self.add_pos_to_marker_array(
+                                "init",
+                                self.curr_pos
+                            )
+                        else:
+                            self.add_pos_to_marker_array(
+                                "curr",
+                                self.prev_pos,
+                                self.curr_pos,
+                                self.curr_rotation
+                            )
+                
+                elif(
+                    self.last_action_completed
+                    and self.pointgoal_set
+                    and (
+                        self.pointgoal_reached
+                        or self.count_steps >= self.max_steps
+                    )
+                ):
+                    # if the navigation is completed, publish data
+                    # for visualization
+                    self.logger.info(f"navigation completed after {self.count_steps} steps")
+                    with self.curr_pose_lock:
+                        self.logger.info(f"final agent position: {self.curr_pos}")
+                        self.add_pos_to_marker_array(
+                            "goal",
+                            self.final_pointgoal_pos
+                        )
+                        self.publish_marker_array()
+                    self.last_action_completed = False
                 else:
                     # otherwise, drop the observations
                     return
@@ -290,7 +428,7 @@ class GazeboHabitatAgentBridge:
         the action to velocities and publishes to `cmd_vel/`.
         :param action_msg: A discrete action command
         """
-        # produce velocity message
+        # convert action to Twist message and publish
         vel_msg = Twist()
         vel_msg.linear.x = 0
         vel_msg.linear.y = 0
@@ -298,12 +436,8 @@ class GazeboHabitatAgentBridge:
         vel_msg.angular.x = 0
         vel_msg.angular.y = 0
         vel_msg.angular.z = 0
-        # convert to Twist message and publish
         action_id = action_msg.data
         if action_id == _DefaultHabitatSimActions.STOP.value:
-            self.logger.info("navigation completed")
-            with self.curr_pose_lock:
-                self.logger.info(f"final agent position: {self.curr_pos}")
             with self.pointgoal_lock:
                 self.pointgoal_reached = True
         elif action_id == _DefaultHabitatSimActions.MOVE_FORWARD.value:
@@ -324,11 +458,15 @@ class GazeboHabitatAgentBridge:
         elif action_id == _DefaultHabitatSimActions.TURN_RIGHT.value:
             vel_msg.angular.z = np.deg2rad(-10.0)
         self.pub_vel.publish(vel_msg)
+        
         # actuate
         action_start_time = rospy.get_rostime().secs
         while rospy.get_rostime().secs < action_start_time + self.control_period:
             rospy.sleep(self.control_period/10.0)
+        
+        # register the action and increment step counter
         with self.last_action_lock:
+            self.count_steps += 1
             self.last_action_completed = True
 
     def callback_register_goal(self, goal_msg):
