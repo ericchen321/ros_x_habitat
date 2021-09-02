@@ -62,12 +62,12 @@ def main():
     utils_visualization.visualize_metrics_across_configs_with_box_plots(
         metrics_list=list_of_dict_of_metrics_for_box_plot,
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
-            "+physics, -ROS",
-            "+physics, +ROS",
+            "-physics & -ROS",
+            "-physics & +ROS",
+            "+physics & -ROS",
+            "+physics & +ROS",
         ],
-        configs_or_seeds="configs",
+        configs_or_seeds="configurations",
         plot_dir=args.plot_dir,
     )
 
@@ -87,12 +87,12 @@ def main():
     utils_visualization.visualize_metrics_across_configs_with_histograms(
         metrics_list=list_of_dict_of_metrics_for_histogram,
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
-            "+physics, -ROS",
-            "+physics, +ROS",
+            "(a) -physics & -ROS",
+            "(b) -physics & +ROS",
+            "(c) +physics & -ROS",
+            "(d) +physics & +ROS",
         ],
-        configs_or_seeds="configs",
+        configs_or_seeds="configurations",
         plot_dir=args.plot_dir,
     )
 
@@ -101,12 +101,12 @@ def main():
     utils_visualization.visualize_success_across_configs_with_pie_charts(
         metrics_list=list_of_dict_of_metrics,
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
-            "+physics, -ROS",
-            "+physics, +ROS",
+            "(a) -physics & -ROS",
+            "(b) -physics & +ROS",
+            "(c) +physics & -ROS",
+            "(d) +physics & +ROS",
         ],
-        configs_or_seeds="configs",
+        configs_or_seeds="configurations",
         plot_dir=args.plot_dir,
     )
 
@@ -131,10 +131,10 @@ def main():
             continuous_ros_time,
         ],
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
-            "+physics, -ROS",
-            "+physics, +ROS",
+            "-physics & -ROS",
+            "-physics & +ROS",
+            "+physics & -ROS",
+            "+physics & +ROS",
         ],
         plot_dir=args.plot_dir,
     )
@@ -160,8 +160,8 @@ def main():
     utils_visualization.visualize_pairwise_percentage_diff_of_metrics(
         pairwise_diff_dict_of_metrics=pairwise_diff_dict_of_metrics,
         config_names=[
-            "-physics, -ROS",
-            "+physics, -ROS",
+            "-physics & -ROS",
+            "+physics & -ROS",
         ],
         diff_in_percentage=args.plot_pairwise_diff_in_percentage,
         plot_dir=args.plot_dir,
@@ -186,8 +186,8 @@ def main():
     utils_visualization.visualize_pairwise_percentage_diff_of_metrics(
         pairwise_diff_dict_of_metrics=pairwise_diff_dict_of_metrics,
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
+            "-physics & -ROS",
+            "-physics & +ROS",
         ],
         diff_in_percentage=args.plot_pairwise_diff_in_percentage,
         plot_dir=args.plot_dir,
