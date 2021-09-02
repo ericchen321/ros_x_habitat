@@ -9,23 +9,22 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 from PIL import Image as PILImage
-from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Header, Int16
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Pose, Point
 import quaternion
-from habitat.utils.geometry_utils import quaternion_rotate_vector
 from habitat.tasks.utils import cartesian_to_polar
 from tf.transformations import euler_from_quaternion, rotation_matrix
 from visualization_msgs.msg import Marker, MarkerArray
 from threading import Lock
-from habitat.sims.habitat_simulator.actions import _DefaultHabitatSimActions
+from ros_x_habitat.srv import GetAgentPose
+from src.constants.constants import PACKAGE_NAME, ServiceNames
 from src.utils import utils_logging
 
-class GazeboHabitatAgentBridge:
+class GazeboToHabitatAgent:
     r"""
-    A class to represent a ROS node which acts as an interface
-    between a Habitat agent and the Gazebo simulator.
+    A class to represent a ROS node which subscribes from Gazebo sensor
+    topics and publishes to Habitat agent's sensor topics.
     """
 
     def __init__(
@@ -37,10 +36,9 @@ class GazeboHabitatAgentBridge:
         move_base_goal_topic_name: str,
         fetch_goal_from_move_base: bool=False,
         final_pointgoal_pos: np.ndarray = np.array([0.0, 0.0, 0.0]),
-        control_period: float=1.0
     ):
         r"""
-        Instantiates the bridge.
+        Instantiates the Gazebo->Habitat agent bridge.
         :param node_name: name of the bridge node
         :param gazebo_rgb_topic_name: name of the topic on which Gazebo
             publishes RGB observations
@@ -55,8 +53,6 @@ class GazeboHabitatAgentBridge:
         :param final_pointgoal_pos: goal location of navigation, measured
             in the world frame. If `fetch_goal_from_move_base` is True, this
             position is ignored
-        :param control_period: time it takes for a discrete action to complete,
-            measured in seconds
         """
         # initialize the node
         self.node_name = node_name
@@ -70,19 +66,16 @@ class GazeboHabitatAgentBridge:
         # set up logger
         self.logger = utils_logging.setup_logger(self.node_name)
 
-        # register control period
-        self.control_period = control_period
-
         # set max number of steps for navigation
         # TODO: make them configurable by constructor argument
         self.max_steps = 500
 
-        # last_action_completed controls when to publish the next set
+        # last_action_done controls when to publish the next set
         # of observations
         self.last_action_lock = Lock()
         with self.last_action_lock:
             self.count_steps = 0
-            self.last_action_completed = True
+            self.last_action_done = True
 
         # current pose of the agent
         self.curr_pose_lock = Lock()
@@ -91,10 +84,14 @@ class GazeboHabitatAgentBridge:
             self.curr_pos = None
             self.curr_rotation = None
 
-        # initialize final pointgoal position
-        self.pointgoal_lock = Lock()
-        with self.pointgoal_lock:
+        # initialize pointogal_reached flag
+        self.pointgoal_reached_lock = Lock()
+        with self.pointgoal_reached_lock:
             self.pointgoal_reached = False
+        
+        # initialize final pointgoal position
+        self.final_pointgoal_lock = Lock()
+        with self.final_pointgoal_lock:
             self.final_pointgoal_pos = None
             self.pointgoal_set = False
         if fetch_goal_from_move_base:
@@ -108,7 +105,7 @@ class GazeboHabitatAgentBridge:
             )
         else:
             # get goal directly from constructor argument
-            with self.pointgoal_lock:
+            with self.final_pointgoal_lock:
                 self.final_pointgoal_pos = final_pointgoal_pos
                 self.logger.info(f"Final pointgoal position set to: {self.final_pointgoal_pos}")
                 self.pointgoal_set = True
@@ -123,11 +120,14 @@ class GazeboHabitatAgentBridge:
         )
         self.ts.registerCallback(self.callback_obs_from_gazebo)
 
-        # subscribe from Habitat-agent-facing action topic
-        self.sub_action = rospy.Subscriber(
-            "action", Int16, self.callback_action_from_agent, queue_size=self.sub_queue_size
+        # subscribe from `last_action_done/`
+        self.sub_last_action_done = rospy.Subscriber(
+            "last_action_done",
+            Int16,
+            self.callback_signal_last_action,
+            queue_size=self.sub_queue_size
         )
-
+        
         # publish to Habitat-agent-facing sensor topics
         self.pub_rgb = rospy.Publisher(
             "rgb",
@@ -144,21 +144,25 @@ class GazeboHabitatAgentBridge:
             PointGoalWithGPSCompass,
             queue_size=self.pub_queue_size
         )
-
-        # publish to Gazebo-facing velocity command topic
-        self.pub_vel = rospy.Publisher("cmd_vel", Twist, queue_size=self.pub_queue_size)
-
+        
+        # establish get_agent_pose service server
+        self.get_agent_pose_service = rospy.Service(
+            f"{PACKAGE_NAME}/{node_name}/{ServiceNames.GET_AGENT_POSE}",
+            GetAgentPose,
+            self.get_agent_pose,
+        )
+        
         # publish initial/goal position for visualization
+        self.marker_array_lock = Lock()
+        with self.marker_array_lock:
+            self.marker_array = MarkerArray()
         self.pub_init_and_goal_pos = rospy.Publisher(
             "visualization_marker_array",
             MarkerArray,
             queue_size=self.pub_queue_size
         )
-        self.marker_array_lock = Lock()
-        with self.marker_array_lock:
-            self.marker_array = MarkerArray()
 
-        self.logger.info("gazebo-habitat-agent bridge initialized")
+        self.logger.info("gazebo -> habitat agent bridge initialized")
     
     def pos_to_point(self, pos):
         r"""
@@ -246,7 +250,7 @@ class GazeboHabitatAgentBridge:
         r"""
         Compute distance-to-goal and angle-to-goal. Modified upon
         habitat.task.nav.nav.PointGoalSensor._compute_pointgoal().
-        Require 1) self.curr_pose_lock and self.pointgoal_lock
+        Require 1) `self.curr_pose_lock` and `self.final_pointgoal_lock`
         already acquired in the calling thread
         :return tuple 1) distance-to-goal, 2) angle-to-goal
         """
@@ -316,6 +320,27 @@ class GazeboHabitatAgentBridge:
         #depth_img_pil.save("gazebo_obs/depth.png", mode="L")
         return depth_img
     
+    def update_pose(self, odom_msg):
+        r"""
+        Update current position, current rotation, previous position.
+        Require `self.curr_pose_lock` already acquired by the calling
+        thread
+        :param odom_msg: Odometry data from Gazebo
+        """
+        self.prev_pos = self.curr_pos
+        self.curr_pos = np.array(
+            [odom_msg.pose.pose.position.x,
+                odom_msg.pose.pose.position.y,
+                odom_msg.pose.pose.position.z
+            ]
+        )
+        self.curr_rotation = [
+            odom_msg.pose.pose.orientation.x,
+            odom_msg.pose.pose.orientation.y,
+            odom_msg.pose.pose.orientation.z,
+            odom_msg.pose.pose.orientation.w
+        ]
+    
     def callback_obs_from_gazebo(self, rgb_msg, depth_msg, odom_msg):
         r"""
         Upon receiving a set of RGBD observations and odometry data from
@@ -332,149 +357,91 @@ class GazeboHabitatAgentBridge:
         :param odom_msg: Odometry data from Gazebo
         """
         with self.last_action_lock:
-            with self.pointgoal_lock:
-                if (
-                    self.last_action_completed
-                    and self.pointgoal_set
-                    and not self.pointgoal_reached
-                    and not (self.count_steps >= self.max_steps)
-                ):
-                    # publish a new set of observations if last action's done,
-                    # pointgoal's set and navigation not completed yet
-                    # get a header object and assign time
-                    h = Header()
-                    h.stamp = rospy.Time.now()
-                    # create RGB message for Habitat
-                    rgb_img = self.rgb_msg_to_img(rgb_msg, 720)
-                    rgb_msg_for_hab = CvBridge().cv2_to_imgmsg(rgb_img, encoding="rgb8")
-                    rgb_msg_for_hab.header = h
-                    # create depth message for Habitat
-                    depth_img = self.depth_msg_to_img(depth_msg, 720)
-                    depth_msg_for_hab = DepthImage()
-                    depth_msg_for_hab.height, depth_msg_for_hab.width = depth_img.shape
-                    depth_msg_for_hab.step = depth_msg_for_hab.width
-                    depth_msg_for_hab.data = np.ravel(depth_img)
-                    depth_msg_for_hab.header = h
-                    # compute current GPS+Compass info
-                    with self.curr_pose_lock:
-                        self.prev_pos = self.curr_pos
-                        self.curr_pos = np.array(
-                            [odom_msg.pose.pose.position.x,
-                                odom_msg.pose.pose.position.y,
-                                odom_msg.pose.pose.position.z
-                            ]
-                        )
-                        self.curr_rotation = [
-                            odom_msg.pose.pose.orientation.x,
-                            odom_msg.pose.pose.orientation.y,
-                            odom_msg.pose.pose.orientation.z,
-                            odom_msg.pose.pose.orientation.w
-                        ]
-                        distance_to_goal, angle_to_goal = self.compute_pointgoal()
-                    ptgoal_gps_msg = PointGoalWithGPSCompass()
-                    ptgoal_gps_msg.distance_to_goal = distance_to_goal
-                    ptgoal_gps_msg.angle_to_goal = angle_to_goal
-                    ptgoal_gps_msg.header = h
-                    # publish observations
-                    self.pub_rgb.publish(rgb_msg_for_hab)
-                    self.pub_depth.publish(depth_msg_for_hab)
-                    self.pub_pointgoal_with_gps_compass.publish(ptgoal_gps_msg)
-                    # block further sensor callbacks
-                    self.last_action_completed = False
+            with self.pointgoal_reached_lock:
+                with self.final_pointgoal_lock:
+                    if (
+                        self.last_action_done
+                        and self.pointgoal_set
+                        and not self.pointgoal_reached
+                        and not (self.count_steps >= self.max_steps)
+                    ):
+                        # publish a new set of observations if last action's done,
+                        # pointgoal's set and navigation not completed yet
+                        # get a header object and assign time
+                        h = Header()
+                        h.stamp = rospy.Time.now()
+                        # create RGB message for Habitat
+                        rgb_img = self.rgb_msg_to_img(rgb_msg, 720)
+                        rgb_msg_for_hab = CvBridge().cv2_to_imgmsg(rgb_img, encoding="rgb8")
+                        rgb_msg_for_hab.header = h
+                        # create depth message for Habitat
+                        depth_img = self.depth_msg_to_img(depth_msg, 720)
+                        depth_msg_for_hab = DepthImage()
+                        depth_msg_for_hab.height, depth_msg_for_hab.width = depth_img.shape
+                        depth_msg_for_hab.step = depth_msg_for_hab.width
+                        depth_msg_for_hab.data = np.ravel(depth_img)
+                        depth_msg_for_hab.header = h
+                        with self.curr_pose_lock:
+                            # update pose and compute current GPS+Compass info
+                            self.update_pose(odom_msg)
+                            distance_to_goal, angle_to_goal = self.compute_pointgoal()
+                        ptgoal_gps_msg = PointGoalWithGPSCompass()
+                        ptgoal_gps_msg.distance_to_goal = distance_to_goal
+                        ptgoal_gps_msg.angle_to_goal = angle_to_goal
+                        ptgoal_gps_msg.header = h
+                        # publish observations
+                        self.pub_rgb.publish(rgb_msg_for_hab)
+                        self.pub_depth.publish(depth_msg_for_hab)
+                        self.pub_pointgoal_with_gps_compass.publish(ptgoal_gps_msg)
+                        # block further sensor callbacks
+                        self.last_action_done = False
 
-                    # add the current position to the marker array for
-                    # visualization
-                    with self.curr_pose_lock:
-                        if self.count_steps == 0:
-                            self.logger.info(f"initial agent position: {self.curr_pos}")
-                            self.add_pos_to_marker_array(
-                                "init",
-                                self.curr_pos
-                            )
-                        else:
-                            self.add_pos_to_marker_array(
-                                "curr",
-                                self.prev_pos,
-                                self.curr_pos,
-                                self.curr_rotation
-                            )
-                
-                elif(
-                    self.last_action_completed
-                    and self.pointgoal_set
-                    and (
-                        self.pointgoal_reached
-                        or self.count_steps >= self.max_steps
-                    )
-                ):
-                    # if the navigation is completed, publish data
-                    # for visualization
-                    self.logger.info(f"navigation completed after {self.count_steps} steps")
-                    with self.curr_pose_lock:
-                        self.logger.info(f"final agent position: {self.curr_pos}")
-                        self.add_pos_to_marker_array(
-                            "goal",
-                            self.final_pointgoal_pos
+                        # add the current position to the marker array for
+                        # visualization
+                        with self.curr_pose_lock:
+                            if self.count_steps == 0:
+                                self.logger.info(f"initial agent position: {self.curr_pos}")
+                                self.add_pos_to_marker_array(
+                                    "init",
+                                    self.curr_pos
+                                )
+                            else:
+                                self.add_pos_to_marker_array(
+                                    "curr",
+                                    self.prev_pos,
+                                    self.curr_pos,
+                                    self.curr_rotation
+                                )
+                    
+                    elif(
+                        self.last_action_done
+                        and self.pointgoal_set
+                        and (
+                            self.pointgoal_reached
+                            or self.count_steps >= self.max_steps
                         )
-                        self.publish_marker_array()
-                    self.last_action_completed = False
-                else:
-                    # otherwise, drop the observations
-                    return
-    
-    def callback_action_from_agent(self, action_msg):
-        r"""
-        Upon receiving a discrete action from a Habitat agent, converts
-        the action to velocities and publishes to `cmd_vel/`.
-        :param action_msg: A discrete action command
-        """
-        # convert action to Twist message and publish
-        vel_msg = Twist()
-        vel_msg.linear.x = 0
-        vel_msg.linear.y = 0
-        vel_msg.linear.z = 0
-        vel_msg.angular.x = 0
-        vel_msg.angular.y = 0
-        vel_msg.angular.z = 0
-        action_id = action_msg.data
-        if action_id == _DefaultHabitatSimActions.STOP.value:
-            with self.pointgoal_lock:
-                self.pointgoal_reached = True
-        elif action_id == _DefaultHabitatSimActions.MOVE_FORWARD.value:
-            linear_vel_local = np.array([-0.25 / self.control_period, 0, 0])
-            with self.curr_pose_lock:
-                linear_vel_world = quaternion_rotate_vector(
-                    np.quaternion(
-                        self.curr_rotation[0],
-                        self.curr_rotation[1],
-                        self.curr_rotation[2],
-                        self.curr_rotation[3]),
-                    linear_vel_local)
-            vel_msg.linear.x = linear_vel_world[0]
-            vel_msg.linear.y = linear_vel_world[1]
-            vel_msg.linear.z = linear_vel_world[2]
-        elif action_id == _DefaultHabitatSimActions.TURN_LEFT.value:
-            vel_msg.angular.z = np.deg2rad(10.0)
-        elif action_id == _DefaultHabitatSimActions.TURN_RIGHT.value:
-            vel_msg.angular.z = np.deg2rad(-10.0)
-        self.pub_vel.publish(vel_msg)
-        
-        # actuate
-        action_start_time = rospy.get_rostime().secs
-        while rospy.get_rostime().secs < action_start_time + self.control_period:
-            rospy.sleep(self.control_period/10.0)
-        
-        # register the action and increment step counter
-        with self.last_action_lock:
-            self.count_steps += 1
-            self.last_action_completed = True
+                    ):
+                        # if the navigation is completed, publish data
+                        # for visualization
+                        self.logger.info(f"navigation completed after {self.count_steps} steps")
+                        with self.curr_pose_lock:
+                            self.logger.info(f"final agent position: {self.curr_pos}")
+                            self.add_pos_to_marker_array(
+                                "goal",
+                                self.final_pointgoal_pos
+                            )
+                            self.publish_marker_array()
+                        self.last_action_done = False
+                    else:
+                        # otherwise, drop the observations
+                        return
 
     def callback_register_goal(self, goal_msg):
         r"""
         Register point-goal position w.r.t. the world frame.
         :param goal_msg: point-goal position from move_base
         """
-        with self.pointgoal_lock:
+        with self.final_pointgoal_lock:
             self.final_pointgoal_pos = np.array([
                 goal_msg.pose.position.x,
                 goal_msg.pose.position.y,
@@ -483,6 +450,38 @@ class GazeboHabitatAgentBridge:
             self.pointgoal_set = True
             self.logger.info(f"Final pointgoal position set to: {self.final_pointgoal_pos}")
 
+    def callback_signal_last_action(self, done_msg):
+        r"""
+        Signal the last action being done; toggle `pointgoal_reached`
+        flag if the last action is `STOP`.
+        """
+        if done_msg.data == 1:
+            # last action is `STOP`
+            with self.pointgoal_reached_lock:
+                self.pointgoal_reached = True
+        
+        with self.last_action_lock:
+            # increment step counter and signal last action being done
+            self.count_steps += 1
+            self.last_action_done = True
+    
+    def get_agent_pose(self, request):
+        r"""
+        ROS service handler which returns the current pose of the agent.
+        :param request: not used
+        :returns: current pose of the agent
+        """
+        pose = Pose()
+        with self.curr_pose_lock:
+            pose.position.x = self.curr_pos[0]
+            pose.position.y = self.curr_pos[1]
+            pose.position.z = self.curr_pos[2]
+            pose.orientation.x = self.curr_rotation[0]
+            pose.orientation.y = self.curr_rotation[1]
+            pose.orientation.z = self.curr_rotation[2]
+            pose.orientation.w = self.curr_rotation[3]
+        return pose
+    
     def spin_until_shutdown(self):
         r"""
         Let the node spin until shutdown.
@@ -495,7 +494,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--node-name",
-        default="gazebo_habitat_agent_bridge",
+        default="gazebo_to_habitat_agent",
         type=str
     )
     parser.add_argument(
@@ -537,7 +536,7 @@ def main():
         pointgoal_list = args.pointgoal_location
     
     # instantiate the bridge
-    bridge = GazeboHabitatAgentBridge(
+    bridge = GazeboToHabitatAgent(
         node_name=args.node_name,
         gazebo_rgb_topic_name=args.gazebo_rgb_topic_name,
         gazebo_depth_topic_name=args.gazebo_depth_topic_name,
@@ -545,7 +544,6 @@ def main():
         move_base_goal_topic_name=args.move_base_goal_topic_name,
         fetch_goal_from_move_base=args.fetch_goal_from_move_base,
         final_pointgoal_pos=np.array(pointgoal_list),
-        control_period=2.0
     )
 
     # spins until receiving the shutdown signal

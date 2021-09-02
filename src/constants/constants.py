@@ -30,3 +30,4 @@ class ServiceNames(str, Enum):
     GET_AGENT_TIME = "get_agent_time"
     RESET_AGENT = "reset_agent"
     ROAM = "roam"
+    GET_AGENT_POSE = "get_agent_pose"

@@ -45,6 +45,7 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     rospy
     std_msgs
+    geometry_msgs
     message_generation
 )
 
@@ -62,6 +63,7 @@ add_service_files(
     ResetAgent.srv
     GetAgentTime.srv
     Roam.srv
+    GetAgentPose.srv
 #   Service2.srv
 )
 
@@ -76,6 +78,7 @@ add_service_files(
 generate_messages(
     DEPENDENCIES
     std_msgs  # Or other packages containing msgs
+    geometry_msgs
 )
 
 ################################################
