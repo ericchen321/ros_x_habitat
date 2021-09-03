@@ -311,11 +311,11 @@ def visualize_metrics_across_configs_with_box_plots(
         config_names: names of experiment configurations. Should be in the same
             order as metrics_list.
         configs_or_seeds: if visualizing across configs or seeds. Can only be
-            "configs" or "seeds"
+            "configurations" or "seeds"
         plot_dir: directory to save the box plot.
     """
     # check configs_or_seeds
-    assert configs_or_seeds in ["configs", "seeds"]
+    assert configs_or_seeds in ["configurations", "seeds"]
     
     # check if we have metrics from all configs
     num_configs = len(config_names)
@@ -365,9 +365,17 @@ def visualize_metrics_across_configs_with_box_plots(
     for metric_name in metric_names:
         fig = plt.figure(figsize=(12.8, 9.6))
         ax = fig.add_subplot(111)
+        sns.set(font_scale=1.2, style="white")
         sns.boxplot(x=configs_or_seeds, y=metric_name, data=df, ax=ax)
         sns.stripplot(x=configs_or_seeds, y=metric_name, data=df, color=".25", size=2, ax=ax)
-        ax.set_ylabel(f"{metric_name.value} {resolve_metric_unit(metric_name)}")
+        ax.set_xlabel(f"{configs_or_seeds}", fontsize=22)
+        if configs_or_seeds == "seeds":
+            plt.xticks(rotation=90, ha="right")
+            plt.subplots_adjust(bottom=0.2)
+        else:
+            plt.xticks(rotation=0)
+            plt.subplots_adjust(bottom=0.1)
+        ax.set_ylabel(f"{metric_name.value} {resolve_metric_unit(metric_name)}", fontsize=22)
         #fig.suptitle(f"{metric_name.value} across {num_configs} {configs_or_seeds}")
         fig.savefig(f"{plot_dir}/{metric_name}-{num_configs}_{configs_or_seeds}.png")
         plt.close(fig)
@@ -388,11 +396,11 @@ def visualize_success_across_configs_with_pie_charts(
         config_names: names of experiment configurations. Should be in the same
             order as metrics_list.
         configs_or_seeds: if visualizing across configs or seeds. Can only be
-            "configs" or "seeds"
+            "configurations" or "seeds"
         plot_dir: directory to save the pie chart.
     """
     # check configs_or_seeds
-    assert configs_or_seeds in ["configs", "seeds"]
+    assert configs_or_seeds in ["configurations", "seeds"]
 
     # check if we have metrics from all configs
     num_configs = len(config_names)
@@ -463,11 +471,11 @@ def visualize_metrics_across_configs_with_histograms(
         config_names: names of experiment configurations. Should be in the same
             order as metrics_list.
         configs_or_seeds: if visualizing across configs or seeds. Can only be
-            "configs" or "seeds"
+            "configurations" or "seeds"
         plot_dir: directory to save the histograms.
     """
     # check configs_or_seeds
-    assert configs_or_seeds in ["configs", "seeds"]
+    assert configs_or_seeds in ["configurations", "seeds"]
 
     # check if we have metrics from all configs
     num_configs = len(config_names)
@@ -530,11 +538,13 @@ def visualize_metrics_across_configs_with_histograms(
                 )
             else:
                 raise NotImplementedError
-            axes_flattened[config_index].set_xlabel(f"{metric_name.value} {resolve_metric_unit(metric_name)}")
-            axes_flattened[config_index].set_ylabel("number of episodes")
-            axes_flattened[config_index].set_title(config_name)
-        #fig.suptitle(f"{metric_name.value} across {num_configs} {configs_or_seeds}")
-        fig.tight_layout()
+            axes_flattened[config_index].set_title(config_name, fontsize=18)
+        # set common x and y label. Code adapted from
+        # https://stackoverflow.com/questions/16150819/common-xlabel-ylabel-for-matplotlib-subplots
+        fig.text(0.5, 0.04, f"{metric_name.value} {resolve_metric_unit(metric_name)}", ha="center", fontsize=22)
+        fig.text(0.04, 0.5, "number of episodes", va="center", rotation="vertical", fontsize=22)
+        plt.xticks(rotation=0)
+        plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.6)
         fig.savefig(f"{plot_dir}/{metric_name}-{num_configs}_{configs_or_seeds}.png")
         plt.close(fig)
 
@@ -618,13 +628,16 @@ def visualize_running_times_with_bar_plots(
     data["config"] = config_names
     data["running_time"] = running_times
     df = pd.DataFrame(data)
+    sns.set(font_scale=1.2, style="white")
     ax = sns.barplot(x="config", y="running_time", data=df)
     # add bar labels;
     # solution from https://stackoverflow.com/questions/43214978/seaborn-barplot-displaying-values
     # TODO: upgrade matplotlib to 3.4.0
     # ax.bar_label(ax.containers[0])
-    ax.set_ylabel("running_time (seconds)")
-    fig.savefig(f"{plot_dir}/running_time-{len(config_names)}_configs.png")
+    ax.set_xlabel("configurations", fontsize=22)
+    plt.xticks(rotation=0)
+    ax.set_ylabel("running_time (hours)", fontsize=22)
+    fig.savefig(f"{plot_dir}/running_time-{len(config_names)}_configurations.png")
     plt.close(fig)
 
 
