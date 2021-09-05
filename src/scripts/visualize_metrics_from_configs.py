@@ -45,17 +45,14 @@ def main():
         list_of_log_filepaths=list_of_log_filepaths,
     )
 
-    # visualize distance-to-goal, SPL, number-of-steps,
-    # (per-step)-agent-time, (per-step)-simulation-time
+    # visualize number-of-steps, (per-step)-agent-time, (per-step)-simulation-time
+    # with box plots
     list_of_dict_of_metrics_for_box_plot = []
     for dict_of_metrics in list_of_dict_of_metrics:
-        # remove success
+        # remove other metrics
         dict_of_metrics_for_box_plot = HabitatSimEvaluator.extract_metrics(
             dict_of_metrics=dict_of_metrics,
             metric_names=[
-                NumericalMetrics.DISTANCE_TO_GOAL,
-                NumericalMetrics.SPL,
-                NumericalMetrics.NUM_STEPS,
                 NumericalMetrics.SIM_TIME,
                 NumericalMetrics.RESET_TIME,
                 NumericalMetrics.AGENT_TIME,
@@ -65,23 +62,51 @@ def main():
     utils_visualization.visualize_metrics_across_configs_with_box_plots(
         metrics_list=list_of_dict_of_metrics_for_box_plot,
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
-            "+physics, -ROS",
-            "+physics, +ROS",
+            "-physics & -ROS",
+            "-physics & +ROS",
+            "+physics & -ROS",
+            "+physics & +ROS",
         ],
+        configs_or_seeds="configurations",
         plot_dir=args.plot_dir,
     )
 
-    # visualize success
+    # visualize spl, distance_to_goal, num_steps with histograms
+    list_of_dict_of_metrics_for_histogram = []
+    for dict_of_metrics in list_of_dict_of_metrics:
+        # remove other metrics
+        dict_of_metrics_for_histogram = HabitatSimEvaluator.extract_metrics(
+            dict_of_metrics=dict_of_metrics,
+            metric_names=[
+                NumericalMetrics.DISTANCE_TO_GOAL,
+                NumericalMetrics.SPL,
+                NumericalMetrics.NUM_STEPS,
+            ],
+        )
+        list_of_dict_of_metrics_for_histogram.append(dict_of_metrics_for_histogram)
+    utils_visualization.visualize_metrics_across_configs_with_histograms(
+        metrics_list=list_of_dict_of_metrics_for_histogram,
+        config_names=[
+            "(a) -physics & -ROS",
+            "(b) -physics & +ROS",
+            "(c) +physics & -ROS",
+            "(d) +physics & +ROS",
+        ],
+        configs_or_seeds="configurations",
+        plot_dir=args.plot_dir,
+    )
+
+
+    # visualize success with pie charts
     utils_visualization.visualize_success_across_configs_with_pie_charts(
         metrics_list=list_of_dict_of_metrics,
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
-            "+physics, -ROS",
-            "+physics, +ROS",
+            "(a) -physics & -ROS",
+            "(b) -physics & +ROS",
+            "(c) +physics & -ROS",
+            "(d) +physics & +ROS",
         ],
+        configs_or_seeds="configurations",
         plot_dir=args.plot_dir,
     )
 
@@ -106,10 +131,10 @@ def main():
             continuous_ros_time,
         ],
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
-            "+physics, -ROS",
-            "+physics, +ROS",
+            "-physics & -ROS",
+            "-physics & +ROS",
+            "+physics & -ROS",
+            "+physics & +ROS",
         ],
         plot_dir=args.plot_dir,
     )
@@ -135,8 +160,8 @@ def main():
     utils_visualization.visualize_pairwise_percentage_diff_of_metrics(
         pairwise_diff_dict_of_metrics=pairwise_diff_dict_of_metrics,
         config_names=[
-            "-physics, -ROS",
-            "+physics, -ROS",
+            "-physics & -ROS",
+            "+physics & -ROS",
         ],
         diff_in_percentage=args.plot_pairwise_diff_in_percentage,
         plot_dir=args.plot_dir,
@@ -161,8 +186,8 @@ def main():
     utils_visualization.visualize_pairwise_percentage_diff_of_metrics(
         pairwise_diff_dict_of_metrics=pairwise_diff_dict_of_metrics,
         config_names=[
-            "-physics, -ROS",
-            "-physics, +ROS",
+            "-physics & -ROS",
+            "-physics & +ROS",
         ],
         diff_in_percentage=args.plot_pairwise_diff_in_percentage,
         plot_dir=args.plot_dir,

@@ -203,6 +203,26 @@ def save_blank_map(episode_id: str, scene_id: str, blank_map: np.ndarray, map_di
     )
 
 
+def resolve_metric_unit(metric_name):
+    r"""
+    Return a string of the unit of the given metric.
+    :param metric_name: name of the metric
+    :return: a unit string
+    """
+    if metric_name == NumericalMetrics.DISTANCE_TO_GOAL:
+        return "(meters)"
+    elif (
+        metric_name == NumericalMetrics.SUCCESS
+        or metric_name == NumericalMetrics.SPL
+        or metric_name == NumericalMetrics.NUM_STEPS):
+        return ""
+    elif (
+        metric_name == NumericalMetrics.SIM_TIME
+        or metric_name == NumericalMetrics.RESET_TIME
+        or metric_name == NumericalMetrics.AGENT_TIME):
+        return "(seconds)"
+
+
 def visualize_variability_due_to_seed_with_box_plots(
     metrics_list: List[Dict[str, Dict[str, float]]],
     seeds: List[int],
@@ -278,19 +298,25 @@ def visualize_variability_due_to_seed_with_box_plots(
 def visualize_metrics_across_configs_with_box_plots(
     metrics_list: List[Dict[str, Dict[str, float]]],
     config_names: List[str],
+    configs_or_seeds: str,
     plot_dir: str,
 ):
     r"""
     Generate box plots from metrics and experiment configurations. Requires same
     metrics collected across all configs. Save the plots to
-    <plot_dir>/<metric_name>.png, where <metric_name> is for eg. "spl".
+    <plot_dir>/<metric_name>.png, where <metric_name> is for eg. "agent_time".
     Args:
         metrics_list: list of metrics collected from experiment run with the
             given seeds.
         config_names: names of experiment configurations. Should be in the same
             order as metrics_list.
+        configs_or_seeds: if visualizing across configs or seeds. Can only be
+            "configurations" or "seeds"
         plot_dir: directory to save the box plot.
     """
+    # check configs_or_seeds
+    assert configs_or_seeds in ["configurations", "seeds"]
+    
     # check if we have metrics from all configs
     num_configs = len(config_names)
     assert len(metrics_list) == num_configs
@@ -316,7 +342,7 @@ def visualize_metrics_across_configs_with_box_plots(
     # build dataframe
     data = {}
     total_num_samples = num_samples_per_config * num_configs
-    data["config"] = np.ndarray((total_num_samples,), dtype=object)
+    data[configs_or_seeds] = np.ndarray((total_num_samples,), dtype=object)
     for metric_name in metric_names:
         data[metric_name] = np.ndarray((total_num_samples,))
     # populate each array
@@ -324,7 +350,7 @@ def visualize_metrics_across_configs_with_box_plots(
     for config_index in range(num_configs):
         for _, episode_metrics in metrics_list[config_index].items():
             # register a new sample
-            data["config"][total_sample_count] = config_names[config_index]
+            data[configs_or_seeds][total_sample_count] = config_names[config_index]
             for metric_name in metric_names:
                 data[metric_name][total_sample_count] = episode_metrics[metric_name]
             total_sample_count += 1
@@ -339,15 +365,26 @@ def visualize_metrics_across_configs_with_box_plots(
     for metric_name in metric_names:
         fig = plt.figure(figsize=(12.8, 9.6))
         ax = fig.add_subplot(111)
-        sns.boxplot(x="config", y=metric_name, data=df, ax=ax)
-        sns.stripplot(x="config", y=metric_name, data=df, color=".25", size=2, ax=ax)
-        fig.savefig(f"{plot_dir}/{metric_name}.png")
+        sns.set(font_scale=1.2, style="white")
+        sns.boxplot(x=configs_or_seeds, y=metric_name, data=df, ax=ax)
+        sns.stripplot(x=configs_or_seeds, y=metric_name, data=df, color=".25", size=2, ax=ax)
+        ax.set_xlabel(f"{configs_or_seeds}", fontsize=22)
+        if configs_or_seeds == "seeds":
+            plt.xticks(rotation=90, ha="right")
+            plt.subplots_adjust(bottom=0.2)
+        else:
+            plt.xticks(rotation=0)
+            plt.subplots_adjust(bottom=0.1)
+        ax.set_ylabel(f"{metric_name.value} {resolve_metric_unit(metric_name)}", fontsize=22)
+        #fig.suptitle(f"{metric_name.value} across {num_configs} {configs_or_seeds}")
+        fig.savefig(f"{plot_dir}/{metric_name}-{num_configs}_{configs_or_seeds}.png")
         plt.close(fig)
 
 
 def visualize_success_across_configs_with_pie_charts(
     metrics_list: List[Dict[str, Dict[str, float]]],
     config_names: List[str],
+    configs_or_seeds: str,
     plot_dir: str,
 ):
     r"""
@@ -358,8 +395,13 @@ def visualize_success_across_configs_with_pie_charts(
             given seeds.
         config_names: names of experiment configurations. Should be in the same
             order as metrics_list.
+        configs_or_seeds: if visualizing across configs or seeds. Can only be
+            "configurations" or "seeds"
         plot_dir: directory to save the pie chart.
     """
+    # check configs_or_seeds
+    assert configs_or_seeds in ["configurations", "seeds"]
+
     # check if we have metrics from all configs
     num_configs = len(config_names)
     assert len(metrics_list) == num_configs
@@ -375,8 +417,7 @@ def visualize_success_across_configs_with_pie_charts(
     # for i in range(num_configs):
     #    assert  len(metrics_list[i]) == num_samples_per_config
 
-    # code adapted from examples on
-    # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.plot.pie.html
+    # build data for plotting
     success_counts = []
     for config_index in range(0, num_configs):
         # count success in this config
@@ -391,17 +432,121 @@ def visualize_success_across_configs_with_pie_charts(
             success_counts[config_index],
             num_samples_per_config - success_counts[config_index],
         ]
-    df = pd.DataFrame(dict_of_success_counts, index=["Success", "Fail"])
-    plot = df.plot.pie(
-        subplots=True,
-        legend=None,
-        figsize=(12.8, 9.6),
-        layout=(2, int(num_configs / 2)),
-        autopct="%1.1f%%",
-    )
-    fig = plot[0][0].get_figure()
-    fig.savefig(f"{plot_dir}/success.png")
+    
+    # create pie plots for all configs
+    fig, axes = plt.subplots(
+        int(np.ceil(num_configs/2)),
+        2,
+        sharey=True,
+        figsize=(9.6, 12.8))
+    axes_flattened = axes.ravel()
+    for config_index in range(0, num_configs):
+        config_name = config_names[config_index]
+        data_per_config = dict_of_success_counts[config_name]
+        axes_flattened[config_index].pie(data_per_config,
+            labels=["success", "fail"],
+            autopct='%1.1f%%',
+            shadow=False,
+            startangle=90)
+        axes_flattened[config_index].set_title(config_name)
+    #fig.suptitle(f"proportion of succeeded/failed episodes across {num_configs} {configs_or_seeds}")
+    fig.tight_layout()
+    fig.savefig(f"{plot_dir}/success-{num_configs}_{configs_or_seeds}.png")
     plt.close(fig)
+
+
+def visualize_metrics_across_configs_with_histograms(
+    metrics_list: List[Dict[str, Dict[str, float]]],
+    config_names: List[str],
+    configs_or_seeds: str,
+    plot_dir: str,
+):
+    r"""
+    Generate histograms from metrics and experiment configurations. Requires same
+    metrics collected across all configs. Save the plots to
+    <plot_dir>/<metric_name>.png, where <metric_name> is for eg. "spl".
+    Args:
+        metrics_list: list of metrics collected from experiment run with the
+            given seeds.
+        config_names: names of experiment configurations. Should be in the same
+            order as metrics_list.
+        configs_or_seeds: if visualizing across configs or seeds. Can only be
+            "configurations" or "seeds"
+        plot_dir: directory to save the histograms.
+    """
+    # check configs_or_seeds
+    assert configs_or_seeds in ["configurations", "seeds"]
+
+    # check if we have metrics from all configs
+    num_configs = len(config_names)
+    assert len(metrics_list) == num_configs
+
+    # return if no data
+    if num_configs == 0:
+        return
+    num_samples_per_config = len(metrics_list[0])
+    if num_samples_per_config == 0:
+        return
+
+    # check if all configs have the same number of data points
+    # for i in range(num_configs):
+    #    assert  len(metrics_list[i]) == num_samples_per_config
+
+    # extract metric names
+    metric_names = []
+    for _, episode_metrics in metrics_list[0].items():
+        for metric_name, _ in episode_metrics.items():
+            metric_names.append(metric_name)
+        break
+
+    # build data for plotting
+    data_all_configs_all_metrics = {} # Dict[Dict[List[float]]]
+    for config_index in range(0, num_configs):
+        data_per_config_all_metrics = {} # Dict[List[float]]
+        metrics_per_config = metrics_list[config_index]
+        for metric_name in metric_names:
+            data_per_config_per_metric = []
+            for _, dict_of_metrics in metrics_per_config.items():
+                if (
+                    not np.isnan(dict_of_metrics[metric_name])
+                    and not np.isinf(dict_of_metrics[metric_name])
+                ):
+                    data_per_config_per_metric.append(dict_of_metrics[metric_name])
+            data_per_config_all_metrics[metric_name] = data_per_config_per_metric
+        data_all_configs_all_metrics[config_names[config_index]] = data_per_config_all_metrics
+
+    # plot histograms
+    for metric_name in metric_names:
+        fig, axes = plt.subplots(
+            int(np.ceil(num_configs/2)),
+            2,
+            sharey=True,
+            figsize=(12.8, 9.6))
+        axes_flattened = axes.ravel()
+        for config_index in range(0, num_configs):
+            config_name = config_names[config_index]
+            # create histogram per metric, per config
+            data_to_plot = data_all_configs_all_metrics[config_name][metric_name]
+            if (
+                metric_name == NumericalMetrics.DISTANCE_TO_GOAL
+                or metric_name == metric_name == NumericalMetrics.SPL
+                or metric_name == NumericalMetrics.NUM_STEPS
+            ):
+                axes_flattened[config_index].hist(
+                    data_to_plot,
+                    bins=50
+                )
+            else:
+                raise NotImplementedError
+            axes_flattened[config_index].set_title(config_name, fontsize=18)
+        # set common x and y label. Code adapted from
+        # https://stackoverflow.com/questions/16150819/common-xlabel-ylabel-for-matplotlib-subplots
+        fig.text(0.5, 0.04, f"{metric_name.value} {resolve_metric_unit(metric_name)}", ha="center", fontsize=22)
+        fig.text(0.04, 0.5, "number of episodes", va="center", rotation="vertical", fontsize=22)
+        plt.xticks(rotation=0)
+        plt.subplots_adjust(left=0.125, bottom=0.1, right=0.9, top=0.9, wspace=0.2, hspace=0.6)
+        fig.savefig(f"{plot_dir}/{metric_name}-{num_configs}_{configs_or_seeds}.png")
+        plt.close(fig)
 
 
 def observations_to_image_for_roam(
@@ -483,12 +628,16 @@ def visualize_running_times_with_bar_plots(
     data["config"] = config_names
     data["running_time"] = running_times
     df = pd.DataFrame(data)
+    sns.set(font_scale=1.2, style="white")
     ax = sns.barplot(x="config", y="running_time", data=df)
     # add bar labels;
     # solution from https://stackoverflow.com/questions/43214978/seaborn-barplot-displaying-values
     # TODO: upgrade matplotlib to 3.4.0
     # ax.bar_label(ax.containers[0])
-    fig.savefig(f"{plot_dir}/running_time_across_configs.png")
+    ax.set_xlabel("configurations", fontsize=22)
+    plt.xticks(rotation=0)
+    ax.set_ylabel("running_time (hours)", fontsize=22)
+    fig.savefig(f"{plot_dir}/running_time-{len(config_names)}_configurations.png")
     plt.close(fig)
 
 
