@@ -2,9 +2,8 @@
 
 <launch>
 
-   <arg name="map_path" default="$(find ros_x_habitat)/maps/test_map.yaml"/>
-   <arg name="map_file_path" default="$(find ros_x_habitat)"/>
-   <arg name="map_file_base_name" default="test_map.yaml"/>
+   <arg name="map_file_path" default="$(find ros_x_habitat)/maps/YFuZgdQ5vWj.yaml"/>
+   <arg name="map_file_base_name" default="YFuZgdQ5vWj.yaml"/>
    <arg name="trajectory_source_frame_name" default="/base_frame"/>
    <arg name="trajectory_update_rate" default="4"/>
    <arg name="trajectory_publish_rate" default="0.25"/>
@@ -12,7 +11,7 @@
    <master auto="start"/>
 
    <!-- Run the map server -->
-   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_path)"/>
+   <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file_path)"/>
 
 
    <!--- Run AMCL -->
