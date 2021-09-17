@@ -44,18 +44,33 @@ The package allows roboticists to
    ```
 
 ## System Architecture
-Coming soon
+``ros_x_habitat`` exists as a collection of ROS nodes, topics and services. For simplicity, we have omitted components not essential to the interface's operation:
+
+![](docs/architecture_enlarged.png)
 
 ## Examples
 Coming soon
 
 ## Cite Our Work
-Coming soon
+If you are interested in using ``ros_x_habitat`` for your own research, please cite [our (Arxiv preprint) paper](https://arxiv.org/abs/2109.07703):
+```
+@misc{chen2021rosxhabitat,
+      title={ROS-X-Habitat: Bridging the ROS Ecosystem with Embodied AI}, 
+      author={Guanxiong Chen and Haoyu Yang and Ian M. Mitchell},
+      year={2021},
+      eprint={2109.07703},
+      archivePrefix={arXiv},
+      primaryClass={cs.RO}
+}
+```
 
 ## License
-Coming soon
+This work is under the [Creative Commons](https://creativecommons.org/licenses/by/4.0/) CC BY 4.0 License.
 
 ## Acknowledgments
+We would like to thank [Bruce Cui](https://github.com/brucecui97) from the Department of Mechanical Engineering at UBC for his initial work on ``ros_x_habitat``. Also,  we would like to appreciate the AI Habitat team from Facebook AI Research, including Prof. Dhruv Batra, Alex Clegg, Prof. Manolis Savva, and Erik Wijmans for their generous support throughout our development process.
 
 ## References
-Coming soon
+1. [Habitat: A Platform for Embodied AI Research.](https://arxiv.org/abs/1904.01201) Manolis Savva, Abhishek Kadian, Oleksandr Maksymets, Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia Liu, Vladlen Koltun, Jitendra Malik, Devi Parikh, Dhruv Batra. IEEE/CVF International Conference on Computer Vision (ICCV), 2019.
+2. [Habitat 2.0: Training Home Assistants to Rearrange their Habitat.](https://arxiv.org/abs/2106.14405) Andrew Szot, Alex Clegg, Eric Undersander, Erik Wijmans, Yili Zhao, John Turner, Noah Maestre, Mustafa Mukadam, Devendra Chaplot, Oleksandr Maksymets, Aaron Gokaslan, Vladimir Vondrus, Sameer Dharur, Franziska Meier, Wojciech Galuba, Angel Chang, Zsolt Kira, Vladlen Koltun, Jitendra Malik, Manolis Savva, Dhruv Batra. arXiv preprint arXiv:2106.14405, 2021.
+3. [ROS-X-Habitat: Bridging the ROS Ecosystem with Embodied AI.](https://arxiv.org/abs/2109.07703) Guanxiong Chen, Haoyu Yang, Ian Mitchell. arXiv preprint arXiv:2109.07703, 2021.
