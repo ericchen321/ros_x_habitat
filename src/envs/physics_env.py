@@ -192,11 +192,5 @@ class PhysicsEnv(Env):
         vel_control.controlling_ang_vel = True
         vel_control.lin_vel_is_local = True
         vel_control.ang_vel_is_local = True
-        if(linear_vel):
-            vel_control.linear_velocity = linear_vel
-        else:
-            vel_control.linear_velocity = np.array([0.0,0.0,0.0])
-        if(angular_vel):
-            vel_control.angular_velocity = angular_vel
-        else:
-            vel_control.angular_velocity = np.array([0.0,0.0,0.0])
+        vel_control.linear_velocity = linear_vel
+        vel_control.angular_velocity = angular_vel
