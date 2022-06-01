@@ -20,9 +20,7 @@ from habitat.tasks.nav.nav import (
     StopAction,
 )
 import pandas as pd
-import math
-import os
-from habitat.utils.geometry_utils import angle_between_quaternions
+from src.utils.utils_logging import log_continuous_actuation
 
 
 @registry.register_task(name="Nav-Phys")
@@ -96,68 +94,36 @@ class PhysicsNavigationTask(EmbodiedTask):
 
                 # save previous position/rotation
                 # comment out when not collecting actuation error data
-                current_df_name = (
-                    "actuation_data/"
-                    + str(episode.scene_id).split("/")[-1]
-                    + "_"
-                    + str(episode.episode_id)
-                    + "_actuation.csv"
-                )
-                if self.df_name != current_df_name:
-                    self.df = self.df.iloc[0:0]
-                    self.df_name = current_df_name
+                # current_df_name = (
+                #     "actuation_data/"
+                #     + str(episode.scene_id).split("/")[-1]
+                #     + "_"
+                #     + str(episode.episode_id)
+                #     + "_actuation.csv"
+                # )
+                # if self.df_name != current_df_name:
+                #     self.df = self.df.iloc[0:0]
+                #     self.df_name = current_df_name
+                # current_position = self._sim.get_agent_state().position
+                # current_rotation = self._sim.get_agent_state().rotation
 
-                current_position = self._sim.get_agent_state().position
-                current_rotation = self._sim.get_agent_state().rotation
+                # iterate continuous steps
                 for frame in range(0, total_steps):
                     observations = self._sim.step_physics(agent_object, time_step)
                     # if collision occurred, quit the loop immediately
                     # NOTE: this is not working yet
                     # if self._sim.previous_step_collided:
                     #    break
+                
                 # log position/rotation after stepping
-                # NOTE: to get angle between quarternions, use angle_between_quaternions()
-                # from geometry_utils in habitat
                 # comment out when not collecting actuation error data
-                new_position = self._sim.get_agent_state().position
-                new_rotation = self._sim.get_agent_state().rotation
-                displacement = np.linalg.norm(new_position - current_position)
-                angle_diff = math.degrees(
-                    angle_between_quaternions(new_rotation, current_rotation)
-                )
-                if isinstance(task_action, TurnLeftAction):
-                    self.df = self.df.append(
-                        {
-                            "action": "TurnLeft",
-                            "desired_value": 10.0,
-                            "actual_value": angle_diff,
-                        },
-                        ignore_index=True,
-                    )
-                elif isinstance(task_action, TurnRightAction):
-                    self.df = self.df.append(
-                        {
-                            "action": "TurnRight",
-                            "desired_value": 10.0,
-                            "actual_value": angle_diff,
-                        },
-                        ignore_index=True,
-                    )
-                elif isinstance(task_action, MoveForwardAction):
-                    self.df = self.df.append(
-                        {
-                            "action": "MoveForward",
-                            "desired_value": 0.25,
-                            "actual_value": displacement,
-                        },
-                        ignore_index=True,
-                    )
-                else:
-                    pass
-
-                if not self.df.empty:
-                    print("Updating csv: " + self.df_name)
-                    self.df.to_csv(self.df_name, index=False)
+                # new_position = self._sim.get_agent_state().position
+                # new_rotation = self._sim.get_agent_state().rotation
+                # log_continuous_actuation(
+                #     task_action,
+                #     new_position, current_position, new_rotation, current_rotation,
+                #     self.df,
+                #     self.df_name)
 
         observations.update(
             self.sensor_suite.get_observations(
