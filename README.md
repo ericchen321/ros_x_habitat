@@ -118,6 +118,10 @@ Here we outline steps to control a ROS agent with RGBD sensors via a joystick in
 
 We will soon update steps to run a planner from `rtabmap_ros` in Habitat Sim.
 
+## Tested Platforms
+The experiments were run on a desktop with  i7-10700K CPU, 64 GB of RAM, and an NVIDIA
+RTX 3070 GPU. We also tested the experiments on a desktop with 32 GB of RAM and an NVIDIA GT1030 GPU.
+
 ## Cite Our Work
 If you are interested in using ``ros_x_habitat`` for your own research, please cite [our (Arxiv preprint) paper](https://arxiv.org/abs/2109.07703):
 ```
