@@ -28,22 +28,35 @@ The package allows roboticists to
 ## Installation
 1. Install Ubuntu 20.04 + ROS Noetic.
 2. Install [Anaconda](https://www.anaconda.com/). 
-3. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim) following the official instructions. Note that
-    * We suggest you to use the version tagged `0.2.0`. Any versions below this is not supported;
-    * We also suggest install by building from the source;
-    * Install with Bullet Physics;
-    * If you have an NVIDIA card, we suggest you to install with CUDA.
-4. Install [Habitat Lab](https://github.com/facebookresearch/habitat-lab) in the same conda environment following the official instructions. Note that
-    * We suggest you to use the version tagged `0.2.0`. Any versions below this is not supported;
+3. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim) version `0.2.0`. 
+    * Here we show how to install it from conda. First download the code base, then reset the head to version 0.2.0, create a conda environment and install dependent packages:
+        ```
+        conda create -n rosxhab python=3.6 cmake=3.14.0
+        conda activate rosxhab
+        cd <path to Habitat Sim's root directory>
+        pip install -r requirements.txt
+        conda install habitat-sim=0.2.0 withbullet -c conda-forge -c aihabitat
+        ```
+    * If installing from conda doesn't work, you can also try building from source with Bullet Physics and CUDA support (if you have an NVIDIA card).
+4. Install [Habitat Lab](https://github.com/facebookresearch/habitat-lab) version `0.2.0` in the same conda environment following the official instructions. Note that
     * In addition to the core of Habitat Lab, also install `habitat_baselines` and other required packages.
+    * The `requirements.txt` provided in the official repo does not seem to cover the entire set of packages required to set up Habitat Lab. We had to install these pacakges manually:
+        ```
+        pip install Cython==0.29.30
+        pip install pkgconfig==1.5.5
+        ```
 5. Install the following ROS packages:
    * `ros-noetic-depthimage-to-laserscan`
    * `ros-noetic-laser-scan-matcher`
    * `ros-noetic-rtabmap-ros`
    * `ros-noetic-joy`
-6. Clone the repo to your catkin workspace.
+6. Clone the repo to the `src/` directory under your catkin workspace.
 7. Compile the package by calling `catkin_make`.
-8. Export the repo's directory to `$PYTHONPATH`:
+8. Install Python pacakges required by this repo:
+    ```
+    pip install -r requirements.txt
+    ```
+9. Export the repo's directory to `$PYTHONPATH`:
    ```
    export PYTHONPATH=$PYTHONPATH:<path-to-the-root-directory-of-the-repo>
    ```
@@ -70,7 +83,17 @@ To run an evaluation, follow these steps:
    4. Select from `seeds/` a seed file or create one of your own for your experiment. The seed is used for initializing the Habitat agent.
    5. Run the following command to evaluate the agent over the test episodes while producing top-down maps and box plots to visualize metrics:
       ```
-      python src/scripts/eval_and_vis_habitat.py --input-type rgbd --model-path data/checkpoints/v2/gibson-rgbd-best.pth --task-config <path to config file> --episode-id <ID of last episode evaluated; -1 to evaluate from start> --seed-file-path <path to seed file> --log-dir <path to dir storing evaluation logs> --make-maps --map-dir <path to dir storing top-down maps> --make-plots --plot-dir <path to dir storing metric plots>
+      python src/scripts/eval_and_vis_habitat.py \
+      --input-type rgbd \
+      --model-path data/checkpoints/v2/gibson-rgbd-best.pth \
+      --task-config <path to config file> \
+      --episode-id <ID of last episode evaluated; -1 to evaluate from start> \
+      --seed-file-path <path to seed file> \
+      --log-dir <path to dir storing evaluation logs> \
+      --make-maps \
+      --map-dir <path to dir storing top-down maps> \
+      --make-plots \
+      --plot-dir <path to dir storing metric plots>
       ```
 
 ### Navigating Habitat Agent in Habitat Sim with ROS (+/-Physics, +ROS)
