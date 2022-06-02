@@ -33,6 +33,6 @@
 		<param name="base_frame" value="base_frame"/>
 	</node>
 
-	<node pkg="tf" type="static_transform_publisher" name="base_frame_to_laser" args="0.0 0.0 0.0 0.0 0.0 0.0 /base_frame /laser 50" />
+	<node pkg="tf" type="static_transform_publisher" name="base_frame_to_laser" args="0.0 0.0 0.0 -1.5708 0.0 -1.5708 /base_frame /laser 50" />
 
 </launch>
