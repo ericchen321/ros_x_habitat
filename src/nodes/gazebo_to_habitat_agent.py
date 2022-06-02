@@ -371,11 +371,11 @@ class GazeboToHabitatAgent:
                         h = Header()
                         h.stamp = rospy.Time.now()
                         # create RGB message for Habitat
-                        rgb_img = self.rgb_msg_to_img(rgb_msg, 720)
+                        rgb_img = self.rgb_msg_to_img(rgb_msg, 256)
                         rgb_msg_for_hab = CvBridge().cv2_to_imgmsg(rgb_img, encoding="rgb8")
                         rgb_msg_for_hab.header = h
                         # create depth message for Habitat
-                        depth_img = self.depth_msg_to_img(depth_msg, 720)
+                        depth_img = self.depth_msg_to_img(depth_msg, 256)
                         depth_msg_for_hab = DepthImage()
                         depth_msg_for_hab.height, depth_msg_for_hab.width = depth_img.shape
                         depth_msg_for_hab.step = depth_msg_for_hab.width
