@@ -125,7 +125,6 @@ Here we demonstrate steps to posit a Habitat agent embodied on a TurtleBot in a 
    2. Launch Gazebo and RViz:
       ```
       roslaunch turtlebot3_gazebo turtlebot3_house.launch
-
       ```
    3. Launch the agent node:
       ```
