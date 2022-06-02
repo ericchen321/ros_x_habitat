@@ -50,6 +50,8 @@ The package allows roboticists to
    * `ros-noetic-laser-scan-matcher`
    * `ros-noetic-rtabmap-ros`
    * `ros-noetic-joy`
+   * `ros-noetic-turtlebot3-gazebo`
+   * `ros-noetic-turtlebot3-bringup`
 6. Clone the repo to the `src/` directory under your catkin workspace.
 7. Compile the package by calling `catkin_make`.
 8. Install Python pacakges required by this repo:
@@ -58,7 +60,7 @@ The package allows roboticists to
     ```
 9. Export the repo's directory to `$PYTHONPATH`:
    ```
-   export PYTHONPATH=$PYTHONPATH:<path-to-the-root-directory-of-the-repo>
+   export PYTHONPATH=$PYTHONPATH:<path to the root directory of this repo>
    ```
 
 ## Examples
@@ -97,10 +99,52 @@ To run an evaluation, follow these steps:
       ```
 
 ### Navigating Habitat Agent in Habitat Sim with ROS (+/-Physics, +ROS)
-Coming soon
+Under this mode we run a Habitat Agent still inside Habitat Sim but through our interface.
+
+   1. Select an experiment configuration file from `configs/`. Our configurations are coded by numbers:
+      * Setting 3: -Physics, +ROS;
+      * Setting 5: +Physics, +ROS.
+   2. Select a seed file (as above).
+   3. Run:
+      ```
+      python src/scripts/eval_habitat_ros.py \
+      --input-type rgbd \
+      --model-path data/checkpoints/v2/gibson-rgbd-best.pth \
+      --task-config configs/setting_5_configs/pointnav_rgbd-mp3d_with_physics.yaml \
+      --episode-id <ID of last episode evaluated; -1 to evaluate from start> \
+      --seed-file-path <seed file path> \
+      --log-dir= <log dir path>
+      ```
 
 ### Navigating Habitat Agent in Gazebo
-Coming soon
+Here we demonstrate steps to posit a Habitat agent embodied on a TurtleBot in a Gazebo-simulated environment, and render sensor data with RViz.
+   1. Define the model for the TurtleBot (here we use "Waffle"):
+      ```
+      export TURTLEBOT3_MODEL="waffle" 
+      ```
+   2. Launch Gazebo and RViz:
+      ```
+      roslaunch turtlebot3_gazebo turtlebot3_house.launch
+
+      ```
+   3. Launch the agent node:
+      ```
+      python src/nodes/habitat_agent_node.py \
+      --node-name agent_node \
+      --input-type rgbd \
+      --model-path data/checkpoints/v2/gibson-rgbd-best.pth 
+      ```
+      Then reset the agent in a separate window:
+      ```
+      rosservice call /ros_x_habitat/agent_node/reset_agent "{reset: 0, seed: 0}" 
+      ```
+   4. Launch the converter nodes:
+      ```
+      python src/nodes/habitat_agent_to_gazebo.py
+      python src/nodes/gazebo_to_habitat_agent.py \
+      --pointgoal-location <coordinates>
+      ```
+   5. In RViz, subscribe to topic `/camera/depth/image_raw` and `/camera/rgb/image_raw` to render observations from the RGB and the depth sensor.
 
 ### Navigating ROS Agent in Habitat Sim
 Here we outline steps to control a ROS agent with RGBD sensors via a joystick in a Habitat Sim-simulated scene.
