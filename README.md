@@ -58,13 +58,25 @@ The package allows roboticists to
     ```
     pip install -r requirements.txt
     ```
-9. Export the repo's directory to `$PYTHONPATH`:
+
+## Examples
+Here we outline steps to reproduce experiments from our paper. 
+
+### Environment Setup
+To set up your bash environment before you run any experiments, do the following:
+1. Activate your conda environment (if you are running any script/node from this codebase).
+2. Export the repo's directory to `$PYTHONPATH`:
    ```
    export PYTHONPATH=$PYTHONPATH:<path to the root directory of this repo>
    ```
-
-## Examples
-Here we outline steps to reproduce experiments from our paper.
+   In fact for convenience, you can create a command in your `$HOME/.bashrc`:
+   ```
+   alias erosxhab="export PYTHONPATH=$PYTHONPATH:<path to the root directory of this repo>"
+   ```
+3. Source ROS-related environment variables. Similarly we can create a command to do this:
+   ```
+   alias sros="source /opt/ros/noetic/setup.bash && source <path to catkin_ws/devel>/setup.sh"
+   ```
 
 ### Navigating Habitat Agent in Habitat Sim without ROS (+/-Physics, -ROS)
 We can attempt to reproduce experiments from the [Habitat v1 paper](https://arxiv.org/abs/1904.01201) by evaluating a Habitat agent's performance in a MatterPort3D test scenario. Note that unlike what the authors did in the paper, we used
@@ -125,6 +137,7 @@ Here we demonstrate steps to posit a Habitat agent embodied on a TurtleBot in a 
    2. Launch Gazebo and RViz:
       ```
       roslaunch turtlebot3_gazebo turtlebot3_house.launch
+      roslaunch turtlebot3_gazebo turtlebot3_gazebo_rviz.launch 
       ```
    3. Launch the agent node:
       ```
