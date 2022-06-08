@@ -63,7 +63,7 @@ The package allows roboticists to
 Here we outline steps to reproduce experiments from our paper. 
 
 ### Environment Setup
-To set up your bash environment before you run any experiments, do the following:
+To set up your bash environment before you run any experiment, do the following:
 1. Activate your conda environment (if you are running any script/node from this codebase).
 2. Export the repo's directory to `$PYTHONPATH`:
    ```
