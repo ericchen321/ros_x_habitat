@@ -173,18 +173,19 @@ Here we outline steps to control a ROS agent with RGBD sensors via a joystick in
       python src/scripts/roam_with_joy.py --hab-env-config-path <config file path> --episode-id <ID of episode to roam inside> --scene-id <path to the episode's scene file, e.g. data/scene_datasets/mp3d/2t7WUuJeko7/2t7WUuJeko7.glb> --video-frame-period <number of continuous steps for each frame recorded>
       ```
 
-Up to this step we have initialized a Habitat sim environment to be mapped and a joystick-controlled agent. Next, we build a map with `rtabmap_ros`:
+Up to this step we have initialized a Habitat sim environment to be mapped and a joystick-controlled agent. Next, we build a map with `rtabmap_ros`, and let a ROS planner move to a goal location:
    1. Run
       ```
       roslaunch launch/rtabmap_mapping.launch
       ```
       Map the environment and save the map to somewhere. We have some pre-built maps of Habitat
       test scenes and Matterport 3D environments under `maps/`.
-   2. Use the map to make a ROS planner move to a goal location. Run
+   2. Run
       ```
       roslaunch launch/move_base.launch
       ```
-      The launcher file should start a GUI environment which allows you to specify the goal point.
+      To start the planenr. The launcher file should also start a GUI environment which allows you to specify the goal point.
+      NOTE: make sure `map_file_path` and `map_file_base_name` have been set correctly before you run.
 
 ## Tested Platforms
 The experiments were run on a desktop with  i7-10700K CPU, 64 GB of RAM, and an NVIDIA
