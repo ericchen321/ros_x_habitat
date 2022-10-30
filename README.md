@@ -49,6 +49,7 @@ The package allows roboticists to
    * `ros-noetic-depthimage-to-laserscan`
    * `ros-noetic-laser-scan-matcher`
    * `ros-noetic-rtabmap-ros`
+   * `ros-noetic-hector-slam`
    * `ros-noetic-joy`
    * `ros-noetic-turtlebot3-gazebo`
    * `ros-noetic-turtlebot3-bringup`
@@ -172,23 +173,32 @@ Here we outline steps to control a ROS agent with RGBD sensors via a joystick in
       python src/scripts/roam_with_joy.py --hab-env-config-path <config file path> --episode-id <ID of episode to roam inside> --scene-id <path to the episode's scene file, e.g. data/scene_datasets/mp3d/2t7WUuJeko7/2t7WUuJeko7.glb> --video-frame-period <number of continuous steps for each frame recorded>
       ```
 
-We will soon update steps to run a planner from `rtabmap_ros` in Habitat Sim.
+Up to this step we have initialized a Habitat sim environment to be mapped and a joystick-controlled agent. Next, we build a map with `rtabmap_ros`:
+   1. Run
+      ```
+      roslaunch launch/rtabmap_mapping.launch
+      ```
+      Map the environment and save the map to somewhere. We have some pre-built maps of Habitat
+      test scenes and Matterport 3D environments under `maps/`.
+   2. Use the map to make a ROS planner move to a goal location. Run
+      ```
+      roslaunch launch/move_base.launch
+      ```
+      The launcher file should start a GUI environment which allows you to specify the goal point.
 
 ## Tested Platforms
 The experiments were run on a desktop with  i7-10700K CPU, 64 GB of RAM, and an NVIDIA
-RTX 3070 GPU. We also tested the experiments on a desktop with 32 GB of RAM and an NVIDIA GT1030 GPU.
+RTX 3070 GPU. We also tested the experiments on a desktop with 32 GB of RAM and an NVIDIA GT 1030 GPU.
 
 ## Cite Our Work
-If you are interested in using ``ros_x_habitat`` for your own research, please cite [our (Arxiv preprint) paper](https://arxiv.org/abs/2109.07703):
+If you are interested in using ``ros_x_habitat`` for your own research, please cite [our CRV 2022 paper](https://arxiv.org/abs/2109.07703):
 ```
-@misc{chen2021rosxhabitat,
-      title={ROS-X-Habitat: Bridging the ROS Ecosystem with Embodied AI}, 
-      author={Guanxiong Chen and Haoyu Yang and Ian M. Mitchell},
-      year={2021},
-      eprint={2109.07703},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO}
-}
+@INPROCEEDINGS{9867069,  
+author={Chen, Guanxiong and Yang, Haoyu and Mitchell, Ian M.},  
+booktitle={2022 19th Conference on Robots and Vision (CRV)},  
+title={ROS-X-Habitat: Bridging the ROS Ecosystem with Embodied AI},  
+year={2022},  volume={},  number={},  pages={24-31},  
+doi={10.1109/CRV55824.2022.00012}}
 ```
 
 ## License
