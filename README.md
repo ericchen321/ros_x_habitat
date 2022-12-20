@@ -80,9 +80,9 @@ To set up your bash environment before you run any experiment, do the following:
    ```
 
 ### Navigating Habitat Agent in Habitat Sim without ROS (+/-Physics, -ROS)
-We can attempt to reproduce experiments from the [Habitat v1 paper](https://arxiv.org/abs/1904.01201) by evaluating a Habitat agent's performance in a MatterPort3D test scenario. Note that unlike what the authors did in the paper, we used
-   * Agents: [Habitat v2's RGBD agent](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v2.zip) since the v1 agents are no longer compatible with Habitat v2;
-   * Test episodes and scenes: MatterPort3D test episodes only. To get episode definitions, download from [here](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip); to download the scene assets, please follow instructions from [here](https://niessner.github.io/Matterport/);
+We can attempt to reproduce experiments from the [Habitat v1 paper](https://arxiv.org/abs/1904.01201) by evaluating a Habitat agent's performance in a MatterPort3D test scenario. Note that unlike what the authors did in the paper, we used the following experimental configurations:
+   * Agents: [Habitat v2's RGBD agent](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v2.zip) since the v1 agents are no longer compatible with Habitat v2.
+   * Test episodes and scenes: MatterPort3D test episodes only. To get episode definitions, download from [here](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/mp3d/v1/pointnav_mp3d_v1.zip); to download the complete MP3D scene assets, please follow instructions under Section "Dataset Download" from [here](https://niessner.github.io/Matterport/).
    * Also we evaluated the agent in physics-enabled Habitat Sim v2.
 
 To run an evaluation, follow these steps:
