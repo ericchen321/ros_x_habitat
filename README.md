@@ -53,6 +53,7 @@ The package allows roboticists to
    * `ros-noetic-joy`
    * `ros-noetic-turtlebot3-gazebo`
    * `ros-noetic-turtlebot3-bringup`
+   * `ros-noetic-turtlebot3-navigation`
 6. Clone the repo to the `src/` directory under your catkin workspace.
 7. Compile the package by calling `catkin_make`.
 8. Install Python pacakges required by this repo:
@@ -160,32 +161,38 @@ Here we demonstrate steps to posit a Habitat agent embodied on a TurtleBot in a 
    5. In RViz, subscribe to topic `/camera/depth/image_raw` and `/camera/rgb/image_raw` to render observations from the RGB and the depth sensor.
 
 ### Navigating ROS Agent in Habitat Sim
-Here we outline steps to control a ROS agent with RGBD sensors via a joystick in a Habitat Sim-simulated scene.
+Here we outline steps to 1) control, via a joystick, a ROS agent with RGBD sensors to roam and map a Habitat Sim-simulated scene; 2) control a planner from the `move_base` package to navigate to a manually-set goal position.
    1. Repeat Step 1 and 2 from [here](#Navigating-Habitat-Agent-in-Habitat-Sim-without-ROS-(+/-Physics,--ROS)) to download MP3D scene assets and episode definitions.
    2. Download Habitat's test object assets into `data/objects/` by running this command from Habitat Sim (more instructions from [here](https://github.com/facebookresearch/habitat-sim/tree/v0.2.0#testing)):
       ```
       python -m habitat_sim.utils.datasets_download --uids habitat_example_objects --data-path <path to ros_x_habitat/data/objects/>
       ```
    3. Start `roscore`.
-   4. Select a configuration file from `configs/roam_configs/`. Here we select `pointnav_rgbd_roam_mp3d_test_scenes.yaml` since we only have downloaded the MP3D test scenes. You might want to change `VIDEO_DIR` to some directory of your liking.
-   5. Run this command:
+   4. Select a configuration file from `configs/roam_configs/`, e.g. `pointnav_rgbd_roam_mp3d_test_scenes.yaml`. You might want to change `VIDEO_DIR` to another directory of your liking.
+   5. Run this command to initialize a Habitat sim environment and a joystick-controlled roamer:
       ```
-      python src/scripts/roam_with_joy.py --hab-env-config-path <config file path> --episode-id <ID of episode to roam inside> --scene-id <path to the episode's scene file, e.g. data/scene_datasets/mp3d/2t7WUuJeko7/2t7WUuJeko7.glb> --video-frame-period <number of continuous steps for each frame recorded>
+      python src/scripts/roam_with_joy.py \
+      --hab-env-config-path <config file path> \
+      --episode-id <ID of episode to roam inside> \
+      --scene-id <path to the episode's scene file, e.g. data/scene_datasets/mp3d/2t7WUuJeko7/2t7WUuJeko7.glb> \
+      --video-frame-period <number of continuous steps for each frame recorded>
       ```
-
-Up to this step we have initialized a Habitat sim environment to be mapped and a joystick-controlled agent. Next, we build a map with `rtabmap_ros`, and let a ROS planner move to a goal location:
-   1. Run
+   6. Next, we map the scene with `rtabmap_ros`. Run
       ```
       roslaunch launch/rtabmap_mapping.launch
       ```
-      Map the environment and save the map to somewhere. We have some pre-built maps of Habitat
-      test scenes and Matterport 3D environments under `maps/`.
-   2. Run
+      Move the joystick-controlled agent around to map the environment. Save the map to somewhere. We also have some pre-built maps of Habitat test scenes and Matterport 3D environments under `maps/`.
+   
+Next, we use a planner from the `move_base` package to navigate in the scene with the help of that
+map we just built.
+   7. Shut down every node you launched from Step 1 to 6 above.
+   8. Repeat Step 3 to 5.
+   9. Run
       ```
       roslaunch launch/move_base.launch
       ```
-      To start the planenr. The launcher file should also start a GUI environment which allows you to specify the goal point.
-      NOTE: make sure `map_file_path` and `map_file_base_name` have been set correctly before you run.
+      To start the planner. Make sure `map_file_path` and `map_file_base_name` have been set correctly before you run. The launcher file should also start an `rviz` session which allows you to 1) specify the goal point and 2) visualize RGB/depth sensor readings. 
+   10. Create a dummy node that listens to topic `/pointgoal_with_gps_compass`. The ROS planner doesn't really use it for navigation, but the environment node won't initialize until it makes sure someone is listening to it.
 
 ## Tested Platforms
 The experiments were run on a desktop with  i7-10700K CPU, 64 GB of RAM, and an NVIDIA
