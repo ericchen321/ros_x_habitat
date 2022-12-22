@@ -185,13 +185,14 @@ Here we outline steps to 1) control, via a joystick, a ROS agent with RGBD senso
    
 Next, we use a planner from the `move_base` package to navigate in the scene with the help of that
 map we just built.
+   
    7. Shut down every node you launched from Step 1 to 6 above.
    8. Repeat Step 3 to 5.
-   9. Run
+   9. Start the planner: run
       ```
       roslaunch launch/move_base.launch
       ```
-      To start the planner. Make sure `map_file_path` and `map_file_base_name` have been set correctly before you run. The launcher file should also start an `rviz` session which allows you to 1) specify the goal point and 2) visualize RGB/depth sensor readings. 
+      Make sure `map_file_path` and `map_file_base_name` have been set correctly before you run. The launcher file should also start an `rviz` session which allows you to 1) specify the goal point and 2) visualize RGB/depth sensor readings. 
    10. Create a dummy node that listens to topic `/pointgoal_with_gps_compass`. The ROS planner doesn't really use it for navigation, but the environment node won't initialize until it makes sure someone is listening to it.
 
 ## Tested Platforms
