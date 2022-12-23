@@ -3,6 +3,8 @@ ros_x_habitat
 
 A ROS package to bridge [AI Habitat](https://aihabitat.org/) with the ROS ecosystem.
 
+https://user-images.githubusercontent.com/22675300/209244722-2655536c-1104-4554-92f5-bb05cec9523c.mp4
+
 ## Outline
    1. [Motivation](#motivation)
    1. [System Architecture](#architecture)
@@ -19,9 +21,6 @@ The package allows roboticists to
    * Connecting a ROS-based planner with Habitat Sim;
    * Connecting an AI Habitat agent with a ROS-bridged simulator ([Gazebo](http://gazebosim.org/) for example) through ROS.
    * Leverage Habitat Sim's photorealistic and physically-realistic simulation capability through ROS.
-To get more details, you can take a look at our presentation on CRV 2022:
-
-https://user-images.githubusercontent.com/22675300/209244722-2655536c-1104-4554-92f5-bb05cec9523c.mp4
 
 
 ## System Architecture
