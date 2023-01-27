@@ -180,6 +180,10 @@ Here we outline steps to 1) control, via a joystick, a ROS agent with RGBD senso
       --scene-id <path to the episode's scene file, e.g. data/scene_datasets/mp3d/2t7WUuJeko7/2t7WUuJeko7.glb> \
       --video-frame-period <number of continuous steps for each frame recorded>
       ```
+      Note that the environment node won't initialize until it makes sure some other node is listening to the topics on which it publishes sensor readings: `/rgb`, `/depth`, `/pointgoal_with_gps_compass`. The script will fire up `image_view` nodes to listen to RGB/Depth readings but you need to fire up a dummy node yourself to listen to Pointgoal/GPS info. You can do this with the command
+      ```
+      rostopic echo /pointgoal_with_gps_compass
+      ```
    6. Next, we map the scene with `rtabmap_ros`. Run
       ```
       roslaunch launch/rtabmap_mapping.launch
@@ -196,7 +200,6 @@ map we just built.
       roslaunch launch/move_base.launch
       ```
       Make sure `map_file_path` and `map_file_base_name` have been set correctly before you run. The launcher file should also start an `rviz` session which allows you to 1) specify the goal point and 2) visualize RGB/depth sensor readings. 
-   10. Create a dummy node that listens to topic `/pointgoal_with_gps_compass`. The ROS planner doesn't really use it for navigation, but the environment node won't initialize until it makes sure someone is listening to it.
 
 ## Tested Platforms
 The experiments were run on a desktop with  i7-10700K CPU, 64 GB of RAM, and an NVIDIA
