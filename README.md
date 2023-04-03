@@ -95,12 +95,13 @@ To run an evaluation, follow these steps:
       * `data/datasets/pointnav/mp3d/v1/`,
       * `data/objects/`,
       * `data/scene_datasets/mp3d/`.
-   2. Extract the v2 agents (`.pth` files) to `data/checkpoints/v2/`. Extract the MP3D episode definitions to `data/datasets/pointnav/mp3d/v1/` (then under `v1/` you should see directory `test/`, `train/`, etc). Extract the MP3D scene files to `data/scene_datasets/mp3d/`.
-   3. Select an experiment configuration file from `configs/`. Our configurations are coded by numbers:
+   2. Download [`default.physics_config.json`](https://github.com/facebookresearch/habitat-sim/blob/v0.2.0/data/default.physics_config.json) and place it under `data/`.
+   3. Extract the v2 agents (`.pth` files) to `data/checkpoints/v2/`. Extract the MP3D episode definitions to `data/datasets/pointnav/mp3d/v1/` (then under `v1/` you should see directory `test/`, `train/`, etc). Extract the MP3D scene files to `data/scene_datasets/mp3d/`.
+   4. Select an experiment configuration file from `configs/`. Our configurations are coded by numbers:
       * Setting 2: -Physics, -ROS;
       * Setting 4: +Physics, -ROS.
-   4. Select from `seeds/` a seed file or create one of your own for your experiment. The seed is used for initializing the Habitat agent.
-   5. Run the following command to evaluate the agent over the test episodes while producing top-down maps and box plots to visualize metrics:
+   5. Select from `seeds/` a seed file or create one of your own for your experiment. The seed is used for initializing the Habitat agent.
+   6. Run the following command to evaluate the agent over the test episodes while producing top-down maps and box plots to visualize metrics:
       ```
       python src/scripts/eval_and_vis_habitat.py \
       --input-type rgbd \
