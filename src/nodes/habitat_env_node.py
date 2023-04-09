@@ -508,33 +508,33 @@ class HabitatEnvNode:
         Requires 1) being called only when evaluation has been enabled and
         2) being called only from the main thread.
         """
-        if not self.use_continuous_agent:
-            # if using Habitat agent, wait for new action before stepping
-            with self.command_cv:
-                while self.new_command_published is False:
-                    self.command_cv.wait()
-                self.new_command_published = False
+        
+        with self.command_cv:
+            # wait for new action before stepping
+            while self.new_command_published is False:
+                self.command_cv.wait()
+            self.new_command_published = False
 
-        # enact the action / velocities
-        # ------------ log sim time start ------------
-        t_sim_start = time.clock()
-        # --------------------------------------------
+            # enact the action / velocities
+            # ------------ log sim time start ------------
+            t_sim_start = time.clock()
+            # --------------------------------------------
 
-        if self.use_continuous_agent:
-            with self.command_cv:
+            if self.use_continuous_agent:
                 self.env.set_agent_velocities(self.linear_vel, self.angular_vel)
-            (self.observations, _, _, info) = self.env.step()
-        else:
-            # NOTE: Here we call HabitatEvalRLEnv.step() which dispatches
-            # to Env.step() or PhysicsEnv.step_physics() depending on
-            # whether physics has been enabled
-            (self.observations, _, _, info) = self.env.step(self.action)
+                print(self.linear_vel)
+                (self.observations, _, _, info) = self.env.step()
+            else:
+                # NOTE: Here we call HabitatEvalRLEnv.step() which dispatches
+                # to Env.step() or PhysicsEnv.step_physics() depending on
+                # whether physics has been enabled
+                (self.observations, _, _, info) = self.env.step(self.action)
 
-        # ------------  log sim time end  ------------
-        t_sim_end = time.clock()
-        with self.timing_lock:
-            self.t_sim_elapsed += t_sim_end - t_sim_start
-        # --------------------------------------------
+            # ------------  log sim time end  ------------
+            t_sim_end = time.clock()
+            with self.timing_lock:
+                self.t_sim_elapsed += t_sim_end - t_sim_start
+            # --------------------------------------------
 
         # if making video, generate frames from actions
         if self.make_video:
