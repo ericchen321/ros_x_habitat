@@ -30,25 +30,32 @@ The package allows roboticists to
 
 ## Installation
 1. Install Ubuntu 20.04 + ROS Noetic.
-2. Install [Anaconda](https://www.anaconda.com/). 
-3. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim) version `0.2.0`. 
-    * Here we show how to install it from conda. First download the code base, then reset the head to version 0.2.0, create a conda environment and install dependent packages:
+2. Install [Anaconda](https://www.anaconda.com/) and create a conda environment for this project.
+   ```
+   conda create -n rosxhab python=3.6.13 cmake=3.14.0
+   conda activate rosxhab
+   ```
+3. Install dependent packages:
+   ```
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+4. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim) version `0.2.0`. 
+    * Here we show how to install it from conda in the environment you just created:
         ```
-        conda create -n rosxhab python=3.6 cmake=3.14.0
-        conda activate rosxhab
         cd <path to Habitat Sim's root directory>
         pip install -r requirements.txt
         conda install habitat-sim=0.2.0 withbullet -c conda-forge -c aihabitat
         ```
     * If installing from conda doesn't work, you can also try building from source with Bullet Physics and CUDA support (if you have an NVIDIA card).
-4. Install [Habitat Lab](https://github.com/facebookresearch/habitat-lab) version `0.2.0` in the same conda environment following the official instructions. Note that
+5. Install [Habitat Lab](https://github.com/facebookresearch/habitat-lab) version `0.2.0` in the same conda environment following the official instructions. Note that
     * In addition to the core of Habitat Lab, also install `habitat_baselines` and other required packages.
     * The `requirements.txt` provided in the official repo does not seem to cover the entire set of packages required to set up Habitat Lab. We had to install these pacakges manually:
         ```
         pip install Cython==0.29.30
         pip install pkgconfig==1.5.5
         ```
-5. Install the following ROS packages:
+6. Install the following ROS packages:
    * `ros-noetic-depthimage-to-laserscan`
    * `ros-noetic-laser-scan-matcher`
    * `ros-noetic-rtabmap-ros`
@@ -57,12 +64,8 @@ The package allows roboticists to
    * `ros-noetic-turtlebot3-gazebo`
    * `ros-noetic-turtlebot3-bringup`
    * `ros-noetic-turtlebot3-navigation`
-6. Clone the repo to the `src/` directory under your catkin workspace.
-7. Compile the package by calling `catkin_make`.
-8. Install Python pacakges required by this repo:
-    ```
-    pip install -r requirements.txt
-    ```
+7. Clone the repo to the `src/` directory under your catkin workspace.
+8. Compile the package by calling `catkin_make`.
 
 ## Examples
 Here we outline steps to reproduce experiments from our paper. 
