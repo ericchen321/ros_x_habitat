@@ -50,11 +50,6 @@ The package allows roboticists to
     * If installing from conda doesn't work, you can also try building from source with Bullet Physics and CUDA support (if you have an NVIDIA card).
 5. Install [Habitat Lab](https://github.com/facebookresearch/habitat-lab) version `0.2.0` in the same conda environment following the official instructions. Note that
     * In addition to the core of Habitat Lab, also install `habitat_baselines` and other required packages.
-    * The `requirements.txt` provided in the official repo does not seem to cover the entire set of packages required to set up Habitat Lab. We had to install these pacakges manually:
-        ```
-        pip install Cython==0.29.30
-        pip install pkgconfig==1.5.5
-        ```
 6. Install the following ROS packages:
    * `ros-noetic-depthimage-to-laserscan`
    * `ros-noetic-laser-scan-matcher`
