@@ -34,23 +34,39 @@ The package allows roboticists to
    ```
    conda create -n rosxhab python=3.6.13 cmake=3.14.0
    conda activate rosxhab
-   ```
-3. Install dependent packages:
-   ```
    pip install --upgrade pip
+   ```
+3. Install Pytorch 1.10.2:
+   ```
+   # if you have an NVIDIA GPU + driver properly installed, install CUDA-compiled torch:
+   pip install torch==1.10.2+cu111 -f https://download.pytorch.org/whl/cu111/torch_stable.html
+   # otherwise, install the CPU-compiled torch:
+   pip install torch==1.10.2+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+   ```
+4. Install other dependent packages:
+   ```
    pip install -r requirements.txt
    ```
-4. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim) version `0.2.0`. 
+5. Install [Habitat Sim](https://github.com/facebookresearch/habitat-sim) version `0.2.0`. 
     * Here we show how to install it from conda in the environment you just created:
-        ```
-        cd <path to Habitat Sim's root directory>
-        pip install -r requirements.txt
-        conda install habitat-sim=0.2.0 withbullet -c conda-forge -c aihabitat
-        ```
-    * If installing from conda doesn't work, you can also try building from source with Bullet Physics and CUDA support (if you have an NVIDIA card).
-5. Install [Habitat Lab](https://github.com/facebookresearch/habitat-lab) version `0.2.0` in the same conda environment following the official instructions. Note that
-    * In addition to the core of Habitat Lab, also install `habitat_baselines` and other required packages.
-6. Install the following ROS packages:
+      ```
+      cd <path to Habitat Sim's root directory>
+      conda install habitat-sim=0.2.0 withbullet -c conda-forge -c aihabitat
+      ```
+    * If the above conda install for some reasons returns an error, you can download [the .tar.gz](https://anaconda.org/aihabitat/habitat-sim/0.2.0/download/linux-64/habitat-sim-0.2.0-py3.6_bullet_linux_bfafd7934df465d79d807e4698659e2c20daf57d.tar.bz2) file and install it locally:
+      ```
+      conda install --use-local linux-64_habitat-sim-0.2.0-py3.6_bullet_linux_bfafd7934df465d79d807e4698659e2c20daf57d.tar.bz2
+      ```
+    * If installing from conda still doesn't work, you can also try building from source with Bullet Physics and CUDA support (if you have an NVIDIA card).
+6. Install [Habitat Lab](https://github.com/facebookresearch/habitat-lab) version `0.2.0` along with `habitat-baselines` in the same conda environment.
+   ```
+   git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
+   cd habitat-lab
+   git reset --hard adf90
+   pip install -r requirements.txt
+   python setup.py develop --all # install habitat and habitat_baselines
+   ```
+7. Install the following ROS packages:
    * `ros-noetic-depthimage-to-laserscan`
    * `ros-noetic-laser-scan-matcher`
    * `ros-noetic-rtabmap-ros`
@@ -59,8 +75,8 @@ The package allows roboticists to
    * `ros-noetic-turtlebot3-gazebo`
    * `ros-noetic-turtlebot3-bringup`
    * `ros-noetic-turtlebot3-navigation`
-7. Clone the repo to the `src/` directory under your catkin workspace.
-8. Compile the package by calling `catkin_make`.
+8. Clone the repo to the `src/` directory under your catkin workspace.
+9. Compile the package by calling `catkin_make`.
 
 ## Examples
 Here we outline steps to reproduce experiments from our paper. 
