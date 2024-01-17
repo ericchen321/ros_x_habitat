@@ -448,6 +448,7 @@ class HabitatEnvNode:
             if sensor_uuid in ["rgb", "depth", "pointgoal_with_gps_compass"]:
                 h = Header()
                 h.stamp = t_curr
+                h.frame_id = 'laser'
                 sensor_msg.header = h
                 observations_ros[sensor_uuid] = sensor_msg
 
